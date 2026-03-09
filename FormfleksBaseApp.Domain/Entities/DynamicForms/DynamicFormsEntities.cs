@@ -100,6 +100,29 @@ public sealed class FormRequestEntity
     public DateTime CreatedAt { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    public void Submit(short newStatus)
+    {
+        Status = newStatus;
+        SubmittedAt = DateTime.UtcNow;
+    }
+
+    public void Approve(short newStatus)
+    {
+        Status = newStatus;
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    public void Reject(short newStatus)
+    {
+        Status = newStatus;
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    public void ReturnForRevision(short newStatus)
+    {
+        Status = newStatus;
+    }
 }
 
 public sealed class FormRequestValueEntity

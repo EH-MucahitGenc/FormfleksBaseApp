@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services;
 
+[System.Obsolete("Bu genel amaçlı servis parçalanmaktadır. Yeni eklemeler DBContext üzerinden Command/Query Handler'lara doğrudan yazılmalıdır.")]
 public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminService, IFormRequestService, IApprovalService
 {
     private readonly DynamicFormsDbContext _db;
@@ -378,8 +379,7 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
         if (wfDef is null)
         {
             // Onay rotası yoksa direkt ONAYLANDI yap
-            req.Status = (short)FormRequestStatus.Approved;
-            req.CompletedAt = DateTime.UtcNow;
+            req.Approve((short)FormRequestStatus.Approved);
         }
         else
         {
@@ -391,14 +391,12 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
 
             if (firstStep is null)
             {
-                req.Status = (short)FormRequestStatus.Approved;
-                req.CompletedAt = DateTime.UtcNow;
+                req.Approve((short)FormRequestStatus.Approved);
             }
             else
             {
-                req.Status = (short)FormRequestStatus.InApproval;
+                req.Submit((short)FormRequestStatus.InApproval);
                 req.CurrentStepNo = firstStep.StepNo;
-                req.SubmittedAt = DateTime.UtcNow;
 
                 // Onay adımı kaydı oluştur
                 _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
@@ -566,15 +564,14 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
 
         if (reqDto.ActionType == ApprovalActionType.Reject)
         {
-            req.Status = (short)FormRequestStatus.Rejected;
-            req.CompletedAt = DateTime.UtcNow;
+            req.Reject((short)FormRequestStatus.Rejected);
 
             if (approval is not null)
                 approval.Status = (short)FormRequestStatus.Rejected;
         }
         else if (reqDto.ActionType == ApprovalActionType.ReturnForRevision)
         {
-            req.Status = (short)FormRequestStatus.ReturnedForRevision;
+            req.ReturnForRevision((short)FormRequestStatus.ReturnedForRevision);
 
             if (approval is not null)
                 approval.Status = (short)FormRequestStatus.ReturnedForRevision;
@@ -593,8 +590,7 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
 
             if (nextStep is null)
             {
-                req.Status = (short)FormRequestStatus.Approved;
-                req.CompletedAt = DateTime.UtcNow;
+                req.Approve((short)FormRequestStatus.Approved);
             }
             else
             {

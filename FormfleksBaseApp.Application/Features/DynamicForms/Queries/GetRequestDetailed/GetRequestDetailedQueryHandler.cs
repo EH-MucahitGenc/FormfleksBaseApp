@@ -1,18 +1,18 @@
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
-using FormfleksBaseApp.DynamicForms.DataAccess;
+using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FormfleksBaseApp.DynamicForms.Infrastructure.Queries;
+namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRequestDetailed;
 
 public sealed class GetRequestDetailedQueryHandler
     : IRequestHandler<GetRequestDetailedQuery, FormRequestDetailedDto?>
 {
-    private readonly DynamicFormsDbContext _db;
+    private readonly IDynamicFormsDbContext _db;
 
-    public GetRequestDetailedQueryHandler(DynamicFormsDbContext db)
+    public GetRequestDetailedQueryHandler(IDynamicFormsDbContext db)
     {
         _db = db;
     }
@@ -20,15 +20,18 @@ public sealed class GetRequestDetailedQueryHandler
     public async Task<FormRequestDetailedDto?> Handle(GetRequestDetailedQuery query, CancellationToken ct)
     {
         var request = await _db.FormRequests
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == query.RequestId, ct);
 
         if (request is null || request.RequestorUserId != query.RequestorUserId)
             return null;
 
         var formType = await _db.FormTypes
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.FormTypeId, ct);
 
         var values = await _db.FormRequestValues
+            .AsNoTracking()
             .Where(x => x.RequestId == query.RequestId)
             .ToListAsync(ct);
 

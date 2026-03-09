@@ -108,12 +108,6 @@ builder.Services.AddAuthorization(options =>
 // MediatR + FluentValidation + Pipeline
 FormfleksBaseApp.Application.DependencyInjection.AddApplicationServices(builder.Services);
 
-// Ek: Infrastructure projesinde bulunan CQRS Handler'larını (GetRequestDetailedQueryHandler vb.) da kaydet.
-builder.Services.AddMediatR(cfg =>
-{
-    cfg.RegisterServicesFromAssembly(typeof(FormfleksBaseApp.DynamicForms.Infrastructure.Queries.GetRequestDetailedQueryHandler).Assembly);
-});
-
 builder.Services.AddValidatorsFromAssembly(typeof(FormfleksBaseApp.Application.AssemblyMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
