@@ -302,12 +302,21 @@
         {
             if (optionsJson.TrimStart().StartsWith("["))
             {
-                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, string>>>(optionsJson);
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(optionsJson, options);
+                
                 if (parsed != null)
                 {
                     return parsed.Select(x => 
-                        x.TryGetValue("Text", out var text) ? text : 
-                        x.TryGetValue("Value", out var val) ? val : "").Where(x => !string.IsNullOrEmpty(x));
+                    {
+                        var textKey = x.Keys.FirstOrDefault(k => string.Equals(k, "text", StringComparison.OrdinalIgnoreCase));
+                        var valKey = x.Keys.FirstOrDefault(k => string.Equals(k, "value", StringComparison.OrdinalIgnoreCase));
+                        
+                        if (textKey != null && x[textKey] != null) return x[textKey].ToString() ?? "";
+                        if (valKey != null && x[valKey] != null) return x[valKey].ToString() ?? "";
+                        
+                        return "";
+                    }).Where(x => !string.IsNullOrEmpty(x));
                 }
             }
         }
