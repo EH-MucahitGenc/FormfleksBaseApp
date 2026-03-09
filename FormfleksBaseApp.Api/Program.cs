@@ -124,6 +124,9 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddDbContext<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext>(sp =>
+    sp.GetRequiredService<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>());
 
 // DynamicForms Services (tek s�n�f, 4 interface)
 builder.Services.AddScoped<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>();

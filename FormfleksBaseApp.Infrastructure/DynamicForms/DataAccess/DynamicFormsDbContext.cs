@@ -1,9 +1,10 @@
+using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.DynamicForms.DataAccess;
 
-public sealed class DynamicFormsDbContext : DbContext
+public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 {
     public DynamicFormsDbContext(DbContextOptions<DynamicFormsDbContext> options) : base(options)
     {

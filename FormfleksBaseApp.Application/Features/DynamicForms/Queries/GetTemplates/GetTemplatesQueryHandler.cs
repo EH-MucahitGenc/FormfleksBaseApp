@@ -1,21 +1,32 @@
-﻿using FormfleksBaseApp.DynamicForms.Business.Contracts;
-using FormfleksBaseApp.DynamicForms.Business.Services;
+using FormfleksBaseApp.Application.Common.Interfaces;
+using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
 
 public sealed class GetTemplatesQueryHandler : IRequestHandler<GetTemplatesQuery, IReadOnlyList<FormTemplateSummaryDto>>
 {
-    private readonly IFormTemplateAdminService _service;
+    private readonly IDynamicFormsDbContext _db;
 
-    public GetTemplatesQueryHandler(IFormTemplateAdminService service)
+    public GetTemplatesQueryHandler(IDynamicFormsDbContext db)
     {
-        _service = service;
+        _db = db;
     }
 
     public async Task<IReadOnlyList<FormTemplateSummaryDto>> Handle(GetTemplatesQuery request, CancellationToken ct)
     {
-        var templates = await _service.GetTemplatesAsync(ct);
-        return templates;
+        return await _db.FormTypes
+            .AsNoTracking()
+            .OrderBy(t => t.Name)
+            .Select(t => new FormTemplateSummaryDto
+            {
+                FormTypeId = t.Id,
+                Code = t.Code,
+                Name = t.Name,
+                Active = t.Active,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync(ct);
     }
 }
