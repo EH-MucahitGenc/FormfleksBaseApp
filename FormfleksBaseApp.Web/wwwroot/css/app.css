@@ -5,11 +5,11 @@
 
 /* ── 1. DESIGN TOKENS (CSS VARIABLES) ────────────────────── */
 :root {
-  /* Brand Colors (Bakır / Turuncu Tonları) */
-  --brand-copper: #F08A4B;
-  --brand-copper-dark: #C96A35;
-  --brand-copper-light: #FADBC7;
-  --brand-copper-glow: rgba(240, 138, 75, 0.15);
+  /* Brand Colors (Koyu Grafit / Logo Tonları) */
+  --brand-copper: #414042;
+  --brand-copper-dark: #2A292A;
+  --brand-copper-light: #6B6A6C;
+  --brand-copper-glow: rgba(65, 64, 66, 0.15);
 
   /* Backgrounds & Surfaces */
   --bg-light-gray: #F8F9FA;

@@ -1,4 +1,4 @@
-﻿@page "/my-forms"
+@page "/my-forms"
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 
@@ -49,7 +49,7 @@
                         <span class="text-muted">—</span>
                     }
                 </td>
-                <td class="text-muted small">@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                <td class="text-muted small">@item.CreatedAt.AddHours(3).ToString("dd.MM.yyyy HH:mm")</td>
             </RowTemplate>
         </DataTable>
     </div>

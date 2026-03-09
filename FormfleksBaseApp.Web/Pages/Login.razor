@@ -6,41 +6,45 @@
 @inject FormfleksBaseApp.Web.Auth.AppAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
-<div class="login-card">
-    <h2>Hoş geldiniz</h2>
-    <p class="login-subtitle">Devam etmek için Active Directory hesabınızla giriş yapın.</p>
-
-    @if (!string.IsNullOrEmpty(_error))
-    {
-        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-            <span>@_error</span>
+<div class="login-card premium-card">
+    <div class="premium-card-body p-4 p-md-5">
+        <div class="text-center mb-4">
+            <img src="/images/logo.png" alt="Logo" style="max-height: 48px;" class="mb-3" />
+            <h2 class="h4 fw-bold text-main">Kurumsal Portal</h2>
+            <p class="text-muted">Devam etmek için Active Directory hesabınızla giriş yapın.</p>
         </div>
-    }
 
-    <EditForm Model="_model" OnValidSubmit="HandleLogin">
-        <DataAnnotationsValidator />
-        <PremiumInput Label="Kullanıcı Adı"
-                      @bind-Value="_model.Username"
-                      Placeholder="ornek.kullanici"
-                      IconClass="bi bi-person"
-                      FormGroupClass="mb-3" />
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span style="font-size: 0.9rem;">@_error</span>
+            </div>
+        }
 
-        <PremiumInput Label="Şifre"
-                      @bind-Value="_model.Password"
-                      Type="password"
-                      Placeholder="••••••••"
-                      IconClass="bi bi-lock"
-                      FormGroupClass="mb-4" />
+        <EditForm Model="_model" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            
+            <FfInput Label="Kullanıcı Adı"
+                     @bind-Value="_model.Username"
+                     Placeholder="ornek.kullanici"
+                     Class="mb-3" />
 
-        <button class="btn-brand w-100" type="submit" disabled="@_loading">
-            @if (_loading)
-            {
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-            }
-            Giriş Yap
-        </button>
-    </EditForm>
+            <FfInput Label="Şifre"
+                     @bind-Value="_model.Password"
+                     Type="password"
+                     Placeholder="••••••••"
+                     Class="mb-4" />
+
+            <FfButton Type="submit"
+                      Variant="primary"
+                      Class="w-100 py-2"
+                      IsLoading="_loading"
+                      LoadingText="Giriş yapılıyor...">
+                Giriş Yap
+            </FfButton>
+        </EditForm>
+    </div>
 </div>
 
 @code {
@@ -55,7 +59,7 @@
 
         try
         {
-            var request = new FormfleksBaseApp.Web.Models.LoginRequestDto
+            var request = new FormfleksBaseApp.Contracts.Auth.LoginRequest
             {
                 Username = _model.Username,
                 Password = _model.Password
@@ -64,16 +68,16 @@
             var result = await ApiClient.AdLoginAsync(request, CancellationToken.None);
             if (result.Success && result.Data is not null)
             {
-                var (userId, roles, _) = JwtTokenParser.Parse(result.Data.AccessToken);
+                var (userId, roles, _) = JwtTokenParser.Parse(result.Data.Token);
                 if (roles.Count == 0)
                 {
-                    _error = "Bu hesap icin herhangi bir rol tanimi bulunamadi. Lutfen yonetici ile iletisime gecin.";
+                    _error = "Bu hesap için herhangi bir rol tanımı bulunamadı. Lütfen yönetici ile iletişime geçin.";
                     await AuthStateProvider.MarkLoggedOutAsync();
                     return;
                 }
 
                 await AuthStateProvider.MarkAuthenticatedAsync(
-                    result.Data.AccessToken,
+                    result.Data.Token,
                     _model.Username,
                     userId,
                     roles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());

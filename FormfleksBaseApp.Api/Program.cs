@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using FormfleksBaseApp.Api.ExceptionHandling;
 using FormfleksBaseApp.Api.Health;
 using FormfleksBaseApp.Api.Middlewares;
@@ -23,7 +23,18 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+builder.Host.UseSerilog((context, loggerConfig) =>
+{
+    loggerConfig
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+});
 
 // Controllers + ValidationProblemDetails (ModelState)
 builder.Services.AddControllers()
@@ -95,20 +106,27 @@ builder.Services.AddAuthorization(options =>
 });
 
 // MediatR + FluentValidation + Pipeline
+FormfleksBaseApp.Application.DependencyInjection.AddApplicationServices(builder.Services);
+
+// Ek: Infrastructure projesinde bulunan CQRS Handler'larını (GetRequestDetailedQueryHandler vb.) da kaydet.
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(FormfleksBaseApp.Application.AssemblyMarker).Assembly));
+{
+    cfg.RegisterServicesFromAssembly(typeof(FormfleksBaseApp.DynamicForms.Infrastructure.Queries.GetRequestDetailedQueryHandler).Assembly);
+});
 
 builder.Services.AddValidatorsFromAssembly(typeof(FormfleksBaseApp.Application.AssemblyMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // EF Core (Postgres)
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IVisitorRepository, FormfleksBaseApp.Infrastructure.Persistence.Repositories.VisitorRepository>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IVisitorRepository, FormfleksBaseApp.Infrastructure.Persistence.Repositories.VisitorRepository>();
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddDbContext<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-// DynamicForms Services (tek sınıf, 4 interface)
+// DynamicForms Services (tek s�n�f, 4 interface)
 builder.Services.AddScoped<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>();
 builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IFormDefinitionService>(sp =>
     sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
@@ -118,6 +136,7 @@ builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IForm
     sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
 builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IApprovalService>(sp =>
     sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
+builder.Services.AddScoped<FormfleksBaseApp.Application.DynamicForms.Business.Services.IAuditLogService, FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.AuditLogService>();
 
 // Repositories / Services
 builder.Services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
@@ -187,8 +206,8 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Pipeline s�ras�
-app.UseExceptionHandler();
+// Pipeline s?ras?
+app.UseMiddleware<FormfleksBaseApp.Api.Middleware.GlobalExceptionMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -217,3 +236,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapControllers();
 
 app.Run();
+
+
+

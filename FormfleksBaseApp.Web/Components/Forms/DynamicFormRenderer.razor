@@ -81,6 +81,13 @@
                                               Placeholder="@field.Placeholder"
                                               HelpText="@field.HelpText" />
                                 break;
+                            case 10: // File Upload
+                                <PremiumInput Label="@GetLabel(field)"
+                                              @bind-Value="GetBindValue(field.Key).Value"
+                                              Type="file"
+                                              IconClass="bi bi-paperclip"
+                                              HelpText="@field.HelpText" />
+                                break;
                             default: // (1) Text
                                 <PremiumInput Label="@GetLabel(field)"
                                               @bind-Value="GetBindValue(field.Key).Value"

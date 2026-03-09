@@ -1,4 +1,4 @@
-﻿using System.DirectoryServices.Protocols;
+using System.DirectoryServices.Protocols;
 using System.Net;
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common;
@@ -70,7 +70,7 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
         }
 
         // Search user
-        var filter = $"(|(userPrincipalName={Escape(userInput)})(sAMAccountName={Escape(userInput)})(mail={Escape(userInput)}))";
+        var filter = $"(&(objectClass=user)(|(userPrincipalName={Escape(userInput)})(sAMAccountName={Escape(userInput)})(mail={Escape(userInput)})))";
 
         var request = new SearchRequest(
             _opt.BaseDn,
@@ -86,7 +86,7 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
         }
         catch (LdapException ex)
         {
-            throw MapLdapException(ex, "LDAP user search failed.");
+            throw MapLdapException(ex, $"LDAP user search failed. Filter: {filter}, BaseDn: {_opt.BaseDn}.");
         }
 
         if (response.Entries.Count == 0)

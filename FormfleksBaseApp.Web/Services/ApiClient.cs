@@ -33,7 +33,7 @@ public sealed class ApiClient
     }
     public string ApiBaseUrl => _configuration["Api:BaseUrl"] ?? "(undefined)";
 
-    public async Task<ApiCallResult<AuthResponseDto>> AdLoginAsync(LoginRequestDto request, CancellationToken ct)
+    public async Task<ApiCallResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>> AdLoginAsync(FormfleksBaseApp.Contracts.Auth.LoginRequest request, CancellationToken ct)
     {
         try
         {
@@ -41,7 +41,7 @@ public sealed class ApiClient
             if (!resp.IsSuccessStatusCode)
             {
                 var body = await resp.Content.ReadAsStringAsync(ct);
-                return new ApiCallResult<AuthResponseDto>
+                return new ApiCallResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>
                 {
                     Success = false,
                     StatusCode = (int)resp.StatusCode,
@@ -49,21 +49,21 @@ public sealed class ApiClient
                 };
             }
 
-            var data = await resp.Content.ReadFromJsonAsync<AuthResponseDto>(JsonOptions, ct);
+            var data = await resp.Content.ReadFromJsonAsync<FormfleksBaseApp.Contracts.Auth.LoginResponse>(JsonOptions, ct);
             if (data is null)
             {
-                return new ApiCallResult<AuthResponseDto>
+                return new ApiCallResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>
                 {
                     Success = false,
                     Error = "AD login response is empty."
                 };
             }
 
-            return new ApiCallResult<AuthResponseDto> { Success = true, Data = data, StatusCode = (int)resp.StatusCode };
+            return new ApiCallResult<FormfleksBaseApp.Contracts.Auth.LoginResponse> { Success = true, Data = data, StatusCode = (int)resp.StatusCode };
         }
         catch (Exception ex)
         {
-            return new ApiCallResult<AuthResponseDto>
+            return new ApiCallResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>
             {
                 Success = false,
                 Error = $"API call error ({ApiBaseUrl}): {ex.Message}"
@@ -225,6 +225,16 @@ public sealed class ApiClient
         return await resp.Content.ReadFromJsonAsync<FormRequestResultDto>(JsonOptions, ct);
     }
 
+    public async Task<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>> GetAuditLogsAsync(CancellationToken ct)
+    {
+        var resp = await Client.GetAsync("/api/dynamic-forms/admin/audit-logs", ct);
+        if (!resp.IsSuccessStatusCode)
+            return [];
+
+        var data = await resp.Content.ReadFromJsonAsync<List<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>>(JsonOptions, ct);
+        return data ?? [];
+    }
+
     public async Task<IReadOnlyList<FormTemplateSummaryDto>> GetTemplatesAsync(CancellationToken ct)
     {
         var resp = await Client.GetAsync("/api/dynamic-forms/admin/templates", ct);
@@ -290,7 +300,10 @@ public sealed class ApiClient
     {
         var resp = await Client.GetAsync("/api/admin/users", ct);
         if (!resp.IsSuccessStatusCode)
-            return [];
+        {
+            var err = await resp.Content.ReadAsStringAsync(ct);
+            throw new Exception($"HTTP {(int)resp.StatusCode}: {err}");
+        }
 
         var data = await resp.Content.ReadFromJsonAsync<List<AdminUserDto>>(JsonOptions, ct);
         return data ?? [];
@@ -409,6 +422,41 @@ public sealed class ApiClient
     private sealed class WorkflowSaveResponseDto
     {
         public int StepCount { get; set; }
+    }
+
+    public async Task<IReadOnlyList<FormfleksBaseApp.Contracts.Visitors.VisitorDto>> GetVisitorsAsync(CancellationToken ct)
+    {
+        var resp = await Client.GetAsync("/api/visitors", ct);
+        if (!resp.IsSuccessStatusCode)
+            return [];
+
+        var wrapper = await resp.Content.ReadFromJsonAsync<FormfleksBaseApp.Contracts.Common.ApiResponse<List<FormfleksBaseApp.Contracts.Visitors.VisitorDto>>>(JsonOptions, ct);
+        return wrapper?.Data ?? [];
+    }
+
+    public async Task<ApiCallResult<Guid>> CreateVisitorAsync(FormfleksBaseApp.Contracts.Visitors.CreateVisitorRequestDto request, CancellationToken ct)
+    {
+        try
+        {
+            var resp = await Client.PostAsJsonAsync("/api/visitors", request, JsonOptions, ct);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync(ct);
+                return new ApiCallResult<Guid>
+                {
+                    Success = false,
+                    StatusCode = (int)resp.StatusCode,
+                    Error = $"Visitor creation failed. HTTP {(int)resp.StatusCode}. {body}"
+                };
+            }
+
+            var wrapper = await resp.Content.ReadFromJsonAsync<FormfleksBaseApp.Contracts.Common.ApiResponse<Guid>>(JsonOptions, ct);
+            return new ApiCallResult<Guid> { Success = wrapper?.Succeeded ?? false, Data = wrapper?.Data ?? Guid.Empty, Error = wrapper?.Error?.Message ?? wrapper?.Messages?.FirstOrDefault() };
+        }
+        catch (Exception ex)
+        {
+            return new ApiCallResult<Guid> { Success = false, Error = ex.Message };
+        }
     }
 }
 

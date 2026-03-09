@@ -1,4 +1,4 @@
-﻿@page "/approvals"
+@page "/approvals"
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
@@ -34,19 +34,19 @@
                         <button class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" 
                                 style="border-radius: var(--radius-sm);"
                                 title="Onayla"
-                                @onclick="() => ExecuteAction(item, 1)">
+                                @onclick="() => OpenActionModal(item, 1)">
                             <i class="bi bi-check-lg"></i> Onayla
                         </button>
                         <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
                                 style="border-radius: var(--radius-sm);"
                                 title="Reddet"
-                                @onclick="() => ExecuteAction(item, 2)">
+                                @onclick="() => OpenActionModal(item, 2)">
                             <i class="bi bi-x-lg"></i> Reddet
                         </button>
                         <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                                 style="border-radius: var(--radius-sm);"
                                 title="İade Et"
-                                @onclick="() => ExecuteAction(item, 3)">
+                                @onclick="() => OpenActionModal(item, 3)">
                             <i class="bi bi-arrow-return-left"></i> İade
                         </button>
                     </div>
@@ -55,6 +55,41 @@
         </DataTable>
     </div>
 </div>
+
+@if (_isModalOpen && _selectedItem is not null)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: var(--radius-modern);">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold">
+                        @if (_selectedActionType == 1) { <i class="bi bi-check-circle-fill text-success me-2"></i> @("Onayla") }
+                        else if (_selectedActionType == 2) { <i class="bi bi-x-circle-fill text-danger me-2"></i> @("Reddet") }
+                        else { <i class="bi bi-arrow-return-left text-warning me-2"></i> @("İade Et") }
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseActionModal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <p class="mb-2 text-muted small"><strong>@_selectedItem.RequestNo</strong> numaralı talebe işlem yapıyorsunuz.</p>
+                    <label class="form-label fw-semibold">
+                        Yorum / Açıklama @( _selectedActionType == 1 ? "(Opsiyonel)" : "(Zorunlu)" )
+                    </label>
+                    <textarea class="form-control" rows="3" @bind="_actionComment" placeholder="İşlem nedenini buraya yazabilirsiniz..."></textarea>
+                </div>
+                <div class="modal-footer border-top bg-white">
+                    <button type="button" class="btn btn-outline-secondary px-4" @onclick="CloseActionModal" disabled="@_busy">Vazgeç</button>
+                    <button type="button" class="btn @GetActionBtnClass()" px-4 @onclick="ConfirmAction" disabled="@(_busy || !IsCommentValid())">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(_message))
 {
@@ -65,11 +100,23 @@
 
 @code {
     private bool _loading = true;
+    private bool _busy = false;
     private string? _message;
     private IReadOnlyList<FormfleksBaseApp.Web.Models.PendingApprovalListItemDto> _items = [];
 
+    private bool _isModalOpen;
+    private FormfleksBaseApp.Web.Models.PendingApprovalListItemDto? _selectedItem;
+    private int _selectedActionType;
+    private string _actionComment = "";
+
     protected override async Task OnInitializedAsync()
     {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
         try
         {
             _items = await ApiClient.GetPendingApprovalsAsync(CancellationToken.None);
@@ -78,35 +125,80 @@
         finally { _loading = false; }
     }
 
-    private async Task ExecuteAction(FormfleksBaseApp.Web.Models.PendingApprovalListItemDto item, int actionType)
+    private void OpenActionModal(FormfleksBaseApp.Web.Models.PendingApprovalListItemDto item, int actionType)
     {
-        if (!TokenStore.UserId.HasValue) return;
+        _selectedItem = item;
+        _selectedActionType = actionType;
+        _actionComment = "";
+        _message = null;
+        _isModalOpen = true;
+    }
+
+    private void CloseActionModal()
+    {
+        _isModalOpen = false;
+        _selectedItem = null;
+        _actionComment = "";
+    }
+
+    private bool IsCommentValid()
+    {
+        if (_selectedActionType == 2 || _selectedActionType == 3) // Red veya İade ise yorum zorunlu
+        {
+            return !string.IsNullOrWhiteSpace(_actionComment);
+        }
+        return true;
+    }
+
+    private string GetActionBtnClass()
+    {
+        return _selectedActionType switch
+        {
+            1 => "btn-success",
+            2 => "btn-danger",
+            3 => "btn-warning",
+            _ => "btn-primary"
+        };
+    }
+
+    private async Task ConfirmAction()
+    {
+        if (!TokenStore.UserId.HasValue || _selectedItem is null) return;
+        if (!IsCommentValid()) return;
+
+        _busy = true;
 
         try
         {
             var dto = new FormfleksBaseApp.Web.Models.ApprovalActionRequestDto
             {
-                RequestId = item.RequestId,
-                ApprovalId = item.ApprovalId,
+                RequestId = _selectedItem.RequestId,
+                ApprovalId = _selectedItem.ApprovalId,
                 ActorUserId = TokenStore.UserId.Value,
-                ApprovalConcurrencyToken = item.ApprovalConcurrencyToken,
-                ActionType = actionType
+                ApprovalConcurrencyToken = _selectedItem.ApprovalConcurrencyToken,
+                ActionType = _selectedActionType,
+                Comment = _actionComment
             };
 
             await ApiClient.ExecuteApprovalActionAsync(dto, CancellationToken.None);
-            _message = actionType switch
+            _message = _selectedActionType switch
             {
-                1 => "Talep onaylandı.",
+                1 => "Talep başarıyla onaylandı.",
                 2 => "Talep reddedildi.",
-                3 => "Talep iade edildi.",
+                3 => "Talep revizyona iade edildi.",
                 _ => "İşlem tamamlandı."
             };
 
-            _items = await ApiClient.GetPendingApprovalsAsync(CancellationToken.None);
+            CloseActionModal();
+            await LoadDataAsync();
         }
         catch (Exception ex)
         {
             _message = $"İşlem başarısız: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
         }
     }
 }

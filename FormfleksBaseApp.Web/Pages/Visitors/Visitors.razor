@@ -1,0 +1,157 @@
+@page "/visitors"
+@using FormfleksBaseApp.Contracts.Visitors
+@attribute [Authorize(Policy = "HasAppRole")]
+@inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+        <h1>Ziyaretçiler</h1>
+        <p class="page-subtitle">Firmamıza gelen ziyaretçilerin kaydı ve takibi.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="OpenAddModal">
+            <i class="bi bi-plus-lg"></i> Yeni Ziyaretçi
+        </button>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+    <div class="card-header bg-white border-bottom py-2">
+        <h6 class="mb-0 fw-bold">
+            <i class="bi bi-person-lines-fill me-2 text-brand"></i>Ziyaretçi Listesi
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <DataTable Items="_items" IsLoading="_loading" EmptyStateTitle="Kayıt bulunamadı" EmptyStateDescription="Sistemde henüz bir ziyaretçi kaydı yok.">
+            <TableHeader>
+                <th>Ad Soyad</th>
+                <th>Firma</th>
+                <th>Ziyaret Nedeni</th>
+                <th class="text-end pe-4">Ziyaret Tarihi</th>
+            </TableHeader>
+            <RowTemplate Context="item">
+                <td class="fw-semibold">@item.FirstName @item.LastName</td>
+                <td>@item.CompanyName</td>
+                <td class="text-muted">@item.Purpose</td>
+                <td class="text-end pe-3">@item.VisitDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+            </RowTemplate>
+        </DataTable>
+    </div>
+</div>
+
+@if (_isModalOpen)
+{
+    <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: var(--radius-modern);">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2 text-brand"></i>Yeni Ziyaretçi Ekle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="_model" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body bg-light">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Ad</label>
+                                <InputText @bind-Value="_model.FirstName" class="form-control" />
+                                <ValidationMessage For="@(() => _model.FirstName)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Soyad</label>
+                                <InputText @bind-Value="_model.LastName" class="form-control" />
+                                <ValidationMessage For="@(() => _model.LastName)" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Firma Adı</label>
+                                <InputText @bind-Value="_model.CompanyName" class="form-control" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Ziyaret Nedeni</label>
+                                <InputText @bind-Value="_model.Purpose" class="form-control" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Ziyaret Tarihi/Saati</label>
+                                <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_model.VisitDate" class="form-control" />
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0 py-2">
+                                <i class="bi bi-exclamation-triangle-fill justify-content-center me-2"></i> @_errorMessage
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer border-top bg-white">
+                        <button type="button" class="btn btn-outline-secondary px-4" @onclick="CloseModal" disabled="@_saving">İptal</button>
+                        <button type="submit" class="btn btn-primary px-4" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Kaydet
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _saving = false;
+    private string? _errorMessage;
+    private IReadOnlyList<VisitorDto> _items = [];
+
+    private bool _isModalOpen;
+    private CreateVisitorRequestDto _model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _items = await ApiClient.GetVisitorsAsync(CancellationToken.None);
+        }
+        catch { /* silent */ }
+        finally { _loading = false; }
+    }
+
+    private void OpenAddModal()
+    {
+        _model = new CreateVisitorRequestDto { VisitDate = DateTime.Now };
+        _errorMessage = null;
+        _isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        _isModalOpen = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _saving = true;
+        _errorMessage = null;
+
+        var result = await ApiClient.CreateVisitorAsync(_model, CancellationToken.None);
+        if (result.Success)
+        {
+            _isModalOpen = false;
+            await LoadDataAsync();
+        }
+        else
+        {
+            _errorMessage = result.Error ?? "Bilinmeyen bir hata oluştu.";
+        }
+
+        _saving = false;
+    }
+}

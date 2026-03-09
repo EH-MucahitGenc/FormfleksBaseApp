@@ -1,4 +1,5 @@
-﻿using FormfleksBaseApp.Domain.Entities;
+using FormfleksBaseApp.Application.Common.Interfaces;
+using FormfleksBaseApp.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,6 +16,8 @@ public class AppDbContext : DbContext
     public DbSet<AppPermission> Permissions => Set<AppPermission>();
     public DbSet<AppUserRole> UserRoles => Set<AppUserRole>();
     public DbSet<AppRolePermission> RolePermissions => Set<AppRolePermission>();
+
+    public DbSet<VisitorEntity> Visitors => Set<VisitorEntity>();
 
     public override int SaveChanges()
     {
@@ -127,10 +130,14 @@ public class AppDbContext : DbContext
         {
             e.ToTable("roles");
             e.HasKey(x => x.Id);
-            ConfigureBaseEntity(e);
+            
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid").ValueGeneratedNever();
+            e.Property(x => x.Active).HasColumnName("active").HasColumnType("boolean").HasDefaultValue(true);
+            e.Ignore(x => x.CreatedAt);
+            e.Ignore(x => x.UpdatedAt);
+            e.Ignore(x => x.Description);
 
             e.Property(x => x.Name).HasColumnName("name").IsRequired().HasColumnType("character varying(100)").HasMaxLength(100);
-            e.Property(x => x.Description).HasColumnName("description").HasColumnType("character varying(500)").HasMaxLength(500);
 
             e.HasIndex(x => x.Name).IsUnique();
         });
@@ -169,6 +176,20 @@ public class AppDbContext : DbContext
 
             e.HasOne(x => x.Role).WithMany(r => r.RolePermissions).HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<VisitorEntity>(e =>
+        {
+            e.ToTable("visitors");
+            e.HasKey(x => x.Id);
+            ConfigureBaseEntity(e);
+
+            e.Property(x => x.FirstName).HasColumnName("first_name").HasMaxLength(100).IsRequired();
+            e.Property(x => x.LastName).HasColumnName("last_name").HasMaxLength(100).IsRequired();
+            e.Property(x => x.CompanyName).HasColumnName("company_name").HasMaxLength(200);
+            e.Property(x => x.Purpose).HasColumnName("purpose").HasMaxLength(500);
+            e.Property(x => x.VisitDate).HasColumnName("visit_date").HasColumnType("timestamp with time zone").IsRequired();
+            
         });
     }
 

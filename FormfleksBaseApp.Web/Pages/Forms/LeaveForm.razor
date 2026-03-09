@@ -83,9 +83,7 @@
                                             }
                                             else if (field.FieldType == 4) // Dropdown
                                             {
-                                                var opts = string.IsNullOrWhiteSpace(field.OptionsJson) 
-                                                    ? [] 
-                                                    : field.OptionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim());
+                                                var opts = GetDropdownOptions(field.OptionsJson);
                                                     
                                                 <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
                                                     Label="@labelWithStar" HelperText="@field.Placeholder"
@@ -230,14 +228,30 @@
             _formData.Clear();
             _model.Fields.Clear();
 
-            // Sadece örnek kullanım. Gerçekte DB'den FormDefinition + RequestData yüklenir.
             var codeToLoad = FormCode ?? "LEAVE_REQ";
             if (!RequestId.HasValue && string.IsNullOrWhiteSpace(FormCode) && NavigationManager.Uri.EndsWith("/forms/leave"))
             {
                 codeToLoad = "LEAVE_REQ";
             }
 
-            // ... (Devamında apiden Definition yükleme kodu olacak, şimdilik mock)
+            if (RequestId.HasValue)
+            {
+                var reqRes = await ApiClient.GetRequestDetailedAsync(RequestId.Value, CancellationToken.None);
+                if (reqRes != null)
+                {
+                    codeToLoad = reqRes.FormTypeCode;
+                    foreach (var v in reqRes.Values)
+                    {
+                        _formData[v.FieldKey] = v.ValueText ?? string.Empty;
+                    }
+                }
+                else
+                {
+                    _error = "Form kaydı bulunamadı.";
+                    return;
+                }
+            }
+
             await LoadDefinition(codeToLoad);
             
             _formTitle = _definition?.Name ?? "Form Kaydı";
@@ -278,6 +292,31 @@
         // EditContext validasyonu için dummy obje tetiklemesi yapılabilir (gerekirse)
         var fieldId = new FieldIdentifier(_model, key);
         _editContext.NotifyFieldChanged(fieldId);
+    }
+
+    private IEnumerable<string> GetDropdownOptions(string? optionsJson)
+    {
+        if (string.IsNullOrWhiteSpace(optionsJson)) return [];
+        
+        try
+        {
+            if (optionsJson.TrimStart().StartsWith("["))
+            {
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, string>>>(optionsJson);
+                if (parsed != null)
+                {
+                    return parsed.Select(x => 
+                        x.TryGetValue("Text", out var text) ? text : 
+                        x.TryGetValue("Value", out var val) ? val : "").Where(x => !string.IsNullOrEmpty(x));
+                }
+            }
+        }
+        catch
+        {
+            // Ignore parse errors and fallback
+        }
+        
+        return optionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim());
     }
 
     private async Task HandleValidSubmit()

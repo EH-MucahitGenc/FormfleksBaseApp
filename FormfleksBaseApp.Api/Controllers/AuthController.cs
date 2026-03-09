@@ -30,8 +30,18 @@ public class AuthController : ControllerBase
         => Ok(await _mediator.Send(new LoginCommand(request), ct));
 
     [HttpPost("ad-login")]
-    public async Task<ActionResult<AuthResponse>> AdLogin(AdLoginRequest request, CancellationToken ct)
-        => Ok(await _mediator.Send(new AdLoginCommand(request), ct));
+    public async Task<ActionResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>> AdLogin(FormfleksBaseApp.Contracts.Auth.LoginRequest request, CancellationToken ct)
+    {
+        var cmdRequest = new FormfleksBaseApp.Application.Auth.Dtos.AdLoginRequest { Username = request.Username, Password = request.Password };
+        var authResponse = await _mediator.Send(new AdLoginCommand(cmdRequest), ct);
+        
+        return Ok(new FormfleksBaseApp.Contracts.Auth.LoginResponse
+        {
+            Token = authResponse.AccessToken,
+            RefreshToken = authResponse.RefreshToken,
+            Username = request.Username
+        });
+    }
 
     [HttpPost("refresh")]
     public async Task<ActionResult<AuthResponse>> Refresh(RefreshRequest request, CancellationToken ct)

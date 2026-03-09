@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FormfleksBaseApp.Application\FormfleksBaseApp.Application.csproj" />
+    <ProjectReference Include="..\FormfleksBaseApp.Contracts\FormfleksBaseApp.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,7 @@ using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetPendingAppro
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplateWorkflow;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetAuditLogs;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
 using MediatR;
@@ -110,6 +111,11 @@ public sealed class DynamicFormsController : ControllerBase
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<IReadOnlyList<RoleLookupDto>>> GetRoles(CancellationToken ct)
         => Ok(await _mediator.Send(new GetRolesQuery(), ct));
+
+    [HttpGet("admin/audit-logs")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>>> GetAuditLogs(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAuditLogsQuery(), ct));
 
     [HttpPost("admin/templates")]
     [Authorize(Policy = "AdminOrHr")]

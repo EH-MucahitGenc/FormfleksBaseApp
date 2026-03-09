@@ -1,4 +1,4 @@
-﻿@page "/admin/users"
+@page "/admin/users"
 @using Microsoft.AspNetCore.Authorization
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @attribute [Authorize(Policy = "AdminOnly")]
@@ -193,7 +193,14 @@
 
     private async Task LoadUsers()
     {
-        _users = (await ApiClient.GetUsersAsync(CancellationToken.None)).ToList();
+        try
+        {
+            _users = (await ApiClient.GetUsersAsync(CancellationToken.None)).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMsg = "Kullanıcılar yüklenirken hata oluştu: " + ex.Message;
+        }
     }
 
     // ── DÜZENLEME ──

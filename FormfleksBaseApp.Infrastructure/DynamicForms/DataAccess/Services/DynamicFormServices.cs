@@ -23,7 +23,7 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
     {
         var formType = await _db.FormTypes
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Code.Trim().ToLower() == code.Trim().ToLower() && t.Active, ct);
+            .FirstOrDefaultAsync(t => EF.Functions.ILike(t.Code.Trim(), code.Trim()) && t.Active, ct);
 
         if (formType is null) return null;
 
@@ -325,13 +325,22 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
 
         await _db.SaveChangesAsync(ct);
 
+        // Alan kimlikleri için form alanlarını bulalım
+        var formFields = await _db.FormFields
+            .AsNoTracking()
+            .Where(f => f.FormTypeId == req.FormTypeId)
+            .ToListAsync(ct);
+
         // Yeni değerleri ekle
         foreach (var v in dto.Values)
         {
+            var fieldDef = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey);
+            var actualFieldId = fieldDef?.Id ?? Guid.NewGuid();
+
             _db.FormRequestValues.Add(new FormRequestValueEntity
             {
                 RequestId = req.Id,
-                FieldId = Guid.Empty,
+                FieldId = actualFieldId,
                 FieldKey = v.FieldKey,
                 ValueText = v.ValueText,
                 ValueNumber = v.ValueNumber,
@@ -403,6 +412,16 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
                 });
             }
         }
+
+        _db.AuditLogs.Add(new AuditLogEntity
+        {
+            EntityType = "FormRequest",
+            EntityId = req.Id,
+            ActionType = "FormSubmitted",
+            ActorUserId = req.RequestorUserId,
+            DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {req.CurrentStepNo}}}",
+            CreatedAt = DateTime.UtcNow
+        });
 
         await _db.SaveChangesAsync(ct);
 
@@ -581,7 +600,7 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
             {
                 req.CurrentStepNo = nextStep.StepNo;
 
-                // Yeni adım için approval kaydı
+                // Yeni adim icin approval kaydi
                 _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
                 {
                     RequestId = req.Id,
@@ -593,6 +612,17 @@ public class DynamicFormServices : IFormDefinitionService, IFormTemplateAdminSer
                 });
             }
         }
+
+        _db.AuditLogs.Add(new AuditLogEntity
+        {
+            EntityType = "FormRequestApproval",
+            EntityId = req.Id,
+            ActionType = reqDto.ActionType == ApprovalActionType.Approve ? "Approved" :
+                         reqDto.ActionType == ApprovalActionType.Reject ? "Rejected" : "ReturnedForRevision",
+            ActorUserId = reqDto.ActorUserId,
+            DetailJson = $"{{\"Comment\": \"{reqDto.Comment}\", \"StepNo\": {req.CurrentStepNo}}}",
+            CreatedAt = DateTime.UtcNow
+        });
 
         await _db.SaveChangesAsync(ct);
 

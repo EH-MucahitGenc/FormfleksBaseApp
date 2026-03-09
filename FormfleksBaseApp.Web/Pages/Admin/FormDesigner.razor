@@ -68,89 +68,123 @@
             </div>
         </div>
 
-        @* Alan Listesi Card *@
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-                <h2 class="h6 mb-0 fw-bold">
-                    <i class="bi bi-list-columns-reverse me-2" style="color: var(--brand-copper);"></i>Form Alanları
-                </h2>
-                <button class="btn btn-sm fw-semibold" style="background: var(--brand-copper-light); color: var(--brand-copper-dark);" @onclick="AddField">
-                    <i class="bi bi-plus-lg me-1"></i>Yeni Alan
-                </button>
+        @* Alan Listesi Card - Bölümler Halinde *@
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h6 mb-0 fw-bold">
+                <i class="bi bi-list-nested me-2" style="color: var(--brand-copper);"></i>Form Bölümleri
+            </h2>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="AddSection">
+                <i class="bi bi-layer-forward me-1"></i>Yeni Bölüm Ekle
+            </button>
+        </div>
+
+        @if (_model.Sections.Count == 0)
+        {
+            <div class="card border-0 shadow-sm mb-3 text-center p-5 text-muted">
+                <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                Hiç bölüm yok. "Yeni Bölüm Ekle" butonuna tıklayarak başlayın.
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem;">
-                        <thead>
-                            <tr style="background: var(--bg-light-gray);">
-                                <th class="text-center" style="width:36px">#</th>
-                                <th style="width:110px">Anahtar</th>
-                                <th style="width:140px">Etiket</th>
-                                <th style="width:100px">Veri Tipi</th>
-                                <th class="text-center" style="width:40px">Zor.</th>
-                                <th>Placeholder / Seçenekler</th>
-                                <th class="text-center" style="width:100px">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (_model.Fields.Count == 0)
-                            {
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
-                                        <i class="bi bi-inbox fs-4 d-block mb-1"></i>
-                                        Hiç alan eklenmedi. Yukarıdaki <strong>+ Yeni Alan</strong> ile başlayın.
-                                    </td>
+        }
+
+        @for (var sIdx = 0; sIdx < _model.Sections.Count; sIdx++)
+        {
+            var sec = _model.Sections[sIdx];
+            var secIndex = sIdx;
+            
+            <div class="card border-0 shadow-sm mb-4" style="border-top: 3px solid var(--brand-copper) !important;">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <i class="bi bi-grip-vertical text-muted cursor-move d-none d-md-block" title="Sürükle"></i>
+                        <InputText class="form-control form-control-sm fw-bold border-0 bg-light" @bind-Value="sec.Title" placeholder="Bölüm Başlığı" style="max-width: 300px;" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm text-secondary" @onclick="() => MoveSectionUp(secIndex)" disabled="@(secIndex == 0)" title="Yukarı">
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-sm text-secondary" @onclick="() => MoveSectionDown(secIndex)" disabled="@(secIndex == _model.Sections.Count - 1)" title="Aşağı">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                        <button class="btn btn-sm text-danger" @onclick="() => RemoveSection(sec)" title="Bölümü Sil">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <button class="btn btn-sm fw-semibold ms-2" style="background: var(--brand-copper-light); color: var(--brand-copper-dark);" @onclick="() => AddField(sec)">
+                            <i class="bi bi-plus-lg me-1"></i>Yeni Alan
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead>
+                                <tr style="background: var(--bg-light-gray);">
+                                    <th class="text-center" style="width:36px">#</th>
+                                    <th style="width:110px">Anahtar</th>
+                                    <th style="width:140px">Etiket</th>
+                                    <th style="width:100px">Veri Tipi</th>
+                                    <th class="text-center" style="width:40px">Zor.</th>
+                                    <th>Placeholder / Seçenekler</th>
+                                    <th class="text-center" style="width:100px">İşlemler</th>
                                 </tr>
-                            }
-                            @for (var i = 0; i < _model.Fields.Count; i++)
-                            {
-                                var f = _model.Fields[i];
-                                var index = i;
-                                <tr>
-                                    <td class="text-center text-muted">@(index + 1)</td>
-                                    <td><InputText class="form-control form-control-sm form-input-borderless bg-light" @bind-Value="f.FieldKey" placeholder="field_key" /></td>
-                                    <td><InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.Label" placeholder="Görünen İsim" /></td>
-                                    <td>
-                                        <InputSelect class="form-select form-select-sm form-input-borderless" @bind-Value="f.FieldType">
-                                            @foreach (var kvp in FieldTypes)
+                            </thead>
+                            <tbody>
+                                @if (sec.Fields.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            Bu bölümde henüz alan yok.
+                                        </td>
+                                    </tr>
+                                }
+                                @for (var i = 0; i < sec.Fields.Count; i++)
+                                {
+                                    var f = sec.Fields[i];
+                                    var fIndex = i;
+                                    <tr>
+                                        <td class="text-center text-muted">@(fIndex + 1)</td>
+                                        <td><InputText class="form-control form-control-sm form-input-borderless bg-light" @bind-Value="f.FieldKey" placeholder="field_key" /></td>
+                                        <td><InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.Label" placeholder="Görünen İsim" /></td>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm form-input-borderless" @bind-Value="f.FieldType">
+                                                @foreach (var kvp in FieldTypes)
+                                                {
+                                                    <option value="@kvp.Key">@kvp.Value</option>
+                                                }
+                                            </InputSelect>
+                                        </td>
+                                        <td class="text-center">
+                                            <InputCheckbox class="form-check-input" @bind-Value="f.IsRequired" />
+                                        </td>
+                                        <td>
+                                            @if (f.FieldType == 4) // Dropdown ise seçenekler
                                             {
-                                                <option value="@kvp.Key">@kvp.Value</option>
+                                                <InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.OptionsJson" placeholder="A,B,C (virgülle ayırın)" />
                                             }
-                                        </InputSelect>
-                                    </td>
-                                    <td class="text-center">
-                                        <InputCheckbox class="form-check-input" @bind-Value="f.IsRequired" />
-                                    </td>
-                                    <td>
-                                        @if (f.FieldType == 4) // Dropdown ise seçenekler
-                                        {
-                                            <InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.OptionsJson" placeholder="A,B,C (virgülle ayırın)" />
-                                        }
-                                        else
-                                        {
-                                            <InputText class="form-control form-control-sm form-input-borderless text-muted" @bind-Value="f.Placeholder" placeholder="İpucu metni..." />
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm w-100">
-                                            <button class="btn btn-outline-secondary" @onclick="() => MoveFieldUp(index)" disabled="@(index == 0)" title="Yukarı">
-                                                <i class="bi bi-chevron-up"></i>
-                                            </button>
-                                            <button class="btn btn-outline-secondary" @onclick="() => MoveFieldDown(index)" disabled="@(index == _model.Fields.Count - 1)" title="Aşağı">
-                                                <i class="bi bi-chevron-down"></i>
-                                            </button>
-                                            <button class="btn btn-outline-danger" @onclick="() => RemoveField(f)" title="Sil">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                            else
+                                            {
+                                                <InputText class="form-control form-control-sm form-input-borderless text-muted" @bind-Value="f.Placeholder" placeholder="İpucu metni..." />
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm w-100">
+                                                <button class="btn btn-outline-secondary" @onclick="() => MoveFieldUp(sec, fIndex)" disabled="@(fIndex == 0)" title="Yukarı">
+                                                    <i class="bi bi-chevron-up"></i>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" @onclick="() => MoveFieldDown(sec, fIndex)" disabled="@(fIndex == sec.Fields.Count - 1)" title="Aşağı">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger" @onclick="() => RemoveField(sec, f)" title="Sil">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
     </div>
 
     @* ── SAĞ PANEL: CANLI ÖNİZLEME ── *@
@@ -164,7 +198,7 @@
                     </div>
                 </div>
                 <div class="card-body" style="max-height: calc(100vh - 160px); overflow-y: auto; background: #fafbfc;">
-                    @if (string.IsNullOrWhiteSpace(_model.Name) && _model.Fields.Count == 0)
+                    @if (string.IsNullOrWhiteSpace(_model.Name) && !_model.Sections.SelectMany(s => s.Fields).Any())
                     {
                         <div class="text-center text-muted p-5">
                             <i class="bi bi-layout-text-window fs-1 mb-2"></i>
@@ -179,82 +213,99 @@
                             </div>
                             <div class="card-body p-4">
                                 @* DynamicFormRenderer yerine statik görsel önizleme *@
-                                @foreach (var df in _model.Fields)
+                                @foreach (var sec in _model.Sections.OrderBy(s => s.SortOrder))
                                 {
-                                    <div class="mb-4">
-                                        <EditForm Model="@df">
-                                        @if (df.FieldType == 1) // Textbox
+                                    <h4 class="h6 fw-bold mb-3 border-bottom pb-2" style="color: var(--brand-copper-dark);">@sec.Title</h4>
+                                    <div class="row g-4 mb-4">
+                                        @foreach (var df in sec.Fields.OrderBy(f => f.SortOrder))
                                         {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Disabled="true" 
-                                                IconClass="bi bi-cursor-text" />
-                                        }
-                                        else if (df.FieldType == 2) // Textarea
-                                        {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Disabled="true" 
-                                                Multiline="true" Rows="3" />
-                                        }
-                                        else if (df.FieldType == 3) // Checkbox
-                                        {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumCheckbox 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.IsRequired)"
-                                                Disabled="true" />
-                                        }
-                                        else if (df.FieldType == 4) // Dropdown
-                                        {
-                                            var opts = string.IsNullOrWhiteSpace(df.OptionsJson) ? ["Seçenek 1", "Seçenek 2"] : df.OptionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Disabled="true" 
-                                                IconClass="bi bi-list-ul">
-                                                @foreach(var o in opts)
+                                            var colClass = df.FieldType == 2 ? "col-12" : "col-md-6 col-xl-4";
+                                            <div class="@colClass">
+                                                <EditForm Model="@df">
+                                                @if (df.FieldType == 1) // Textbox
                                                 {
-                                                    <option>@o.Trim()</option>
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-cursor-text" />
                                                 }
-                                            </FormfleksBaseApp.Web.Components.Forms.PremiumSelect>
+                                                else if (df.FieldType == 2) // Textarea
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Disabled="true" 
+                                                        Multiline="true" Rows="3" />
+                                                }
+                                                else if (df.FieldType == 3) // Checkbox
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumCheckbox 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.IsRequired)"
+                                                        Disabled="true" />
+                                                }
+                                                else if (df.FieldType == 4) // Dropdown
+                                                {
+                                                    var opts = string.IsNullOrWhiteSpace(df.OptionsJson) ? ["Seçenek 1", "Seçenek 2"] : df.OptionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-list-ul">
+                                                        @foreach(var o in opts)
+                                                        {
+                                                            <option>@o.Trim()</option>
+                                                        }
+                                                    </FormfleksBaseApp.Web.Components.Forms.PremiumSelect>
+                                                }
+                                                else if (df.FieldType == 5) // Date
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Type="date" 
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-calendar" />
+                                                }
+                                                else if (df.FieldType == 6) // Time
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Type="time" 
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-clock" />
+                                                }
+                                                else if (df.FieldType == 7) // DateTime
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Type="datetime-local" 
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-clock-history" />
+                                                }
+                                                else if (df.FieldType == 10) // File
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
+                                                        HelperText="@df.Placeholder" 
+                                                        ValueExpression="@(() => df.Label)"
+                                                        Type="file" 
+                                                        Disabled="true" 
+                                                        IconClass="bi bi-paperclip" />
+                                                }
+                                                </EditForm>
+                                            </div>
                                         }
-                                        else if (df.FieldType == 5) // Date
-                                        {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Type="date" 
-                                                Disabled="true" 
-                                                IconClass="bi bi-calendar" />
-                                        }
-                                        else if (df.FieldType == 6) // Time
-                                        {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Type="time" 
-                                                Disabled="true" 
-                                                IconClass="bi bi-clock" />
-                                        }
-                                        else if (df.FieldType == 7) // DateTime
-                                        {
-                                            <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                Label="@(df.Label + (df.IsRequired ? " *" : ""))" 
-                                                HelperText="@df.Placeholder" 
-                                                ValueExpression="@(() => df.Label)"
-                                                Type="datetime-local" 
-                                                Disabled="true" 
-                                                IconClass="bi bi-clock-history" />
-                                        }
-                                        </EditForm>
                                     </div>
                                 }
                             </div>
@@ -353,7 +404,8 @@
         { 4, "Açılır Liste (Dropdown)" },
         { 5, "Tarih Seçici" },
         { 6, "Saat Seçici (Time)" },
-        { 7, "Tarih ve Saat (DateTime)" }
+        { 7, "Tarih ve Saat (DateTime)" },
+        { 10, "Dosya Yükleme (File)" }
     };
 
     protected override async Task OnInitializedAsync()
@@ -361,16 +413,91 @@
         await ReloadTemplates();
     }
 
-    private void AddField()
+    private void AddSection()
     {
-        _model.Fields.Add(new FormFieldEditModel
+        _model.Sections.Add(new FormSectionEditModel
         {
-            FieldKey = $"field_{_model.Fields.Count + 1}",
-            Label = $"Yeni Alan {_model.Fields.Count + 1}",
+            Title = $"Yeni Bölüm {_model.Sections.Count + 1}",
+            SortOrder = _model.Sections.Count + 1
+        });
+        ReindexSectionSortOrder();
+    }
+
+    private void RemoveSection(FormSectionEditModel sec)
+    {
+        _model.Sections.Remove(sec);
+        ReindexSectionSortOrder();
+    }
+
+    private void ReindexSectionSortOrder()
+    {
+        for (var i = 0; i < _model.Sections.Count; i++)
+        {
+            _model.Sections[i].SortOrder = i + 1;
+        }
+    }
+
+    private void MoveSectionUp(int index)
+    {
+        if (index <= 0) return;
+        var item = _model.Sections[index];
+        _model.Sections.RemoveAt(index);
+        _model.Sections.Insert(index - 1, item);
+        ReindexSectionSortOrder();
+    }
+
+    private void MoveSectionDown(int index)
+    {
+        if (index >= _model.Sections.Count - 1) return;
+        var item = _model.Sections[index];
+        _model.Sections.RemoveAt(index);
+        _model.Sections.Insert(index + 1, item);
+        ReindexSectionSortOrder();
+    }
+
+    private void AddField(FormSectionEditModel sec)
+    {
+        int totalFieldCount = _model.Sections.SelectMany(s => s.Fields).Count();
+        sec.Fields.Add(new FormFieldEditModel
+        {
+            FieldKey = $"field_{totalFieldCount + 1}",
+            Label = $"Yeni Alan {totalFieldCount + 1}",
             FieldType = 1,
             IsRequired = false
         });
-        ReindexFieldSortOrder();
+        ReindexFieldSortOrder(sec);
+    }
+
+    private void ReindexFieldSortOrder(FormSectionEditModel sec)
+    {
+        for (var i = 0; i < sec.Fields.Count; i++)
+        {
+            sec.Fields[i].SortOrder = i + 1;
+        }
+    }
+
+    private void MoveFieldUp(FormSectionEditModel sec, int index)
+    {
+        if (index <= 0) return;
+        var item = sec.Fields[index];
+        sec.Fields.RemoveAt(index);
+        sec.Fields.Insert(index - 1, item);
+        ReindexFieldSortOrder(sec);
+    }
+
+    private void MoveFieldDown(FormSectionEditModel sec, int index)
+    {
+        if (index >= sec.Fields.Count - 1) return;
+        var item = sec.Fields[index];
+        sec.Fields.RemoveAt(index);
+        sec.Fields.Insert(index + 1, item);
+        ReindexFieldSortOrder(sec);
+    }
+
+    private void RemoveField(FormSectionEditModel sec, FormFieldEditModel f)
+    {
+        sec.Fields.Remove(f);
+        ReindexFieldSortOrder(sec);
     }
 
     private async Task Save()
@@ -386,13 +513,55 @@
                 return;
             }
 
-            // Code uppercase
-            _model.Code = _model.Code.ToUpperInvariant().Replace(" ", "_");
+            // Code uppercase and normalize Turkish chars
+            _model.Code = SanitizeCode(_model.Code);
 
-            if (_model.Fields.Any(x => string.IsNullOrWhiteSpace(x.FieldKey) || string.IsNullOrWhiteSpace(x.Label)))
+            var allFields = _model.Sections.SelectMany(s => s.Fields).ToList();
+            if (allFields.Any(x => string.IsNullOrWhiteSpace(x.FieldKey) || string.IsNullOrWhiteSpace(x.Label)))
             {
                 _error = "Tüm alanlar için key ve label zorunludur.";
                 return;
+            }
+
+            var dtoSections = new List<FormfleksBaseApp.Web.Models.FormTemplateSectionUpsertDto>();
+            var dtoFields = new List<FormfleksBaseApp.Web.Models.FormTemplateFieldUpsertDto>();
+
+            foreach (var sec in _model.Sections)
+            {
+                // Ensure section has a title
+                var secTitle = string.IsNullOrWhiteSpace(sec.Title) ? "İsimsiz Bölüm" : sec.Title.Trim();
+                
+                dtoSections.Add(new FormfleksBaseApp.Web.Models.FormTemplateSectionUpsertDto
+                {
+                    Title = secTitle,
+                    SortOrder = sec.SortOrder
+                });
+
+                foreach (var f in sec.Fields)
+                {
+                    // Serialize Dropdown (Type=4) options properly
+                    string? serializedOptions = f.OptionsJson;
+                    if (f.FieldType == 4 && !string.IsNullOrWhiteSpace(f.OptionsJson))
+                    {
+                        var optionsArray = f.OptionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                        .Select(opt => new { Value = opt.Trim(), Text = opt.Trim() })
+                                                        .ToList();
+                        serializedOptions = System.Text.Json.JsonSerializer.Serialize(optionsArray);
+                    }
+
+                    dtoFields.Add(new FormfleksBaseApp.Web.Models.FormTemplateFieldUpsertDto
+                    {
+                        FieldKey = f.FieldKey,
+                        Label = string.IsNullOrWhiteSpace(f.Label) ? "İsimsiz Alan" : f.Label,
+                        FieldType = f.FieldType,
+                        IsRequired = f.IsRequired,
+                        SortOrder = f.SortOrder,
+                        SectionTitle = secTitle,
+                        Placeholder = f.Placeholder,
+                        OptionsJson = serializedOptions,
+                        Active = true
+                    });
+                }
             }
 
             var dto = new FormfleksBaseApp.Web.Models.FormTemplateUpsertDto
@@ -401,26 +570,8 @@
                 Code = _model.Code ?? "PREVIEW",
                 Name = string.IsNullOrWhiteSpace(_model.Name) ? "Yeni Tasarım" : _model.Name,
                 Active = _model.Active,
-                Sections = new List<FormfleksBaseApp.Web.Models.FormTemplateSectionUpsertDto>
-                {
-                    new FormfleksBaseApp.Web.Models.FormTemplateSectionUpsertDto
-                    {
-                        Title = "Genel Bilgiler",
-                        SortOrder = 1
-                    }
-                },
-                Fields = _model.Fields.Select(f => new FormfleksBaseApp.Web.Models.FormTemplateFieldUpsertDto
-                {
-                    FieldKey = f.FieldKey,
-                    Label = string.IsNullOrWhiteSpace(f.Label) ? "İsimsiz Alan" : f.Label,
-                    FieldType = f.FieldType,
-                    IsRequired = f.IsRequired,
-                    SortOrder = f.SortOrder,
-                    SectionTitle = "Genel Bilgiler",
-                    Placeholder = f.Placeholder,
-                    OptionsJson = f.OptionsJson,
-                    Active = true
-                }).ToList()
+                Sections = dtoSections,
+                Fields = dtoFields
             };
 
             var saveResult = await ApiClient.SaveTemplateDetailedAsync(dto, CancellationToken.None);
@@ -442,6 +593,18 @@
         {
             _busy = false;
         }
+    }
+
+    private string SanitizeCode(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        var map = new Dictionary<char, char>
+        {
+            {'ç','C'}, {'Ç','C'}, {'ğ','G'}, {'Ğ','G'}, {'ı','I'}, {'I','I'}, {'İ','I'}, {'i','I'},
+            {'ö','O'}, {'Ö','O'}, {'ş','S'}, {'Ş','S'}, {'ü','U'}, {'Ü','U'}
+        };
+        var arr = input.Select(c => map.TryGetValue(c, out var repl) ? repl : char.ToUpperInvariant(c)).ToArray();
+        return new string(arr).Replace(" ", "_");
     }
 
     private async Task ToggleTemplateStatusAsync(FormfleksBaseApp.Web.Models.FormTemplateSummaryDto template)
@@ -473,38 +636,6 @@
         }
     }
 
-    private void ReindexFieldSortOrder()
-    {
-        for (var i = 0; i < _model.Fields.Count; i++)
-        {
-            _model.Fields[i].SortOrder = i + 1;
-        }
-    }
-
-    private void MoveFieldUp(int index)
-    {
-        if (index <= 0) return;
-        var item = _model.Fields[index];
-        _model.Fields.RemoveAt(index);
-        _model.Fields.Insert(index - 1, item);
-        ReindexFieldSortOrder();
-    }
-
-    private void MoveFieldDown(int index)
-    {
-        if (index >= _model.Fields.Count - 1) return;
-        var item = _model.Fields[index];
-        _model.Fields.RemoveAt(index);
-        _model.Fields.Insert(index + 1, item);
-        ReindexFieldSortOrder();
-    }
-
-    private void RemoveField(FormFieldEditModel f)
-    {
-        _model.Fields.Remove(f);
-        ReindexFieldSortOrder();
-    }
-
     private void ResetForm()
     {
         _model = new FormTemplateEditModel();
@@ -532,14 +663,23 @@
         _model.Code = "LEAVE_REQ";
         _model.Name = "Yıllık İzin Formu";
         _model.Active = true;
-        _model.Fields = new List<FormFieldEditModel>
+        
+        var section1 = new FormSectionEditModel { Title = "Temel İzin Bilgileri", SortOrder = 1 };
+        section1.Fields = new List<FormFieldEditModel>
         {
             new() { FieldKey = "leave_type", Label = "İzin Türü", FieldType = 4, IsRequired = true, OptionsJson = "Yıllık İzin,Mazeret İzni,Hastalık İzni", SortOrder = 1 },
             new() { FieldKey = "start_date", Label = "Başlangıç Tarihi", FieldType = 5, IsRequired = true, SortOrder = 2 },
-            new() { FieldKey = "end_date", Label = "Bitiş Tarihi", FieldType = 5, IsRequired = true, SortOrder = 3 },
-            new() { FieldKey = "reason", Label = "Açıklama / Mazeret", FieldType = 2, IsRequired = false, Placeholder = "Varsa eklemek istedikleriniz...", SortOrder = 4 },
-            new() { FieldKey = "emergency_contact", Label = "Acil Durum İletişim", FieldType = 1, IsRequired = true, Placeholder = "Ad Soyad - Telefon", SortOrder = 5 }
+            new() { FieldKey = "end_date", Label = "Bitiş Tarihi", FieldType = 5, IsRequired = true, SortOrder = 3 }
         };
+
+        var section2 = new FormSectionEditModel { Title = "Ek Detaylar", SortOrder = 2 };
+        section2.Fields = new List<FormFieldEditModel>
+        {
+            new() { FieldKey = "reason", Label = "Açıklama / Mazeret", FieldType = 2, IsRequired = false, Placeholder = "Varsa eklemek istedikleriniz...", SortOrder = 1 },
+            new() { FieldKey = "emergency_contact", Label = "Acil Durum İletişim", FieldType = 1, IsRequired = true, Placeholder = "Ad Soyad - Telefon", SortOrder = 2 }
+        };
+
+        _model.Sections = [section1, section2];
     }
 
     // ── GİZLİ MODELLER ──
@@ -548,6 +688,13 @@
         public string? Code { get; set; }
         public string? Name { get; set; }
         public bool Active { get; set; } = true;
+        public List<FormSectionEditModel> Sections { get; set; } = [new FormSectionEditModel { Title = "Genel Bilgiler", SortOrder = 1 }];
+    }
+
+    private class FormSectionEditModel
+    {
+        public string Title { get; set; } = "";
+        public int SortOrder { get; set; }
         public List<FormFieldEditModel> Fields { get; set; } = [];
     }
 
