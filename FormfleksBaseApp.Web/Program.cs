@@ -8,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
+builder.Services.AddDevExpressBlazor(options => {
+    options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
+    options.SizeMode = DevExpress.Blazor.SizeMode.Medium;
+});
 builder.Services.AddAuthorizationCore(options =>
 {
     options.AddPolicy("HasAppRole", policy =>
@@ -36,6 +40,8 @@ builder.Services.AddHttpClient("Api", client =>
 
 builder.Services.AddScoped<ApiClient>();
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -48,6 +54,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+app.MapControllers();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
