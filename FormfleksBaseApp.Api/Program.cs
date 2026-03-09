@@ -205,8 +205,8 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Pipeline s?ras?
-app.UseMiddleware<FormfleksBaseApp.Api.Middleware.GlobalExceptionMiddleware>();
+// Pipeline sırası
+app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 if (app.Environment.IsDevelopment())
