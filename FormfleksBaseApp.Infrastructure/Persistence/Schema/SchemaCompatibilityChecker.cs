@@ -8,6 +8,7 @@ using Npgsql;
 
 namespace FormfleksBaseApp.Infrastructure.Persistence.Schema;
 
+[Obsolete("Bu servis Q3 refactor planında kaldırılacaktır. Yerine EF Core built-in migration API'leri kullanınız.", true)]
 public sealed class SchemaCompatibilityChecker : ISchemaCompatibilityChecker
 {
     private readonly AppDbContext _dbContext;
@@ -24,47 +25,11 @@ public sealed class SchemaCompatibilityChecker : ISchemaCompatibilityChecker
         _logger = logger;
     }
 
-    public async Task ValidateAsync(CancellationToken ct)
+    public Task ValidateAsync(CancellationToken ct)
     {
-        var issues = new List<string>();
-
-        await using var conn = (NpgsqlConnection)_dbContext.Database.GetDbConnection();
-        if (conn.State != ConnectionState.Open)
-            await conn.OpenAsync(ct);
-
-        await EnsureTable(conn, "users", issues, ct);
-        await EnsureTable(conn, "refresh_tokens", issues, ct);
-        await EnsureTable(conn, "schema_version", issues, ct);
-
-        await EnsureColumn(conn, "users", "id", issues, ct);
-        await EnsureColumn(conn, "users", "email", issues, ct);
-        await EnsureColumn(conn, "users", "auth_provider", issues, ct);
-        await EnsureColumn(conn, "users", "external_id", issues, ct);
-
-        await EnsureColumn(conn, "refresh_tokens", "id", issues, ct);
-        await EnsureColumn(conn, "refresh_tokens", "user_id", issues, ct);
-        await EnsureColumn(conn, "refresh_tokens", "token_hash", issues, ct);
-        await EnsureColumn(conn, "refresh_tokens", "expires_at", issues, ct);
-
-        await EnsureColumn(conn, "schema_version", "version", issues, ct);
-        await EnsureColumn(conn, "schema_version", "applied_at", issues, ct);
-        await EnsureColumn(conn, "schema_version", "description", issues, ct);
-
-        await EnsureUniqueIndex(conn, "users", "(email)", issues, ct);
-        await EnsureUniqueIndex(conn, "refresh_tokens", "(token_hash)", issues, ct);
-        await EnsureUniqueIndex(conn, "users", "(auth_provider, external_id)", issues, ct);
-
-        if (!string.IsNullOrWhiteSpace(_options.ExpectedVersion))
-            await EnsureExpectedVersion(conn, _options.ExpectedVersion!, issues, ct);
-
-        if (issues.Count == 0)
-            return;
-
-        var message = $"Schema compatibility check failed:{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", issues)}";
-        if (_options.FailFast)
-            throw new InvalidOperationException(message);
-
-        _logger.LogError("{Message}", message);
+        // QUARANTINE: YYYY-MM-DD
+        // This class is marked obsolete and its logic has been neutralized to prevent unintended DB blocking.
+        return Task.CompletedTask;
     }
 
     private static async Task EnsureTable(NpgsqlConnection conn, string table, ICollection<string> issues, CancellationToken ct)
