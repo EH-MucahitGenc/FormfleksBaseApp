@@ -213,7 +213,7 @@
     private DynamicFormModel _model = new();
     private EditContext _editContext = default!;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _editContext = new EditContext(_model);
     }
