@@ -1,4 +1,4 @@
-namespace FormfleksBaseApp.DynamicForms.DataAccess.Entities;
+namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 
 public sealed class RoleEntity
 {

@@ -1,4 +1,4 @@
-using FormfleksBaseApp.DynamicForms.DataAccess.Entities;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.DynamicForms.DataAccess;

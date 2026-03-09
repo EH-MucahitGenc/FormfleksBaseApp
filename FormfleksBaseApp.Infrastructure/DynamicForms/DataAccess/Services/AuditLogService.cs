@@ -1,6 +1,6 @@
 using FormfleksBaseApp.Application.DynamicForms.Business.Services;
 using FormfleksBaseApp.Contracts.DynamicForms.AuditLogs;
-using FormfleksBaseApp.DynamicForms.DataAccess.Entities;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using FormfleksBaseApp.DynamicForms.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
