@@ -122,18 +122,6 @@ builder.Services.AddDbContext<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFo
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext>(sp =>
     sp.GetRequiredService<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>());
 
-// DynamicForms Services (tek s�n�f, 4 interface)
-builder.Services.AddScoped<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>();
-builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IFormDefinitionService>(sp =>
-    sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
-builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IFormTemplateAdminService>(sp =>
-    sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
-builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IFormRequestService>(sp =>
-    sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
-builder.Services.AddScoped<FormfleksBaseApp.DynamicForms.Business.Services.IApprovalService>(sp =>
-    sp.GetRequiredService<FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.DynamicFormServices>());
-builder.Services.AddScoped<FormfleksBaseApp.Application.DynamicForms.Business.Services.IAuditLogService, FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Services.AuditLogService>();
-
 // Repositories / Services
 builder.Services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
