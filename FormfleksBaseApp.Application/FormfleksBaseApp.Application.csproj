@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -16,10 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\FormfleksBaseApp.Domain\FormfleksBaseApp.Domain.csproj" />
     <ProjectReference Include="..\FormfleksBaseApp.Contracts\FormfleksBaseApp.Contracts.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="DynamicForms\Business\Cqrs\**\*.cs" />
   </ItemGroup>
 
 </Project>
