@@ -1,0 +1,44 @@
+<header class="topbar">
+    <div class="topbar-left">
+        <button class="topbar-toggle-btn" @onclick="OnToggleSidebar" aria-label="Menüyü daralt/aç">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="topbar-title">@Title</div>
+    </div>
+
+    <div class="topbar-right">
+        @if (!string.IsNullOrEmpty(UserName))
+        {
+            <div class="user-profile">
+                <div class="avatar">
+                    @(UserName.Substring(0, 1).ToUpper())
+                </div>
+                <div class="user-info d-none d-sm-block">
+                    <span class="user-name">@UserName</span>
+                    <span class="user-role">@(string.IsNullOrWhiteSpace(UserRole) ? "Kullanıcı" : UserRole)</span>
+                </div>
+            </div>
+        }
+
+        <button class="logout-btn" @onclick="OnLogout" title="Çıkış Yap">
+            <i class="bi bi-box-arrow-right"></i>
+        </button>
+    </div>
+</header>
+
+@code {
+    [Parameter]
+    public string? UserName { get; set; }
+
+    [Parameter]
+    public string? UserRole { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "İnsan Kaynakları Form Takip";
+
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
+    [Parameter]
+    public EventCallback OnLogout { get; set; }
+}

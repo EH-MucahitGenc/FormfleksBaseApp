@@ -1,0 +1,43 @@
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-light-gray);
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--transition-fast);
+}
+
+.app-main.sidebar-collapsed {
+    margin-left: var(--sidebar-collapsed);
+}
+
+.page-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-x: hidden;
+}
+
+.content-container {
+    max-width: 1600px;
+    /* Kurumsal geniş/ferah layout için sınırlandı */
+    margin: 0 auto;
+    width: 100%;
+}
+
+@media (max-width: 991.98px) {
+
+    .app-main,
+    .app-main.sidebar-collapsed {
+        margin-left: 0;
+    }
+
+    .page-content {
+        padding: 1rem;
+    }
+}

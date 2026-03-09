@@ -1,0 +1,97 @@
+.login-shell {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-light-gray);
+}
+
+.login-brand-panel {
+    flex: 0 0 45%;
+    background-color: var(--surface-white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--border-soft);
+}
+
+/* Hafif bakır glow efekti */
+.login-brand-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(240, 138, 75, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.brand-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2rem;
+}
+
+.brand-content img {
+    height: 64px;
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+}
+
+.brand-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.brand-tagline {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+.login-form-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-light-gray);
+    padding: 3rem;
+}
+
+::deep .login-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface-white);
+    border-radius: var(--radius-modern);
+    box-shadow: var(--shadow-hover);
+    padding: 2.5rem;
+    border: 1px solid var(--border-soft);
+}
+
+::deep .login-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+::deep .login-card .login-subtitle {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 991.98px) {
+    .login-brand-panel {
+        display: none;
+    }
+
+    .login-form-panel {
+        padding: 1.5rem;
+    }
+}

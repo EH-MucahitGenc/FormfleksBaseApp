@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="FormfleksBaseApp.Api/FormfleksBaseApp.Api.csproj" />
+  <Project Path="FormfleksBaseApp.Application/FormfleksBaseApp.Application.csproj" />
+  <Project Path="FormfleksBaseApp.Domain/FormfleksBaseApp.Domain.csproj" />
+  <Project Path="FormfleksBaseApp.Infrastructure/FormfleksBaseApp.Infrastructure.csproj" />
+  <Project Path="FormfleksBaseApp.Web/FormfleksBaseApp.Web.csproj" />
+</Solution>

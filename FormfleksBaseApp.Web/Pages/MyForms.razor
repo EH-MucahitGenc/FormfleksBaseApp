@@ -1,0 +1,95 @@
+﻿@page "/my-forms"
+@attribute [Authorize(Policy = "HasAppRole")]
+@inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
+
+<div class="page-header">
+    <h1>Formlarım</h1>
+    <p class="page-subtitle">Gönderdiğiniz tüm form taleplerini buradan takip edebilirsiniz.</p>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
+        <h6 class="mb-0 fw-bold">
+            <i class="bi bi-file-earmark-text me-2" style="color: var(--brand-copper);"></i>Form Talepleri
+        </h6>
+        <span class="badge bg-light text-dark border">@_items.Count kayıt</span>
+    </div>
+    <div class="card-body p-0">
+        <DataTable Items="_items" IsLoading="_loading" EmptyStateTitle="Henüz hiç form talebiniz yok" EmptyStateDescription="Yeni bir talep oluşturarak süreci başlatabilirsiniz.">
+            <TableHeader>
+                <th>Talep No</th>
+                <th>Form Tipi</th>
+                <th>Durum</th>
+                <th>Adım</th>
+                <th>Tarih</th>
+            </TableHeader>
+            <RowTemplate Context="item">
+                <td>
+                    @if(item.Status == 1)
+                    {
+                        <a href="/forms/request/@item.RequestId" class="text-brand text-decoration-none fw-bold d-flex align-items-center gap-1">
+                            <span>@item.RequestNo</span>
+                            <i class="bi bi-pencil-square small"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="fw-bold">@item.RequestNo</span>
+                    }
+                </td>
+                <td>@item.FormTypeName</td>
+                <td>@GetStatusBadge((int)item.Status)</td>
+                <td>
+                    @if(item.CurrentStepNo.HasValue)
+                    {
+                        <span class="badge bg-light text-dark border">Adım @item.CurrentStepNo</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </td>
+                <td class="text-muted small">@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+            </RowTemplate>
+        </DataTable>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "status")] 
+    public int? StatusFilter { get; set; }
+
+    private bool _loading = true;
+    private IReadOnlyList<FormfleksBaseApp.Web.Models.MyFormRequestListItemDto> _items = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _loading = true;
+            var data = await ApiClient.GetMyRequestsAsync(CancellationToken.None);
+            if (StatusFilter.HasValue)
+            {
+                _items = data.Where(x => x.Status == StatusFilter.Value).ToList();
+            }
+            else
+            {
+                _items = data;
+            }
+        }
+        catch { /* silent */ }
+        finally { _loading = false; }
+    }
+
+    private RenderFragment GetStatusBadge(int status) => status switch
+    {
+        1 => @<span class="badge-status badge-draft"><i class="bi bi-pencil"></i> Taslak</span>,
+        2 => @<span class="badge-status badge-submitted"><i class="bi bi-send"></i> Gönderildi</span>,
+        3 => @<span class="badge-status badge-approval"><i class="bi bi-hourglass-split"></i> Onayda</span>,
+        4 => @<span class="badge-status badge-approved"><i class="bi bi-check-circle"></i> Onaylandı</span>,
+        5 => @<span class="badge-status badge-rejected"><i class="bi bi-x-circle"></i> Reddedildi</span>,
+        6 => @<span class="badge-status badge-cancelled"><i class="bi bi-slash-circle"></i> İptal</span>,
+        7 => @<span class="badge-status badge-revision"><i class="bi bi-arrow-counterclockwise"></i> Revizyon</span>,
+        _ => @<span class="badge-status badge-draft">Bilinmiyor</span>
+    };
+}

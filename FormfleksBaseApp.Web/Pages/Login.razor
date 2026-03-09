@@ -1,0 +1,102 @@
+@page "/login"
+@layout LoginLayout
+@using FormfleksBaseApp.Web.Auth
+@inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
+@inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
+@inject FormfleksBaseApp.Web.Auth.AppAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="login-card">
+    <h2>Hoş geldiniz</h2>
+    <p class="login-subtitle">Devam etmek için Active Directory hesabınızla giriş yapın.</p>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>@_error</span>
+        </div>
+    }
+
+    <EditForm Model="_model" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+        <PremiumInput Label="Kullanıcı Adı"
+                      @bind-Value="_model.Username"
+                      Placeholder="ornek.kullanici"
+                      IconClass="bi bi-person"
+                      FormGroupClass="mb-3" />
+
+        <PremiumInput Label="Şifre"
+                      @bind-Value="_model.Password"
+                      Type="password"
+                      Placeholder="••••••••"
+                      IconClass="bi bi-lock"
+                      FormGroupClass="mb-4" />
+
+        <button class="btn-brand w-100" type="submit" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            }
+            Giriş Yap
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+    private bool _loading;
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var request = new FormfleksBaseApp.Web.Models.LoginRequestDto
+            {
+                Username = _model.Username,
+                Password = _model.Password
+            };
+
+            var result = await ApiClient.AdLoginAsync(request, CancellationToken.None);
+            if (result.Success && result.Data is not null)
+            {
+                var (userId, roles, _) = JwtTokenParser.Parse(result.Data.AccessToken);
+                if (roles.Count == 0)
+                {
+                    _error = "Bu hesap icin herhangi bir rol tanimi bulunamadi. Lutfen yonetici ile iletisime gecin.";
+                    await AuthStateProvider.MarkLoggedOutAsync();
+                    return;
+                }
+
+                await AuthStateProvider.MarkAuthenticatedAsync(
+                    result.Data.AccessToken,
+                    _model.Username,
+                    userId,
+                    roles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+                Navigation.NavigateTo("/dashboard", forceLoad: false);
+            }
+            else
+            {
+                _error = result.Error ?? "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Bağlantı hatası: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

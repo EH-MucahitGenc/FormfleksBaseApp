@@ -1,0 +1,51 @@
+@inherits InputBase<bool>
+
+<div class="premium-checkbox-group @FormGroupClass">
+    <div class="form-check custom-checkbox">
+        <input class="form-check-input @CssClass"
+               type="checkbox"
+               id="@Id"
+               disabled="@Disabled"
+               checked="@CurrentValue"
+               @onchange="OnChange"
+               @attributes="AdditionalAttributes" />
+        <label class="form-check-label @(CurrentValue ? "active-label" : "")" for="@Id">
+            @if (Label.EndsWith(" *"))
+            {
+                @(Label.Substring(0, Label.Length - 2)) <span class="text-danger">*</span>
+            }
+            else
+            {
+                @Label
+            }
+        </label>
+    </div>
+    
+    <div class="premium-validation-container">
+        <ValidationMessage For="@ValueExpression" class="premium-validation" />
+        @if (!string.IsNullOrEmpty(HelperText))
+        {
+            <span class="premium-helper-text ms-4">@HelperText</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Id { get; set; } = Guid.NewGuid().ToString("N");
+    [Parameter] public string? HelperText { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? FormGroupClass { get; set; }
+
+    protected override bool TryParseValueFromString(string? value, out bool result, out string validationErrorMessage)
+    {
+        result = false;
+        validationErrorMessage = null!;
+        return true;
+    }
+
+    private void OnChange(ChangeEventArgs e)
+    {
+        CurrentValue = (bool)(e.Value ?? false);
+    }
+}

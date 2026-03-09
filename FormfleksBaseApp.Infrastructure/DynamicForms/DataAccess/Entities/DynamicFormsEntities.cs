@@ -1,0 +1,153 @@
+namespace FormfleksBaseApp.DynamicForms.DataAccess.Entities;
+
+public sealed class RoleEntity
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = default!;
+    public string Name { get; set; } = default!;
+    public bool Active { get; set; }
+}
+
+public sealed class UserRoleEntity
+{
+    public Guid UserId { get; set; }
+    public Guid RoleId { get; set; }
+}
+
+public sealed class DepartmentEntity
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = default!;
+    public string Name { get; set; } = default!;
+    public bool Active { get; set; }
+}
+
+public sealed class UserDepartmentEntity
+{
+    public Guid UserId { get; set; }
+    public Guid DepartmentId { get; set; }
+    public bool IsPrimary { get; set; }
+}
+
+public sealed class FormTypeEntity
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = default!;
+    public string Name { get; set; } = default!;
+    public string? Description { get; set; }
+    public bool Active { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public sealed class FormSectionEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormTypeId { get; set; }
+    public string Title { get; set; } = default!;
+    public int SortOrder { get; set; }
+}
+
+public sealed class FormFieldEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormTypeId { get; set; }
+    public Guid? SectionId { get; set; }
+    public string FieldKey { get; set; } = default!;
+    public string Label { get; set; } = default!;
+    public short FieldType { get; set; }
+    public bool IsRequired { get; set; }
+    public string? Placeholder { get; set; }
+    public string? HelpText { get; set; }
+    public int SortOrder { get; set; }
+    public string? DefaultValue { get; set; }
+    public string? VisibilityRuleJson { get; set; }
+    public string? ValidationRuleJson { get; set; }
+    public string? OptionsJson { get; set; }
+    public bool Active { get; set; }
+}
+
+public sealed class WorkflowDefinitionEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormTypeId { get; set; }
+    public int VersionNo { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class WorkflowStepEntity
+{
+    public Guid Id { get; set; }
+    public Guid WorkflowDefinitionId { get; set; }
+    public int StepNo { get; set; }
+    public string Name { get; set; } = default!;
+    public short AssigneeType { get; set; }
+    public Guid? AssigneeUserId { get; set; }
+    public Guid? AssigneeRoleId { get; set; }
+    public string? DynamicRuleJson { get; set; }
+    public bool AllowReturnForRevision { get; set; }
+}
+
+public sealed class FormRequestEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormTypeId { get; set; }
+    public string RequestNo { get; set; } = default!;
+    public Guid RequestorUserId { get; set; }
+    public short Status { get; set; }
+    public int? CurrentStepNo { get; set; }
+    public long ConcurrencyToken { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public sealed class FormRequestValueEntity
+{
+    public Guid Id { get; set; }
+    public Guid RequestId { get; set; }
+    public Guid FieldId { get; set; }
+    public string FieldKey { get; set; } = default!;
+    public string? ValueText { get; set; }
+    public decimal? ValueNumber { get; set; }
+    public DateTime? ValueDateTime { get; set; }
+    public bool? ValueBool { get; set; }
+    public string? ValueJson { get; set; }
+}
+
+public sealed class FormRequestApprovalEntity
+{
+    public Guid Id { get; set; }
+    public Guid RequestId { get; set; }
+    public int StepNo { get; set; }
+    public Guid WorkflowStepId { get; set; }
+    public short Status { get; set; }
+    public Guid? AssigneeUserId { get; set; }
+    public Guid? AssigneeRoleId { get; set; }
+    public Guid? ActionByUserId { get; set; }
+    public string? ActionComment { get; set; }
+    public DateTime? ActionAt { get; set; }
+    public long ConcurrencyToken { get; set; }
+}
+
+public sealed class AuthorizationMatrixEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormTypeId { get; set; }
+    public Guid? RoleId { get; set; }
+    public Guid? UserId { get; set; }
+    public bool CanCreate { get; set; }
+    public bool CanViewAll { get; set; }
+    public bool CanApprove { get; set; }
+}
+
+public sealed class AuditLogEntity
+{
+    public Guid Id { get; set; }
+    public string EntityType { get; set; } = default!;
+    public Guid EntityId { get; set; }
+    public string ActionType { get; set; } = default!;
+    public Guid? ActorUserId { get; set; }
+    public string? DetailJson { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

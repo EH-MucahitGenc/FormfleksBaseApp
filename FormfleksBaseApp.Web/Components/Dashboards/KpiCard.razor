@@ -1,0 +1,41 @@
+@inject NavigationManager Navigation
+
+<div class="kpi-card @CssClass @(!string.IsNullOrEmpty(Href) ? "kpi-clickable" : "")" @onclick="HandleClick">
+    <div class="kpi-card-header">
+        <div class="kpi-title">@Title</div>
+        @if (!string.IsNullOrEmpty(IconClass))
+        {
+            <div class="kpi-icon" style="background-color: @IconBackgroundColor; color: @IconColor;">
+                <i class="@IconClass"></i>
+            </div>
+        }
+    </div>
+    <div class="kpi-card-body">
+        <div class="kpi-value">@Value</div>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <div class="kpi-subtitle">@Subtitle</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Title";
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? IconClass { get; set; }
+    
+    [Parameter] public string IconBackgroundColor { get; set; } = "rgba(240, 138, 75, 0.15)";
+    [Parameter] public string IconColor { get; set; } = "#F08A4B"; // Brand Copper
+
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? Href { get; set; }
+
+    private void HandleClick()
+    {
+        if (!string.IsNullOrEmpty(Href))
+        {
+            Navigation.NavigateTo(Href);
+        }
+    }
+}

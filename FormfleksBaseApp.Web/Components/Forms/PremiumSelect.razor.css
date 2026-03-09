@@ -1,0 +1,107 @@
+.premium-form-group {
+    margin-bottom: 1.25rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.premium-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+    transition: color var(--transition-fast);
+}
+
+.premium-form-group:focus-within .premium-label {
+    color: var(--brand-copper);
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon-container {
+    position: absolute;
+    left: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: color var(--transition-fast);
+    z-index: 2;
+}
+
+.premium-form-group:focus-within .input-icon-container {
+    color: var(--brand-copper);
+}
+
+.premium-control {
+    width: 100%;
+    background-color: var(--surface-white);
+    border: 1px solid var(--border-soft);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-sm);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    appearance: none;
+    /* remove default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+}
+
+.premium-control.has-icon {
+    padding-left: 2.75rem;
+}
+
+.premium-control:focus {
+    outline: none;
+    border-color: var(--brand-copper);
+    box-shadow: var(--shadow-focus);
+}
+
+.select-arrow {
+    position: absolute;
+    right: 1rem;
+    pointer-events: none;
+    color: var(--text-muted);
+    transition: transform var(--transition-fast);
+}
+
+.premium-form-group:focus-within .select-arrow {
+    transform: rotate(180deg);
+    color: var(--brand-copper);
+}
+
+.premium-control:disabled {
+    background-color: var(--bg-light-gray);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    border-color: var(--border-soft);
+}
+
+::deep .premium-validation-container {
+    margin-top: 0.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    min-height: 1.25rem;
+}
+
+::deep .premium-validation {
+    color: var(--status-danger);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.premium-helper-text {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    opacity: 0.8;
+}

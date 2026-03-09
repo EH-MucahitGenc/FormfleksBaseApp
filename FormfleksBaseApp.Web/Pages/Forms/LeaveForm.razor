@@ -1,0 +1,413 @@
+@page "/forms/{FormCode}"
+@page "/forms/leave"
+@page "/forms/request/{RequestId:guid}"
+@attribute [Authorize(Policy = "HasAppRole")]
+@inject ApiClient ApiClient
+@inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
+
+<div class="page-header">
+    <h1>@_formTitle</h1>
+    <p class="page-subtitle">@_formSubtitle</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+            <div class="card-header bg-white border-bottom py-3" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-ui-checks me-2" style="color: var(--brand-copper);"></i>Form Detayları
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                @if (_loading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-brand" role="status">
+                            <span class="visually-hidden">Yükleniyor...</span>
+                        </div>
+                        <p class="text-muted mt-2">Form yükleniyor...</p>
+                    </div>
+                }
+                else if (_definition is null)
+                {
+                    <div class="alert alert-warning py-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Aradığınız form şablonu bulunamadı. Aktif olmayabilir veya silinmiş olabilir.
+                    </div>
+                }
+                else
+                {
+                    <EditForm EditContext="@_editContext" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        @* Dinamik Form Render *@
+                        @foreach (var sec in _definition.Sections.OrderBy(s => s.SortOrder))
+                        {
+                            <div class="mb-4">
+                                <h5 class="fw-bold mb-3 pb-2 border-bottom text-dark">@sec.Title</h5>
+                                
+                                <div class="row g-3">
+                                    @foreach (var field in sec.Fields.OrderBy(f => f.SortOrder))
+                                    {
+                                        <div class="col-md-12 mt-3">
+                                            @{
+                                                // Dinamik modelden mevcut değeri al
+                                                _formData.TryGetValue(field.Key, out var val);
+                                                var safeStringVal = val?.ToString() ?? string.Empty;
+                                                var safeBoolVal = bool.TryParse(safeStringVal, out var bVal) ? bVal : false;
+                                                var labelWithStar = field.Label + (field.IsRequired ? " *" : "");
+                                            }
+
+                                            @if (field.FieldType == 1) // Textbox
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                    ValueExpression="@( () => safeStringVal )" 
+                                                    Disabled="@_isReadOnly" IconClass="bi bi-cursor-text" />
+                                            }
+                                            else if (field.FieldType == 2) // Textarea
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Multiline="true"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                    ValueExpression="@( () => safeStringVal )" 
+                                                    Disabled="@_isReadOnly" Rows="3" />
+                                            }
+                                            else if (field.FieldType == 3) // Checkbox
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumCheckbox 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                    Value="@safeBoolVal" ValueChanged="@((bool b) => UpdateFieldValue(field.Key, b ? "true" : "false"))"
+                                                    ValueExpression="@( () => safeBoolVal )"
+                                                    Disabled="@_isReadOnly" />
+                                            }
+                                            else if (field.FieldType == 4) // Dropdown
+                                            {
+                                                var opts = string.IsNullOrWhiteSpace(field.OptionsJson) 
+                                                    ? [] 
+                                                    : field.OptionsJson.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(o => o.Trim());
+                                                    
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))"
+                                                    ValueExpression="@( () => safeStringVal )"
+                                                    Disabled="@_isReadOnly" IconClass="bi bi-list-ul">
+                                                    @foreach(var o in opts)
+                                                    {
+                                                        <option value="@o">@o</option>
+                                                    }
+                                                </FormfleksBaseApp.Web.Components.Forms.PremiumSelect>
+                                            }
+                                            else if (field.FieldType == 5) // Date
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="date"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                    ValueExpression="@( () => safeStringVal )" 
+                                                    Disabled="@_isReadOnly" IconClass="bi bi-calendar" />
+                                            }
+                                            else if (field.FieldType == 6) // Time
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="time"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                    ValueExpression="@( () => safeStringVal )" 
+                                                    Disabled="@_isReadOnly" IconClass="bi bi-clock" />
+                                            }
+                                            else if (field.FieldType == 7) // DateTime
+                                            {
+                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="datetime-local"
+                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                    ValueExpression="@( () => safeStringVal )" 
+                                                    Disabled="@_isReadOnly" IconClass="bi bi-clock-history" />
+                                            }
+                                            
+                                            @* Hata mesajını EditContext'ten alıp gösterelim *@
+                                            <div class="text-danger small mt-1">
+                                                @foreach(var msg in _editContext.GetValidationMessages(new FieldIdentifier(_model, field.Key)))
+                                                {
+                                                    <span>@msg</span><br/>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_message))
+                        {
+                            <div class="alert alert-success mt-3 py-2">
+                                <i class="bi bi-check-circle-fill me-2"></i> @_message
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_error))
+                        {
+                            <div class="alert alert-danger mt-3 py-2">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i> @_error
+                            </div>
+                        }
+
+                        @if (!_isReadOnly)
+                        {
+                            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" @onclick="SaveDraft" disabled="@_busy" style="border-radius: var(--radius-sm);">
+                                    @if (_busy) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    Taslak Kaydet
+                                </button>
+                                <button type="submit" class="btn text-white px-4 fw-semibold" style="background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark)); border-radius: var(--radius-sm);" disabled="@_busy">
+                                    @if (_busy) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                    <i class="bi bi-send-fill me-1"></i>Onaya Gönder
+                                </button>
+                            </div>
+                        }
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        @if (_definition is not null)
+        {
+            <div class="card border-0 shadow-sm sticky-top" style="top: 80px; border-radius: var(--radius-modern);">
+                <div class="card-header bg-white border-bottom py-3" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-info-circle me-2" style="color: var(--brand-copper);"></i>Form Bilgileri
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <span class="text-muted small text-uppercase fw-semibold d-block">Form Tipi</span>
+                            <span class="fw-bold fs-6">@_definition.Name</span>
+                        </li>
+                        <li class="mb-3">
+                            <span class="text-muted small text-uppercase fw-semibold d-block">Durum</span>
+                            <span class="badge-status badge-draft mt-1">@(RequestId.HasValue ? "İnceleniyor" : "Yeni Kayıt")</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? FormCode { get; set; }
+
+    [Parameter]
+    public Guid? RequestId { get; set; }
+
+    private bool _loading = true;
+    private bool _busy;
+    private string? _message;
+    private string? _error;
+    private bool _isReadOnly = false;
+    private string _formTitle = "Yeni Kayıt";
+    private string _formSubtitle = "Lütfen form alanlarını eksiksiz doldurun.";
+
+    private FormfleksBaseApp.Web.Models.FormDefinitionDto? _definition;
+    private Dictionary<string, object> _formData = new();
+    
+    // Geçici model (EditForm için)
+    private DynamicFormModel _model = new();
+    private EditContext _editContext = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _editContext = new EditContext(_model);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _loading = true;
+            _message = null;
+            _error = null;
+            _formData.Clear();
+            _model.Fields.Clear();
+
+            // Sadece örnek kullanım. Gerçekte DB'den FormDefinition + RequestData yüklenir.
+            var codeToLoad = FormCode ?? "LEAVE_REQ";
+            if (!RequestId.HasValue && string.IsNullOrWhiteSpace(FormCode) && NavigationManager.Uri.EndsWith("/forms/leave"))
+            {
+                codeToLoad = "LEAVE_REQ";
+            }
+
+            // ... (Devamında apiden Definition yükleme kodu olacak, şimdilik mock)
+            await LoadDefinition(codeToLoad);
+            
+            _formTitle = _definition?.Name ?? "Form Kaydı";
+            _formSubtitle = RequestId.HasValue ? "Mevcut kaydı görüntülüyorsunuz." : "Yeni form dolduruluyor.";
+        }
+        catch (Exception ex)
+        {
+            _error = "Form yüklenirken hata oluştu: " + ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadDefinition(string code)
+    {
+        // Gerçek API çağrısı
+        var result = await ApiClient.GetFormDefinitionDetailedAsync(code, CancellationToken.None);
+        if (result.Success && result.Data is not null)
+        {
+            _definition = result.Data;
+        }
+        else
+        {
+            _error = result.Error ?? "Form tanımı bulunamadı.";
+            _definition = null;
+        }
+    }
+
+    private void UpdateFieldValue(string key, object? val)
+    {
+        if (val is null)
+            _formData.Remove(key);
+        else
+            _formData[key] = val;
+            
+        // EditContext validasyonu için dummy obje tetiklemesi yapılabilir (gerekirse)
+        var fieldId = new FieldIdentifier(_model, key);
+        _editContext.NotifyFieldChanged(fieldId);
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _error = null;
+        
+        // Custom backend Validation - Zorunlu alan kontrolü
+        if (_definition is not null)
+        {
+            var errors = new List<string>();
+            foreach(var sec in _definition.Sections)
+            {
+                foreach(var field in sec.Fields.Where(f => f.IsRequired))
+                {
+                    if (!_formData.TryGetValue(field.Key, out var val) || string.IsNullOrWhiteSpace(val?.ToString()))
+                    {
+                        errors.Add($"{field.Label} alanı zorunludur.");
+                    }
+                }
+            }
+            if (errors.Any())
+            {
+                _error = string.Join(" ", errors);
+                return;
+            }
+        }
+
+        await SubmitForm();
+    }
+
+    private async Task SubmitForm()
+    {
+        if (_definition is null) return;
+        _busy = true;
+        _message = null;
+        
+        try
+        {
+            var valuesDict = _formData.Select(kvp => new FormfleksBaseApp.Web.Models.UpsertFormRequestItemDto
+            {
+                FieldKey = kvp.Key,
+                ValueText = kvp.Value?.ToString()
+            }).ToList();
+
+            var draftReq = new FormfleksBaseApp.Web.Models.SaveDraftRequestDto
+            {
+                RequestId = RequestId,
+                FormTypeId = _definition.FormTypeId,
+                RequestorUserId = TokenStore.UserId ?? Guid.Empty,
+                Values = valuesDict
+            };
+
+            var draftRes = await ApiClient.SaveDraftDetailedAsync(draftReq, CancellationToken.None);
+            if (!draftRes.Success || draftRes.Data is null)
+            {
+                _error = "Taslak kaydedilemedi: " + draftRes.Error;
+                return;
+            }
+
+            var subReq = new FormfleksBaseApp.Web.Models.SubmitRequestDto
+            {
+                RequestId = draftRes.Data.RequestId,
+                ActorUserId = TokenStore.UserId ?? Guid.Empty,
+                ConcurrencyToken = draftRes.Data.ConcurrencyToken
+            };
+
+            var subRes = await ApiClient.SubmitDetailedAsync(subReq, CancellationToken.None);
+            if (subRes.Success)
+            {
+                _message = "Form başarıyla onaya gönderildi!";
+                _isReadOnly = true;
+                _formData.Clear();
+            }
+            else
+            {
+                _error = "Hata: " + subRes.Error;
+            }
+        }
+        catch(Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SaveDraft()
+    {
+        if (_definition is null) return;
+        _busy = true;
+        _message = null;
+        
+        try
+        {
+            var valuesDict = _formData.Select(kvp => new FormfleksBaseApp.Web.Models.UpsertFormRequestItemDto
+            {
+                FieldKey = kvp.Key,
+                ValueText = kvp.Value?.ToString()
+            }).ToList();
+
+            var draftReq = new FormfleksBaseApp.Web.Models.SaveDraftRequestDto
+            {
+                RequestId = RequestId,
+                FormTypeId = _definition.FormTypeId,
+                RequestorUserId = TokenStore.UserId ?? Guid.Empty,
+                Values = valuesDict
+            };
+
+            var draftRes = await ApiClient.SaveDraftDetailedAsync(draftReq, CancellationToken.None);
+             if (draftRes.Success && draftRes.Data is not null)
+            {
+                _message = "Taslak kaydedildi!";
+                RequestId = draftRes.Data.RequestId;
+            }
+            else
+            {
+                _error = "Hata: " + draftRes.Error;
+            }
+        }
+        catch(Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally { _busy = false; }
+    }
+
+    [Inject] public NavigationManager NavigationManager { get; set; } = default!;
+
+    // EditForm desteği için basit bir model sarmalayıcı
+    private class DynamicFormModel
+    {
+        public Dictionary<string, string> Fields { get; set; } = new();
+    }
+}

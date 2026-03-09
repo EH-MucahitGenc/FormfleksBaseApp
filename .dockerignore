@@ -1,0 +1,11 @@
+﻿**/.git
+**/.vs
+**/bin
+**/obj
+**/TestResults
+**/.idea
+**/.vscode
+build.diag.log
+README.md
+.env
+.env.*

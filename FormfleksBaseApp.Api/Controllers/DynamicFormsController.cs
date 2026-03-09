@@ -1,0 +1,166 @@
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SaveDraft;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SetTemplateStatus;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SubmitRequest;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.UpsertTemplate;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.UpsertTemplateWorkflow;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetFormDefinition;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetMyRequests;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetPendingApprovals;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplateWorkflow;
+using FormfleksBaseApp.DynamicForms.Business.Contracts;
+using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FormfleksBaseApp.DynamicForms.Web.Controllers;
+
+[ApiController]
+[Route("api/dynamic-forms")]
+[Authorize(Policy = "HasAppRole")]
+public sealed class DynamicFormsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public DynamicFormsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpGet("{formCode}")]
+    public async Task<ActionResult<FormDefinitionDto>> GetDefinition(string formCode, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetFormDefinitionQuery(formCode), ct);
+        if (result is null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+    [HttpPost("requests/draft")]
+    public async Task<ActionResult<FormRequestResultDto>> SaveDraft([FromBody] SaveDraftRequestDto request, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        request.RequestorUserId = userId;
+        return Ok(await _mediator.Send(new SaveDraftCommand(request), ct));
+    }
+
+    [HttpPost("requests/submit")]
+    public async Task<ActionResult<FormRequestResultDto>> Submit([FromBody] SubmitRequestDto request, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        request.ActorUserId = userId;
+        return Ok(await _mediator.Send(new SubmitRequestCommand(request), ct));
+    }
+
+    [HttpGet("requests/{requestId:guid}")]
+    public async Task<ActionResult<FormRequestDetailedDto>> GetRequestDetailed(Guid requestId, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new GetRequestDetailedQuery(requestId, userId), ct);
+        if (result is null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
+    [HttpGet("requests/my")]
+    public async Task<ActionResult<IReadOnlyList<MyFormRequestListItemDto>>> GetMyRequests(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new GetMyRequestsQuery(userId), ct));
+    }
+
+    [HttpGet("approvals/pending")]
+    public async Task<ActionResult<IReadOnlyList<PendingApprovalListItemDto>>> GetPendingApprovals(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new GetPendingApprovalsQuery(userId), ct));
+    }
+
+    [HttpPost("approvals/action")]
+    public async Task<ActionResult<FormRequestResultDto>> ApprovalAction([FromBody] ApprovalActionRequestDto request, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        request.ActorUserId = userId;
+        return Ok(await _mediator.Send(new ExecuteApprovalActionCommand(request), ct));
+    }
+
+    [HttpGet("admin/templates")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetTemplates(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetTemplatesQuery(), ct));
+
+    [HttpGet("admin/roles")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<IReadOnlyList<RoleLookupDto>>> GetRoles(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetRolesQuery(), ct));
+
+    [HttpPost("admin/templates")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<FormTemplateSummaryDto>> UpsertTemplate([FromBody] FormTemplateUpsertDto request, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new UpsertTemplateCommand(request, userId), ct));
+    }
+
+    [HttpGet("admin/templates/{formTypeId:guid}/workflow")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<IReadOnlyList<FormTemplateWorkflowStepUpsertDto>>> GetTemplateWorkflow(Guid formTypeId, CancellationToken ct)
+        => Ok(await _mediator.Send(new GetTemplateWorkflowQuery(formTypeId), ct));
+
+    [HttpPost("admin/templates/{formTypeId:guid}/workflow")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<object>> UpsertTemplateWorkflow(
+        Guid formTypeId,
+        [FromBody] IReadOnlyList<FormTemplateWorkflowStepUpsertDto> request,
+        CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var count = await _mediator.Send(new UpsertTemplateWorkflowCommand(formTypeId, request, userId), ct);
+        return Ok(new { stepCount = count });
+    }
+
+    [HttpPatch("admin/templates/{formTypeId:guid}/status")]
+    [Authorize(Policy = "AdminOrHr")]
+    public async Task<ActionResult<FormTemplateSummaryDto>> SetTemplateStatus(
+        Guid formTypeId,
+        [FromBody] TemplateStatusUpdateRequest request,
+        CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new SetTemplateStatusCommand(formTypeId, request.Active, userId), ct));
+    }
+
+    private bool TryGetCurrentUserId(out Guid userId)
+    {
+        var sub = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(sub, out userId);
+    }
+
+    public sealed class TemplateStatusUpdateRequest
+    {
+        public bool Active { get; set; }
+    }
+}

@@ -1,0 +1,88 @@
+﻿@page "/dashboard"
+@attribute [Authorize(Policy = "HasAppRole")]
+@inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
+@inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
+
+<div class="page-header">
+    <h1>Hoş geldiniz, @(TokenStore.UserName ?? "Kullanıcı") 👋</h1>
+    <p class="page-subtitle">İşlerinizi hızlıca takip edin.</p>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <KpiCard Title="Toplam Formlarım" 
+                 Value="@_myFormsCount.ToString()" 
+                 IconClass="bi bi-file-earmark-text"
+                 Href="/my-forms" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <KpiCard Title="Onay Bekleyen" 
+                 Value="@_pendingCount.ToString()" 
+                 IconClass="bi bi-hourglass-split"
+                 IconBackgroundColor="rgba(245, 158, 11, 0.12)"
+                 IconColor="#F59E0B"
+                 Href="/approvals" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <KpiCard Title="Onaylanan" 
+                 Value="@_approvedCount.ToString()" 
+                 IconClass="bi bi-check-circle"
+                 IconBackgroundColor="rgba(16, 185, 129, 0.12)"
+                 IconColor="#10B981"
+                 Href="/my-forms?status=4" />
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <KpiCard Title="Reddedilen" 
+                 Value="@_rejectedCount.ToString()" 
+                 IconClass="bi bi-x-circle"
+                 IconBackgroundColor="rgba(239, 68, 68, 0.12)"
+                 IconColor="#EF4444"
+                 Href="/my-forms?status=5" />
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
+        <h6 class="mb-0 fw-bold">
+            <i class="bi bi-lightning-charge me-2" style="color: var(--brand-copper);"></i>Hızlı İşlemler
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="quick-actions-grid">
+            <a href="/forms/leave" class="quick-action-btn">
+                <i class="bi bi-plus-circle"></i> 
+                <span>Yeni İzin Talebi</span>
+            </a>
+            <a href="/my-forms" class="quick-action-btn">
+                <i class="bi bi-list-ul"></i> 
+                <span>Tüm Formlarım</span>
+            </a>
+            <a href="/approvals" class="quick-action-btn">
+                <i class="bi bi-check2-square"></i> 
+                <span>Onay Bekleyenler</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int _myFormsCount;
+    private int _pendingCount;
+    private int _approvedCount;
+    private int _rejectedCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var myForms = await ApiClient.GetMyRequestsAsync(CancellationToken.None);
+            _myFormsCount = myForms.Count;
+            _approvedCount = myForms.Count(f => f.Status == 4);
+            _rejectedCount = myForms.Count(f => f.Status == 5);
+
+            var pending = await ApiClient.GetPendingApprovalsAsync(CancellationToken.None);
+            _pendingCount = pending.Count;
+        }
+        catch { /* silent */ }
+    }
+}

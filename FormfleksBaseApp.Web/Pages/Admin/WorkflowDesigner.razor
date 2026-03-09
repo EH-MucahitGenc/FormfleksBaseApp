@@ -1,0 +1,466 @@
+﻿@page "/admin/workflow-designer"
+@attribute [Authorize(Policy = "AdminOrHr")]
+@inject ApiClient ApiClient
+
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+        <h1>Onay Rotalari</h1>
+        <p class="page-subtitle">Form bazli workflow adimlarini yonetin, kaydedin ve aktif akislari izleyin.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary" @onclick="LoadCurrentWorkflow" disabled="@(!_selectedFormTypeId.HasValue || _busy)">
+            <i class="bi bi-arrow-repeat me-1"></i>Mevcut Akisi Yukle
+        </button>
+        <button class="btn btn-outline-primary" @onclick="LoadDefaultTwoStep" disabled="@(!_selectedFormTypeId.HasValue || _busy)">
+            <i class="bi bi-stars me-1"></i>2 Adim Sablon
+        </button>
+        <button class="btn btn-brand" @onclick="SaveWorkflow" disabled="@(!_selectedFormTypeId.HasValue || _busy)">
+            @if (_busy)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            <i class="bi bi-save2 me-1"></i>Workflow Kaydet
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-success py-2 d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>@_message</span>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="alert alert-danger py-2 d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>@_error</span>
+    </div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <KpiCard Title="Toplam Form" Value="@_templates.Count.ToString()" IconClass="bi bi-collection" />
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <KpiCard Title="Aktif Form" Value="@_templates.Count(x => x.Active).ToString()" IconClass="bi bi-check2-circle" IconBackgroundColor="rgba(16,185,129,.12)" IconColor="#10B981" />
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <KpiCard Title="Mevcut Adim" Value="@_steps.Count.ToString()" IconClass="bi bi-diagram-3" IconBackgroundColor="rgba(59,130,246,.12)" IconColor="#3B82F6" />
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <KpiCard Title="Rol Sayisi" Value="@_roles.Count.ToString()" IconClass="bi bi-people" IconBackgroundColor="rgba(245,158,11,.12)" IconColor="#F59E0B" />
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4" style="border-radius: var(--radius-modern);">
+    <div class="card-header bg-white border-bottom py-2">
+        <h6 class="mb-0 fw-bold">
+            <i class="bi bi-funnel me-2 text-brand"></i>Form Secimi
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-8 col-xl-6">
+                <label class="form-label small text-uppercase text-muted fw-semibold">Form</label>
+                <select class="form-select" value="@_selectedFormTypeId" @onchange="OnFormChanged">
+                    <option value="">Form seciniz</option>
+                    @foreach (var form in _templates.OrderBy(x => x.Name))
+                    {
+                        <option value="@form.FormTypeId">@form.Name (@form.Code)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-xl-6">
+                @if (_selectedTemplate is not null)
+                {
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <span class="badge bg-light text-dark border px-3 py-2">Alan: @_selectedTemplate.FieldCount</span>
+                        <span class="badge bg-light text-dark border px-3 py-2">Workflow: @_selectedTemplate.WorkflowStepCount</span>
+                        @if (_selectedTemplate.Active)
+                        {
+                            <span class="badge bg-success px-3 py-2">Aktif</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary px-3 py-2">Pasif</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-list-ol me-2 text-brand"></i>Workflow Adimlari
+                </h6>
+                <button class="btn btn-sm btn-outline-primary" @onclick="AddStep" disabled="@(!_selectedFormTypeId.HasValue)">
+                    <i class="bi bi-plus-lg me-1"></i>Adim Ekle
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr style="background: var(--bg-light-gray);">
+                                <th style="width:70px">#</th>
+                                <th>Adim Adi</th>
+                                <th style="width:140px">Atama Tipi</th>
+                                <th style="width:240px">Rol</th>
+                                <th style="width:220px">Kullanici Id</th>
+                                <th class="text-end pe-3" style="width:170px">Islem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (_steps.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox d-block fs-4 mb-1"></i>
+                                        Heniz adim tanimlanmadi.
+                                    </td>
+                                </tr>
+                            }
+
+                            @for (var i = 0; i < _steps.Count; i++)
+                            {
+                                var s = _steps[i];
+                                <tr>
+                                    <td>
+                                        <input class="form-control form-control-sm text-center" type="number" min="1" @bind="s.StepNo" />
+                                    </td>
+                                    <td>
+                                        <input class="form-control form-control-sm" @bind="s.Name" placeholder="Adim adi" />
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" @bind="s.AssigneeType">
+                                            <option value="1">User</option>
+                                            <option value="2">Role</option>
+                                            <option value="3">DynamicRule</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm" @bind="s.AssigneeRoleIdText" disabled="@(s.AssigneeType != 2)">
+                                            <option value="">Rol seciniz</option>
+                                            @foreach (var role in _roles)
+                                            {
+                                                <option value="@role.RoleId">@role.Name (@role.Code)</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input class="form-control form-control-sm" @bind="s.AssigneeUserIdText" placeholder="Guid" disabled="@(s.AssigneeType != 1)" />
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary" @onclick="() => MoveStepUp(i)" disabled="@(i == 0)" title="Yukari">
+                                                <i class="bi bi-chevron-up"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" @onclick="() => MoveStepDown(i)" disabled="@(i == _steps.Count - 1)" title="Asagi">
+                                                <i class="bi bi-chevron-down"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" @onclick="() => RemoveStep(s)" title="Sil">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-diagram-3-fill me-2 text-brand"></i>Akis Onizleme
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (_steps.Count == 0)
+                {
+                    <p class="text-muted mb-0">Onizleme icin adim ekleyin.</p>
+                }
+                else
+                {
+                    <ol class="list-group list-group-numbered">
+                        @foreach (var step in _steps.OrderBy(x => x.StepNo))
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="me-2">
+                                    <div class="fw-semibold">@step.Name</div>
+                                    <div class="small text-muted">@GetAssigneeLabel(step)</div>
+                                </div>
+                                <span class="badge bg-light text-dark border rounded-pill">@step.StepNo</span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<FormTemplateSummaryDto> _templates = [];
+    private IReadOnlyList<RoleLookupDto> _roles = [];
+    private Guid? _selectedFormTypeId;
+    private FormTemplateSummaryDto? _selectedTemplate;
+    private readonly List<WorkflowStepVm> _steps = [];
+    private string? _message;
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadReferenceDataAsync();
+    }
+
+    private async Task ReloadReferenceDataAsync()
+    {
+        try
+        {
+            _templates = await ApiClient.GetTemplatesAsync(CancellationToken.None);
+            _roles = await ApiClient.GetRolesAsync(CancellationToken.None);
+            _selectedTemplate = _templates.FirstOrDefault(x => x.FormTypeId == _selectedFormTypeId);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Workflow verileri yuklenemedi: {ex.Message}";
+        }
+    }
+
+    private async Task OnFormChanged(ChangeEventArgs args)
+    {
+        _message = null;
+        _error = null;
+        _steps.Clear();
+
+        var raw = args.Value?.ToString();
+        _selectedFormTypeId = Guid.TryParse(raw, out var formTypeId) ? formTypeId : null;
+        _selectedTemplate = _templates.FirstOrDefault(x => x.FormTypeId == _selectedFormTypeId);
+
+        if (_selectedFormTypeId.HasValue)
+            await LoadCurrentWorkflow();
+    }
+
+    private async Task LoadCurrentWorkflow()
+    {
+        if (!_selectedFormTypeId.HasValue)
+            return;
+
+        _busy = true;
+        _error = null;
+        _message = null;
+
+        try
+        {
+            var current = await ApiClient.GetTemplateWorkflowAsync(_selectedFormTypeId.Value, CancellationToken.None);
+            _steps.Clear();
+            _steps.AddRange(current.Select(x => new WorkflowStepVm
+            {
+                StepNo = x.StepNo,
+                Name = x.Name,
+                AssigneeType = x.AssigneeType,
+                AssigneeRoleIdText = x.AssigneeRoleId?.ToString(),
+                AssigneeUserIdText = x.AssigneeUserId?.ToString()
+            }));
+
+            ReindexStepNumbers();
+            _message = _steps.Count == 0 ? "Bu form icin tanimli workflow yok." : $"{_steps.Count} adim yuklendi.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Workflow yuklenemedi: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void LoadDefaultTwoStep()
+    {
+        if (!_selectedFormTypeId.HasValue)
+            return;
+
+        _steps.Clear();
+        _steps.Add(new WorkflowStepVm
+        {
+            StepNo = 1,
+            Name = "Bolum Lideri Onayi",
+            AssigneeType = 2,
+            AssigneeRoleIdText = FindRoleIdByCode("TeamLead", "Bolum")
+        });
+        _steps.Add(new WorkflowStepVm
+        {
+            StepNo = 2,
+            Name = "IK Onayi",
+            AssigneeType = 2,
+            AssigneeRoleIdText = FindRoleIdByCode("HR", "IK")
+        });
+
+        ReindexStepNumbers();
+        _message = "Standart 2 adimli akis yuklendi (Bolum Lideri -> IK).";
+        _error = null;
+    }
+
+    private string? FindRoleIdByCode(params string[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            var role = _roles.FirstOrDefault(x =>
+                x.Code.Contains(candidate, StringComparison.OrdinalIgnoreCase)
+                || x.Name.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+
+            if (role is not null)
+                return role.RoleId.ToString();
+        }
+
+        return null;
+    }
+
+    private void AddStep()
+    {
+        _steps.Add(new WorkflowStepVm
+        {
+            StepNo = _steps.Count + 1,
+            Name = $"Adim {_steps.Count + 1}",
+            AssigneeType = 2
+        });
+        ReindexStepNumbers();
+    }
+
+    private void RemoveStep(WorkflowStepVm step)
+    {
+        _steps.Remove(step);
+        ReindexStepNumbers();
+    }
+
+    private void MoveStepUp(int index)
+    {
+        if (index <= 0) return;
+        (_steps[index - 1], _steps[index]) = (_steps[index], _steps[index - 1]);
+        ReindexStepNumbers();
+    }
+
+    private void MoveStepDown(int index)
+    {
+        if (index >= _steps.Count - 1) return;
+        (_steps[index + 1], _steps[index]) = (_steps[index], _steps[index + 1]);
+        ReindexStepNumbers();
+    }
+
+    private async Task SaveWorkflow()
+    {
+        _message = null;
+        _error = null;
+
+        if (!_selectedFormTypeId.HasValue)
+        {
+            _error = "Lutfen once form seciniz.";
+            return;
+        }
+
+        if (_steps.Count == 0)
+        {
+            _error = "En az bir workflow adimi eklemelisiniz.";
+            return;
+        }
+
+        if (_steps.Any(x => string.IsNullOrWhiteSpace(x.Name)))
+        {
+            _error = "Tum adimlarda adim adi zorunludur.";
+            return;
+        }
+
+        if (_steps.Any(x => x.AssigneeType == 2 && string.IsNullOrWhiteSpace(x.AssigneeRoleIdText)))
+        {
+            _error = "Rol atamali adimlarda rol secimi zorunludur.";
+            return;
+        }
+
+        if (_steps.Any(x => x.AssigneeType == 1 && string.IsNullOrWhiteSpace(x.AssigneeUserIdText)))
+        {
+            _error = "Kullanici atamali adimlarda kullanici guid zorunludur.";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var payload = _steps
+                .OrderBy(x => x.StepNo)
+                .Select((x, index) => new FormTemplateWorkflowStepUpsertDto
+                {
+                    StepNo = index + 1,
+                    Name = x.Name.Trim(),
+                    AssigneeType = x.AssigneeType,
+                    AssigneeRoleId = Guid.TryParse(x.AssigneeRoleIdText, out var roleId) ? roleId : null,
+                    AssigneeUserId = Guid.TryParse(x.AssigneeUserIdText, out var userId) ? userId : null,
+                    AllowReturnForRevision = true
+                })
+                .ToList();
+
+            var result = await ApiClient.SaveTemplateWorkflowAsync(_selectedFormTypeId.Value, payload, CancellationToken.None);
+            if (!result.Success)
+            {
+                _error = result.Error ?? "Workflow kaydedilemedi.";
+                return;
+            }
+
+            _message = $"Workflow kaydedildi. Toplam adim: {result.Data}";
+            await ReloadReferenceDataAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void ReindexStepNumbers()
+    {
+        for (var i = 0; i < _steps.Count; i++)
+            _steps[i].StepNo = i + 1;
+    }
+
+    private string GetAssigneeLabel(WorkflowStepVm step)
+    {
+        return step.AssigneeType switch
+        {
+            1 => $"User: {step.AssigneeUserIdText}",
+            2 => $"Role: {ResolveRoleName(step.AssigneeRoleIdText)}",
+            3 => "Dynamic rule",
+            _ => "Unknown"
+        };
+    }
+
+    private string ResolveRoleName(string? roleIdText)
+    {
+        if (!Guid.TryParse(roleIdText, out var roleId))
+            return "Secilmedi";
+
+        var role = _roles.FirstOrDefault(x => x.RoleId == roleId);
+        return role is null ? roleIdText ?? "Secilmedi" : $"{role.Name} ({role.Code})";
+    }
+
+    private sealed class WorkflowStepVm
+    {
+        public int StepNo { get; set; }
+        public string Name { get; set; } = "";
+        public int AssigneeType { get; set; } = 2;
+        public string? AssigneeRoleIdText { get; set; }
+        public string? AssigneeUserIdText { get; set; }
+    }
+}

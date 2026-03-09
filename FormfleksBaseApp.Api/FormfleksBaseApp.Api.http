@@ -1,0 +1,6 @@
+@FormfleksBaseApp.Api_HostAddress = http://localhost:5057
+
+GET {{FormfleksBaseApp.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
