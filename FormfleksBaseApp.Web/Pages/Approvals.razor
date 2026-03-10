@@ -3,58 +3,79 @@
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 
-<div class="page-header">
-    <h1>Onay Bekleyenler</h1>
-    <p class="page-subtitle">Size atanan bekleyen onay talepleri.</p>
+<div class="page-header mb-4">
+    <h1 class="h3 mb-1">Bekleyen Onaylar</h1>
+    <p class="text-muted mb-0">Size atanan bekleyen onay talepleri.</p>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-clock-history me-2" style="color: var(--brand-copper);"></i>Bekleyen Onaylar
-        </h6>
-        <span class="badge bg-light text-dark border">@_items.Count talep</span>
+@if (_loading)
+{
+    <div class="d-flex justify-content-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <DataTable Items="_items" IsLoading="_loading" EmptyStateTitle="Tüm işlemleriniz güncel!" EmptyStateDescription="Bekleyen onay talebiniz bulunmuyor.">
-            <TableHeader>
-                <th>Talep No</th>
-                <th>Form Tipi</th>
-                <th>Adım</th>
-                <th>Tarih</th>
-                <th class="text-end pe-4">İşlem</th>
-            </TableHeader>
-            <RowTemplate Context="item">
-                <td class="fw-bold">@item.RequestNo</td>
-                <td>@item.FormTypeName</td>
-                <td><span class="badge-status badge-approval">Adım @item.StepNo</span></td>
-                <td class="text-muted small">@item.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
-                <td class="text-end pe-3">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <button class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" 
-                                style="border-radius: var(--radius-sm);"
-                                title="Onayla"
-                                @onclick="() => OpenActionModal(item, 1)">
-                            <i class="bi bi-check-lg"></i> Onayla
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                style="border-radius: var(--radius-sm);"
-                                title="Reddet"
-                                @onclick="() => OpenActionModal(item, 2)">
-                            <i class="bi bi-x-lg"></i> Reddet
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                                style="border-radius: var(--radius-sm);"
-                                title="İade Et"
-                                @onclick="() => OpenActionModal(item, 3)">
-                            <i class="bi bi-arrow-return-left"></i> İade
-                        </button>
-                    </div>
-                </td>
-            </RowTemplate>
-        </DataTable>
+}
+else
+{
+    <div class="shadow-sm border rounded">
+        <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+        </DxToolbar>
+
+        <DxGrid @ref="_grid"
+                Data="@_items" 
+                ShowFilterRow="true" 
+                ShowGroupPanel="true" 
+                ShowSearchBox="true" 
+                PageSize="15" 
+                PagerVisible="true" 
+                PageSizeSelectorVisible="true" 
+                PageSizeSelectorItems="@(new int[] { 15, 30, 50 })"
+                AllowSelectRowByClick="true"
+                SelectionMode="GridSelectionMode.Multiple"
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                CssClass="w-100 border-0">
+            <Columns>
+                <DxGridDataColumn FieldName="RequestNo" Caption="Talep No" MinWidth="180">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.PendingApprovalListItemDto)context.DataItem; }
+                        <span class="ff-cell-primary">@item.RequestNo</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="FormTypeName" Caption="Form Tipi" MinWidth="200" />
+                <DxGridDataColumn FieldName="StepNo" Caption="Adım" MinWidth="120">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.PendingApprovalListItemDto)context.DataItem; }
+                        <span class="badge" style="background-color: var(--ff-bg-hover); color: var(--ff-text-secondary); border: 1px solid var(--ff-border); font-weight: 500;">Adım @item.StepNo</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="CreatedAt" Caption="Tarih" MinWidth="180">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.PendingApprovalListItemDto)context.DataItem; }
+                        <span class="ff-cell-muted">@item.CreatedAt.AddHours(3).ToString("dd.MM.yyyy HH:mm")</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn Caption="İşlem" AllowFilter="false" AllowSort="false" MinWidth="280">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.PendingApprovalListItemDto)context.DataItem; }
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success px-3 rounded-pill fw-medium border-0 d-flex align-items-center gap-1 shadow-sm" @onclick="() => OpenActionModal(item, 1)">
+                                <i class="bi bi-check2"></i> Onayla
+                            </button>
+                            <button class="btn btn-sm btn-danger px-3 rounded-pill fw-medium border-0 d-flex align-items-center gap-1 shadow-sm" @onclick="() => OpenActionModal(item, 2)">
+                                <i class="bi bi-x-lg"></i> Reddet
+                            </button>
+                            <button class="btn btn-sm btn-secondary px-3 rounded-pill fw-medium border-0 d-flex align-items-center gap-1 shadow-sm" @onclick="() => OpenActionModal(item, 3)">
+                                <i class="bi bi-arrow-return-left"></i> İade
+                            </button>
+                        </div>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+            </Columns>
+        </DxGrid>
     </div>
-</div>
+}
 
 @if (_isModalOpen && _selectedItem is not null)
 {
@@ -99,6 +120,7 @@
 }
 
 @code {
+    IGrid _grid;
     private bool _loading = true;
     private bool _busy = false;
     private string? _message;

@@ -1,27 +1,27 @@
 .login-shell {
     display: flex;
     min-height: 100vh;
-    background-color: var(--bg-light-gray);
+    background-color: var(--ff-bg-body);
 }
 
 .login-brand-panel {
-    flex: 0 0 45%;
-    background-color: var(--surface-white);
+    flex: 0 0 50%;
+    background-color: var(--ff-bg-hover);
+    color: var(--ff-text-primary);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
-    border-right: 1px solid var(--border-soft);
 }
 
-/* Hafif bakır glow efekti */
-.login-brand-panel::before {
+/* Subtle accent overlay on the brand background */
+.login-brand-panel::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(240, 138, 75, 0.08) 0%, transparent 60%);
+    background: radial-gradient(circle at top right, rgba(246, 137, 76, 0.15) 0%, transparent 70%);
     pointer-events: none;
 }
 
@@ -29,29 +29,29 @@
     position: relative;
     z-index: 1;
     text-align: center;
-    padding: 2rem;
+    padding: 3rem;
+    max-width: 480px;
 }
 
 .brand-content img {
-    height: 64px;
+    height: 80px;
     object-fit: contain;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .brand-title {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 700;
-    color: var(--text-main);
-    margin: 0;
+    color: var(--ff-primary);
+    margin: 0 0 1rem 0;
     letter-spacing: -0.02em;
 }
 
 .brand-tagline {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-top: 0.5rem;
-    max-width: 320px;
-    line-height: 1.5;
+    color: var(--ff-text-secondary);
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin: 0;
 }
 
 .login-form-panel {
@@ -59,31 +59,47 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-light-gray);
+    background-color: var(--ff-bg-surface);
     padding: 3rem;
 }
 
-::deep .login-card {
+::deep .login-card-wrapper {
     width: 100%;
-    max-width: 420px;
-    background: var(--surface-white);
-    border-radius: var(--radius-modern);
-    box-shadow: var(--shadow-hover);
-    padding: 2.5rem;
-    border: 1px solid var(--border-soft);
+    max-width: 440px;
 }
 
-::deep .login-card h2 {
-    font-size: 1.5rem;
+::deep .login-title {
+    font-size: 1.75rem;
     font-weight: 700;
-    color: var(--text-main);
+    color: var(--ff-primary);
     margin-bottom: 0.5rem;
 }
 
-::deep .login-card .login-subtitle {
-    color: var(--text-muted);
+::deep .login-subtitle {
+    color: var(--ff-text-secondary);
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+::deep .login-form-label {
+    font-weight: 600;
     font-size: 0.875rem;
-    margin-bottom: 2rem;
+    color: var(--ff-primary);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+::deep .login-alert {
+    background-color: rgba(218, 30, 40, 0.1);
+    border: 1px solid var(--ff-danger);
+    color: var(--ff-danger);
+    padding: 1rem;
+    border-radius: var(--ff-border-radius);
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 @media (max-width: 991.98px) {
@@ -93,5 +109,13 @@
 
     .login-form-panel {
         padding: 1.5rem;
+        background-color: var(--ff-bg-body);
+    }
+    
+    ::deep .login-card-wrapper {
+        background-color: var(--ff-bg-surface);
+        padding: 2.5rem 2rem;
+        border-radius: var(--ff-border-radius-lg);
+        box-shadow: var(--ff-shadow-lg);
     }
 }

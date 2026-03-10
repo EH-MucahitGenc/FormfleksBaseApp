@@ -137,14 +137,24 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
                 // SSL kapalıyken sunucu basic bind'i reddedebilir; Negotiate tercih et.
                 var userName = NormalizeLoginName(userInput, user.UserPrincipalName);
                 conn.AuthType = AuthType.Negotiate;
-                conn.Credential = new NetworkCredential(userName, password);
+
+                if (userName.Contains('\\'))
+                {
+                    var parts = userName.Split('\\', 2);
+                    conn.Credential = new NetworkCredential(parts[1], password, parts[0]);
+                }
+                else
+                {
+                    conn.Credential = new NetworkCredential(userName, password);
+                }
             }
 
             conn.Bind();
         }
         catch (LdapException ex)
         {
-            throw MapLdapException(ex, "LDAP user bind failed.");
+            var usedName = NormalizeLoginName(userInput, user.UserPrincipalName);
+            throw MapLdapException(ex, $"LDAP user bind failed for user '{usedName}'.");
         }
     }
 

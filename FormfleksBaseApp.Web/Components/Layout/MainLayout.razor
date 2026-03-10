@@ -1,28 +1,29 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 @inject FormfleksBaseApp.Web.Auth.AppAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 
-<div class="app-shell">
-    <AppSidebar IsCollapsed="_isSidebarCollapsed"
-                FormTypes="_formTypes"
-                HasAppRole="HasAppRole"
-                CanAccessTemplateAdmin="CanAccessTemplateAdmin"
-                CanAccessUserAdmin="CanAccessUserAdmin" />
+<div class="ff-app-wrapper">
+    <AppTopbar Title="İnsan Kaynakları Form Takip"
+               UserName="@TokenStore.UserName"
+               UserRole="@(TokenStore.Roles.Count > 0 ? TokenStore.Roles[0] : "Yetkisiz")"
+               IsCollapsed="@_isSidebarCollapsed"
+               OnToggleSidebar="ToggleSidebar"
+               OnLogout="Logout" />
 
-    <div class="app-main @(_isSidebarCollapsed ? "sidebar-collapsed" : "")">
-        <AppTopbar Title="İnsan Kaynakları Form Takip"
-                   UserName="@TokenStore.UserName"
-                   UserRole="@(TokenStore.Roles.Count > 0 ? TokenStore.Roles[0] : "Yetkisiz")"
-                   OnToggleSidebar="ToggleSidebar"
-                   OnLogout="Logout" />
+    <div class="ff-body-wrapper">
+        <AppSidebar IsCollapsed="_isSidebarCollapsed"
+                    FormTypes="_formTypes"
+                    HasAppRole="HasAppRole"
+                    CanAccessTemplateAdmin="CanAccessTemplateAdmin"
+                    CanAccessUserAdmin="CanAccessUserAdmin" />
 
-        <main class="page-content">
-            <div class="content-container">
+        <div class="ff-main-wrapper" style="transition: width 0.3s ease;">
+            <main class="ff-content">
                 @Body
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 </div>
 

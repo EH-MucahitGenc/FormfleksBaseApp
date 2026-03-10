@@ -5,33 +5,57 @@
 @inject ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 
-<div class="page-header">
-    <h1>@_formTitle</h1>
-    <p class="page-subtitle">@_formSubtitle</p>
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h1 class="fw-bold mb-1" style="color: var(--ff-text-main); font-size: 1.8rem; letter-spacing: -0.5px;">@_formTitle</h1>
+        <div class="text-muted d-flex align-items-center gap-2" style="font-size: 0.9rem;">
+            <i class="bi bi-folder2-open" style="color: var(--ff-primary);"></i>
+            <span>Formlarım</span> 
+            <i class="bi bi-chevron-right" style="font-size: 0.7rem;"></i> 
+            <span class="fw-medium" style="color: var(--ff-text-secondary);">@_formTitle</span>
+        </div>
+    </div>
+    @if (RequestId.HasValue)
+    {
+        <div class="px-3 py-1 fw-bold text-uppercase d-flex align-items-center gap-2" style="background-color: var(--ff-bg-surface); border: 1px solid var(--ff-border); border-radius: 50px; color: var(--ff-text-secondary); font-size: 0.8rem; box-shadow: var(--ff-shadow-sm);">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--ff-warning);"></div>
+            İnceleniyor
+        </div>
+    }
 </div>
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-            <div class="card-header bg-white border-bottom py-3" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
-                <h6 class="mb-0 fw-bold">
-                    <i class="bi bi-ui-checks me-2" style="color: var(--brand-copper);"></i>Form Detayları
+<div class="alert d-flex align-items-center gap-3 mb-4 shadow-sm" style="background-color: var(--ff-bg-surface); border: 1px solid var(--ff-border); border-left: 4px solid var(--ff-info); border-radius: var(--ff-border-radius-lg);">
+    <i class="bi bi-info-circle-fill fs-3" style="color: var(--ff-info);"></i>
+    <div style="color: var(--ff-text-secondary); font-size: 0.95rem;">
+        <strong class="d-block" style="color: var(--ff-text-main);">Bilgilendirme</strong>
+        @_formSubtitle
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-11">
+        <div class="ff-card shadow-lg border-0" style="border-radius: var(--ff-border-radius-lg);">
+            <div class="ff-card-header bg-white" style="border-bottom: 2px solid var(--ff-bg-body); padding: 1.5rem 2rem;">
+                <h6 class="mb-0 fw-bold d-flex align-items-center" style="font-size: 1.15rem; color: var(--ff-text-main);">
+                    <i class="bi bi-ui-checks-grid me-3 fs-4" style="color: var(--ff-primary);"></i>Form Kayıt Detayları
                 </h6>
             </div>
-            <div class="card-body p-4">
+            <div class="ff-card-body p-4 p-md-5" style="background-color: #FAFCFF;">
                 @if (_loading)
                 {
                     <div class="text-center py-5">
-                        <div class="spinner-border text-brand" role="status">
-                            <span class="visually-hidden">Yükleniyor...</span>
-                        </div>
-                        <p class="text-muted mt-2">Form yükleniyor...</p>
+                        <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem; opacity: 0.5;" role="status"></div>
+                        <h5 class="fw-bold text-muted">Form Hazırlanıyor...</h5>
                     </div>
                 }
                 else if (_definition is null)
                 {
-                    <div class="alert alert-warning py-3 d-flex align-items-center gap-2">
-                        <i class="bi bi-exclamation-triangle-fill"></i> Aradığınız form şablonu bulunamadı. Aktif olmayabilir veya silinmiş olabilir.
+                    <div class="alert alert-warning py-4 px-4 d-flex align-items-center gap-3 rounded-4">
+                        <i class="bi bi-exclamation-triangle-fill fs-2"></i> 
+                        <div>
+                            <strong class="d-block mb-1">Şablon Bulunamadı</strong>
+                            Aradığınız form şablonu pasif durumda veya silinmiş olabilir. Lütfen yönetici ile iletişime geçin.
+                        </div>
                     </div>
                 }
                 else
@@ -39,105 +63,109 @@
                     <EditForm EditContext="@_editContext" OnValidSubmit="HandleValidSubmit">
                         <DataAnnotationsValidator />
                         
-                        @* Dinamik Form Render *@
+                        @* Dinamik Form Render - Premium Styling *@
                         @foreach (var sec in _definition.Sections.OrderBy(s => s.SortOrder))
                         {
-                            <div class="mb-4">
-                                <h5 class="fw-bold mb-3 pb-2 border-bottom text-dark">@sec.Title</h5>
+                            <div class="mb-5 bg-white p-4 p-md-5 rounded-4 shadow-sm border" style="border-color: var(--ff-border) !important;">
+                                <h4 class="fw-bold mb-4 pb-3" style="color: var(--ff-text-main); border-bottom: 2px solid var(--ff-bg-body);">
+                                    @sec.Title
+                                </h4>
                                 
-                                <div class="row g-3">
+                                <DxFormLayout CssClass="w-100">
                                     @foreach (var field in sec.Fields.OrderBy(f => f.SortOrder))
                                     {
-                                        <div class="col-md-12 mt-3">
-                                            @{
-                                                // Dinamik modelden mevcut değeri al
-                                                _formData.TryGetValue(field.Key, out var val);
-                                                var safeStringVal = val?.ToString() ?? string.Empty;
-                                                var safeBoolVal = bool.TryParse(safeStringVal, out var bVal) ? bVal : false;
-                                                var labelWithStar = field.Label + (field.IsRequired ? " *" : "");
-                                            }
-
-                                            @if (field.FieldType == 1) // Textbox
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
-                                                    ValueExpression="@( () => safeStringVal )" 
-                                                    Disabled="@_isReadOnly" IconClass="bi bi-cursor-text" />
-                                            }
-                                            else if (field.FieldType == 2) // Textarea
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Multiline="true"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
-                                                    ValueExpression="@( () => safeStringVal )" 
-                                                    Disabled="@_isReadOnly" Rows="3" />
-                                            }
-                                            else if (field.FieldType == 3) // Checkbox
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumCheckbox 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
-                                                    Value="@safeBoolVal" ValueChanged="@((bool b) => UpdateFieldValue(field.Key, b ? "true" : "false"))"
-                                                    ValueExpression="@( () => safeBoolVal )"
-                                                    Disabled="@_isReadOnly" />
-                                            }
-                                            else if (field.FieldType == 4) // Dropdown
-                                            {
-                                                var opts = GetDropdownOptions(field.OptionsJson);
-                                                    
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))"
-                                                    ValueExpression="@( () => safeStringVal )"
-                                                    Disabled="@_isReadOnly" IconClass="bi bi-list-ul">
-                                                    @foreach(var o in opts)
-                                                    {
-                                                        <option value="@o">@o</option>
-                                                    }
-                                                </FormfleksBaseApp.Web.Components.Forms.PremiumSelect>
-                                            }
-                                            else if (field.FieldType == 5) // Date
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="date"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
-                                                    ValueExpression="@( () => safeStringVal )" 
-                                                    Disabled="@_isReadOnly" IconClass="bi bi-calendar" />
-                                            }
-                                            else if (field.FieldType == 6) // Time
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="time"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
-                                                    ValueExpression="@( () => safeStringVal )" 
-                                                    Disabled="@_isReadOnly" IconClass="bi bi-clock" />
-                                            }
-                                            else if (field.FieldType == 7) // DateTime
-                                            {
-                                                <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
-                                                    Label="@labelWithStar" HelperText="@field.Placeholder" Type="datetime-local"
-                                                    Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
-                                                    ValueExpression="@( () => safeStringVal )" 
-                                                    Disabled="@_isReadOnly" IconClass="bi bi-clock-history" />
-                                            }
-                                            
-                                            @* Hata mesajını EditContext'ten alıp gösterelim *@
-                                            <div class="text-danger small mt-1">
-                                                @foreach(var msg in _editContext.GetValidationMessages(new FieldIdentifier(_model, field.Key)))
-                                                {
-                                                    <span>@msg</span><br/>
+                                        <DxFormLayoutItem ColSpanMd="12" CssClass="mb-3">
+                                            <Template Context="formLayoutCtx">
+                                                @{
+                                                    // Dinamik modelden mevcut değeri al
+                                                    _formData.TryGetValue(field.Key, out var val);
+                                                    var safeStringVal = val?.ToString() ?? string.Empty;
+                                                    var safeBoolVal = bool.TryParse(safeStringVal, out var bVal) ? bVal : false;
+                                                    var labelWithStar = field.Label + (field.IsRequired ? " *" : "");
                                                 }
-                                            </div>
-                                        </div>
+
+                                                @if (field.FieldType == 1) // Textbox
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                        ValueExpression="@( () => safeStringVal )" 
+                                                        Disabled="@_isReadOnly" IconClass="bi bi-cursor-text" />
+                                                }
+                                                else if (field.FieldType == 2) // Textarea
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder" Multiline="true"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                        ValueExpression="@( () => safeStringVal )" 
+                                                        Disabled="@_isReadOnly" Rows="3" />
+                                                }
+                                                else if (field.FieldType == 3) // Checkbox
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumCheckbox 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                        Value="@safeBoolVal" ValueChanged="@((bool b) => UpdateFieldValue(field.Key, b ? "true" : "false"))"
+                                                        ValueExpression="@( () => safeBoolVal )"
+                                                        Disabled="@_isReadOnly" />
+                                                }
+                                                else if (field.FieldType == 4) // Dropdown
+                                                {
+                                                    var opts = GetDropdownOptions(field.OptionsJson);
+                                                        
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumSelect 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))"
+                                                        ValueExpression="@( () => safeStringVal )"
+                                                        Disabled="@_isReadOnly" IconClass="bi bi-list-ul">
+                                                        @foreach(var o in opts)
+                                                        {
+                                                            <option value="@o">@o</option>
+                                                        }
+                                                    </FormfleksBaseApp.Web.Components.Forms.PremiumSelect>
+                                                }
+                                                else if (field.FieldType == 5) // Date
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder" Type="date"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                        ValueExpression="@( () => safeStringVal )" 
+                                                        Disabled="@_isReadOnly" IconClass="bi bi-calendar" />
+                                                }
+                                                else if (field.FieldType == 6) // Time
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder" Type="time"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                        ValueExpression="@( () => safeStringVal )" 
+                                                        Disabled="@_isReadOnly" IconClass="bi bi-clock" />
+                                                }
+                                                else if (field.FieldType == 7) // DateTime
+                                                {
+                                                    <FormfleksBaseApp.Web.Components.Forms.PremiumInput 
+                                                        Label="@labelWithStar" HelperText="@field.Placeholder" Type="datetime-local"
+                                                        Value="@safeStringVal" ValueChanged="@((string s) => UpdateFieldValue(field.Key, s))" 
+                                                        ValueExpression="@( () => safeStringVal )" 
+                                                        Disabled="@_isReadOnly" IconClass="bi bi-clock-history" />
+                                                }
+                                                
+                                                @* Hata mesajını EditContext'ten alıp gösterelim *@
+                                                <div class="text-danger small mt-1">
+                                                    @foreach(var msg in _editContext.GetValidationMessages(new FieldIdentifier(_model, field.Key)))
+                                                    {
+                                                        <span>@msg</span><br/>
+                                                    }
+                                                </div>
+                                            </Template>
+                                        </DxFormLayoutItem>
                                     }
-                                </div>
+                                </DxFormLayout>
                             </div>
                         }
 
                         @if (!string.IsNullOrWhiteSpace(_message))
                         {
-                            <div class="alert alert-success mt-3 py-2">
-                                <i class="bi bi-check-circle-fill me-2"></i> @_message
+                            <div class="alert mt-3 py-2 d-flex align-items-center gap-2" style="background-color: var(--ff-success); color: white; border-radius: var(--ff-border-radius);">
+                                <i class="bi bi-check-circle-fill"></i> @_message
                             </div>
                         }
                         @if (!string.IsNullOrWhiteSpace(_error))
@@ -149,15 +177,21 @@
 
                         @if (!_isReadOnly)
                         {
-                            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" @onclick="SaveDraft" disabled="@_busy" style="border-radius: var(--radius-sm);">
-                                    @if (_busy) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                    Taslak Kaydet
-                                </button>
-                                <button type="submit" class="btn text-white px-4 fw-semibold" style="background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark)); border-radius: var(--radius-sm);" disabled="@_busy">
-                                    @if (_busy) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                                    <i class="bi bi-send-fill me-1"></i>Onaya Gönder
-                                </button>
+                            <div class="d-flex justify-content-end gap-3 mt-5 px-4 py-3 sticky-bottom" style="background-color: var(--ff-bg-surface); border-top: 1px solid var(--ff-border); border-radius: 0 0 var(--ff-border-radius-lg) var(--ff-border-radius-lg); margin-left: -3rem; margin-right: -3rem; margin-bottom: -3rem; box-shadow: 0 -4px 15px rgba(0,0,0,0.03);">
+                                <DxButton RenderStyle="ButtonRenderStyle.Secondary"
+                                          RenderStyleMode="ButtonRenderStyleMode.Outline"
+                                          Text="Taslak Kaydet"
+                                          Click="SaveDraft"
+                                          Enabled="@(!_busy)"
+                                          CssClass="px-5 py-2 fw-semibold" />
+
+                                <DxButton RenderStyle="ButtonRenderStyle.Primary"
+                                          RenderStyleMode="ButtonRenderStyleMode.Contained"
+                                          Text="Onayı Başlat"
+                                          SubmitFormOnClick="true"
+                                          IconCssClass="bi bi-send-fill"
+                                          Enabled="@(!_busy)"
+                                          CssClass="px-5 py-2 fw-bold" />
                             </div>
                         }
                     </EditForm>

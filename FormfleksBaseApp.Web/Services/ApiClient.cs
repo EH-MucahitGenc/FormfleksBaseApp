@@ -296,6 +296,76 @@ public sealed class ApiClient
         return data ?? [];
     }
 
+    // --- Admin Roles ---
+    public async Task<IReadOnlyList<FormfleksBaseApp.Application.Features.AdminRoles.Dtos.AdminRoleDto>> GetAdminRolesAsync(CancellationToken ct)
+    {
+        var resp = await Client.GetAsync("/api/admin/roles", ct);
+        if (!resp.IsSuccessStatusCode) return [];
+        return await resp.Content.ReadFromJsonAsync<List<FormfleksBaseApp.Application.Features.AdminRoles.Dtos.AdminRoleDto>>(JsonOptions, ct) ?? [];
+    }
+
+    public async Task<ApiCallResult<Guid>> CreateRoleAsync(FormfleksBaseApp.Application.Features.AdminRoles.Commands.CreateRole.CreateRoleCommand command, CancellationToken ct)
+    {
+        var resp = await Client.PostAsJsonAsync("/api/admin/roles", command, ct);
+        if (resp.IsSuccessStatusCode)
+        {
+            var id = await resp.Content.ReadFromJsonAsync<Guid>(JsonOptions, ct);
+            return new ApiCallResult<Guid> { Success = true, Data = id };
+        }
+        return new ApiCallResult<Guid> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
+    public async Task<ApiCallResult<bool>> UpdateRoleAsync(Guid id, FormfleksBaseApp.Application.Features.AdminRoles.Commands.UpdateRole.UpdateRoleCommand command, CancellationToken ct)
+    {
+        var resp = await Client.PutAsJsonAsync($"/api/admin/roles/{id}", command, ct);
+        if (resp.IsSuccessStatusCode)
+            return new ApiCallResult<bool> { Success = true, Data = true };
+        return new ApiCallResult<bool> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
+    public async Task<ApiCallResult<bool>> DeleteRoleAsync(Guid id, CancellationToken ct)
+    {
+        var resp = await Client.DeleteAsync($"/api/admin/roles/{id}", ct);
+        if (resp.IsSuccessStatusCode)
+            return new ApiCallResult<bool> { Success = true, Data = true };
+        return new ApiCallResult<bool> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
+    // --- Admin Departments ---
+    public async Task<IReadOnlyList<FormfleksBaseApp.Application.Features.AdminDepartments.Dtos.AdminDepartmentDto>> GetAdminDepartmentsAsync(CancellationToken ct)
+    {
+        var resp = await Client.GetAsync("/api/admin/departments", ct);
+        if (!resp.IsSuccessStatusCode) return [];
+        return await resp.Content.ReadFromJsonAsync<List<FormfleksBaseApp.Application.Features.AdminDepartments.Dtos.AdminDepartmentDto>>(JsonOptions, ct) ?? [];
+    }
+
+    public async Task<ApiCallResult<Guid>> CreateDepartmentAsync(FormfleksBaseApp.Application.Features.AdminDepartments.Commands.CreateDepartment.CreateDepartmentCommand command, CancellationToken ct)
+    {
+        var resp = await Client.PostAsJsonAsync("/api/admin/departments", command, ct);
+        if (resp.IsSuccessStatusCode)
+        {
+            var id = await resp.Content.ReadFromJsonAsync<Guid>(JsonOptions, ct);
+            return new ApiCallResult<Guid> { Success = true, Data = id };
+        }
+        return new ApiCallResult<Guid> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
+    public async Task<ApiCallResult<bool>> UpdateDepartmentAsync(Guid id, FormfleksBaseApp.Application.Features.AdminDepartments.Commands.UpdateDepartment.UpdateDepartmentCommand command, CancellationToken ct)
+    {
+        var resp = await Client.PutAsJsonAsync($"/api/admin/departments/{id}", command, ct);
+        if (resp.IsSuccessStatusCode)
+            return new ApiCallResult<bool> { Success = true, Data = true };
+        return new ApiCallResult<bool> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
+    public async Task<ApiCallResult<bool>> DeleteDepartmentAsync(Guid id, CancellationToken ct)
+    {
+        var resp = await Client.DeleteAsync($"/api/admin/departments/{id}", ct);
+        if (resp.IsSuccessStatusCode)
+            return new ApiCallResult<bool> { Success = true, Data = true };
+        return new ApiCallResult<bool> { Success = false, Error = await resp.Content.ReadAsStringAsync(ct) };
+    }
+
     public async Task<IReadOnlyList<AdminUserDto>> GetUsersAsync(CancellationToken ct)
     {
         var resp = await Client.GetAsync("/api/admin/users", ct);

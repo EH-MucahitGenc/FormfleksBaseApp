@@ -1,428 +1,387 @@
-/* ==========================================================
-   FORMFLEKS — PREMIUM LIGHT ENTERPRISE DESIGN SYSTEM
-   Modern, Ferah (Buz Beyazı) zemin + Kurumsal Bakır/Turuncu
-   ========================================================== */
+/* ==========================================================================
+   FORM FLEKS BASE APP - PREMIUM DESIGN SYSTEM (DevExpress Native)
+   Based on Logo Monochromatic (#2A2F35) + Vurgu (#0F62FE)
+   ========================================================================== */
 
-/* ── 1. DESIGN TOKENS (CSS VARIABLES) ────────────────────── */
 :root {
-  /* Brand Colors (Koyu Grafit / Logo Tonları) */
-  --brand-copper: #414042;
-  --brand-copper-dark: #2A292A;
-  --brand-copper-light: #6B6A6C;
-  --brand-copper-glow: rgba(65, 64, 66, 0.15);
-
-  /* Backgrounds & Surfaces */
-  --bg-light-gray: #F8F9FA;
-  --surface-white: #FFFFFF;
-  --surface-hover: #F1F5F9;
-
-  /* Text Colors (Hiyerarşik) */
-  --text-main: #1E293B;
-  --text-muted: #64748B;
-  --text-inverse: #FFFFFF;
-
-  /* Borders */
-  --border-soft: #E2E8F0;
-  --border-focus: #CBD5E1;
-
-  /* Status Colors */
-  --status-success: #10B981;
-  --status-success-bg: #ECFDF5;
-  --status-warning: #F59E0B;
-  --status-warning-bg: #FFFBEB;
-  --status-danger: #EF4444;
-  --status-danger-bg: #FEF2F2;
-  --status-info: #3B82F6;
-  --status-info-bg: #EFF6FF;
-
-  /* Shapes & Shadows */
-  --radius-modern: 12px;
-  --radius-pill: 9999px;
-  --radius-sm: 8px;
-
-  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-focus: 0 0 0 3px var(--brand-copper-glow);
-
-  /* Layout */
-  --sidebar-width: 280px;
-  --sidebar-collapsed: 70px;
-  --topbar-height: 70px;
-
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Brand Colors (Derived from logo.svg - f6894c gradient) */
+    --ff-primary: #F6894C;
+    --ff-primary-hover: #E0753A;
+    --ff-primary-active: #D1652C;
+    --ff-primary-soft: rgba(246, 137, 76, 0.1);
+    
+    /* Accent Color */
+    --ff-accent: #414042;
+    --ff-accent-hover: #231F20;
+    
+    /* Backgrounds & Surfaces (Premium SaaS) */
+    --ff-bg-body: #F1F5F9; /* Muted modern gray background */
+    --ff-bg-surface: #FFFFFF; /* Pure white cards */
+    --ff-bg-hover: #FFF5F0; 
+    --ff-input-bg: #F8FAFC; /* Inputs separated from cards */
+    
+    /* Borders */
+    --ff-border: #E2E8F0;
+    --ff-border-focus: var(--ff-primary);
+    
+    /* Shadows & Rings */
+    --ff-ring-focus: rgba(246, 137, 76, 0.25);
+    --ff-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05); /* Subtle depth */
+    --ff-shadow-md: 0 4px 10px rgba(15, 23, 42, 0.08); /* Card shadow */
+    --ff-shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.1); /* Modal shadow */
+    
+    /* Typography Colors */
+    --ff-text-main: #1E293B;  /* Very dark blue/gray */
+    --ff-text-secondary: #475569;
+    --ff-text-muted: #94A3B8;
+    --ff-text-inverse: #FFFFFF;
+    
+    /* Theme Specific Components */
+    --ff-sidebar-bg: #FFFFFF;
+    --ff-sidebar-text: #475569;
+    --ff-sidebar-border: #E2E8F0;
+    --ff-sidebar-active-bg: var(--ff-primary-soft);
+    --ff-sidebar-active-text: var(--ff-primary);
+    --ff-topbar-bg: #FFFFFF;
+    --ff-topbar-border: #E2E8F0;
+    
+    /* Spacing & Layout */
+    --ff-border-radius: 6px; /* Slightly more rounded */
+    --ff-border-radius-lg: 12px;
+    --ff-sidebar-width: 260px;
+    --ff-topbar-height: 68px; /* Taller navbar */
 }
 
-/* ── 2. GLOBAL RESET & BASE RULES ────────────────────────── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 15px;
-  scroll-behavior: smooth;
-  background-color: var(--bg-light-gray);
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: var(--bg-light-gray);
-  color: var(--text-main);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--text-main);
-  font-weight: 600;
-  line-height: 1.3;
+/* ==========================================================================
+   GLOBAL RESET & TYPOGRAPHY
+   ========================================================================== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    background-color: var(--ff-bg-body);
+    color: var(--ff-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  color: var(--brand-copper);
-  text-decoration: none;
-  transition: color var(--transition-fast);
+    color: var(--ff-accent);
+    text-decoration: none;
+    transition: color 0.2s ease;
 }
 
 a:hover {
-  color: var(--brand-copper-dark);
+    color: var(--ff-accent-hover);
 }
 
-:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: var(--radius-sm);
+/* ==========================================================================
+   LAYOUT STRUCTURE (App Shell)
+   ========================================================================== */
+.ff-app-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--ff-bg-body);
 }
 
-/* ── 3. UTILITY CLASSES ──────────────────────────────────── */
-.text-brand {
-  color: var(--brand-copper) !important;
+.ff-body-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
 }
 
-.bg-surface {
-  background-color: var(--surface-white) !important;
+.ff-sidebar {
+    width: var(--ff-sidebar-width);
+    background-color: var(--ff-sidebar-bg);
+    color: var(--ff-sidebar-text);
+    border-right: 1px solid var(--ff-sidebar-border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.02);
+    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
+    will-change: width;
+    overflow-x: hidden;
 }
 
-.shadow-soft {
-  box-shadow: var(--shadow-soft) !important;
+.ff-sidebar.collapsed {
+    width: 80px;
 }
 
-.radius-modern {
-  border-radius: var(--radius-modern) !important;
+.ff-sidebar .sidebar-text {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 1;
+    transform: translateX(0);
+    white-space: nowrap;
 }
 
-.text-muted-custom {
-  color: var(--text-muted) !important;
+.ff-sidebar.collapsed .sidebar-text {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+    display: none; /* absolute yerine none kullanarak taşmaları engelle */
 }
 
-/* ── 4. PREMIUM PAGE HEADER ──────────────────────────────── */
-.page-header {
-  margin-bottom: 1.5rem;
+
+.ff-main-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
 }
 
-.page-header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 0.25rem;
+.ff-topbar {
+    height: var(--ff-topbar-height);
+    background-color: var(--ff-topbar-bg);
+    border-bottom: 1px solid var(--ff-topbar-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 90;
+    box-shadow: var(--ff-shadow-sm);
 }
 
-.page-header .page-subtitle {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 0;
+.ff-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 2.5rem 3rem; /* Daha geniş premium boşluklar */
 }
 
-/* ── 5. PREMIUM CARD SYSTEM ──────────────────────────────── */
-.premium-card {
-  background: var(--surface-white);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-modern);
-  box-shadow: var(--shadow-soft);
-  transition: box-shadow var(--transition-fast);
-  overflow: hidden;
+/* ==========================================================================
+   PREMIUM CARD SYSTEM
+   ========================================================================== */
+.ff-card {
+    background: var(--ff-bg-surface);
+    border: 1px solid var(--ff-border);
+    border-radius: var(--ff-border-radius-lg);
+    box-shadow: var(--ff-shadow-sm);
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    width: 100%; /* Tam genişlik */
+    transition: box-shadow 0.2s ease;
 }
 
-.premium-card:hover {
-  box-shadow: var(--shadow-hover);
+.ff-card:hover {
+    box-shadow: var(--ff-shadow-md);
 }
 
-.premium-card-header {
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface-white);
+.ff-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--ff-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.premium-card-header-gradient {
-  padding: 0.85rem 1.25rem;
-  background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));
-  color: white;
-  border-bottom: none;
+.ff-card-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--ff-primary);
 }
 
-.premium-card-body {
-  padding: 1.25rem;
+.ff-card-body {
+    padding: 1.5rem;
 }
 
-/* ── 6. PREMIUM TABLE ────────────────────────────────────── */
-.premium-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.875rem;
+/* ==========================================================================
+   DEVEXPRESS BLAZOR OVERRIDES (Blending DX into the Design System)
+   ========================================================================== */
+
+/* Button overrides - Fixing Primary Color */
+.btn-primary, .dxbs-btn-primary {
+    background-color: var(--ff-primary) !important;
+    border-color: var(--ff-primary) !important;
+    color: #fff !important;
+    font-weight: 500;
+    border-radius: var(--ff-border-radius);
+    padding: 0.5rem 1.25rem;
+    box-shadow: none !important;
+    transition: all 0.2s ease;
+}
+.btn-primary:hover, .dxbs-btn-primary:hover {
+    background-color: var(--ff-primary-hover) !important;
+    border-color: var(--ff-primary-hover) !important;
 }
 
-.premium-table thead tr {
-  background: var(--bg-light-gray);
+/* ==========================================================================
+   NATIVE DATA MODULE WRAPPER (PHASE 17 REDESIGN)
+   ========================================================================== */
+
+/* 1. Global Container */
+.ff-data-module-card {
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
 }
 
-.premium-table thead th {
-  padding: 0.6rem 1rem;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  border-bottom: 2px solid var(--border-soft);
-  white-space: nowrap;
+/* Modüle özel başlık alanı, Grid içine karışmasın */
+.ff-data-module-header {
+    padding: 1rem 0;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.ff-data-module-header .module-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1E293B; /* Koyu slate gri */
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.ff-data-module-header .module-title i {
+    color: var(--ff-primary); /* Bakır ikon vurgusu */
 }
 
-.premium-table tbody tr {
-  transition: background var(--transition-fast);
-  border-bottom: 1px solid var(--border-soft);
+/* 3. The Grid Overrides - TEMİZLENDİ, NATIVE YAPIYA BIRAKILDI */
+
+/* Primary Data Column (Örn: Talep No) için Boldlaştırıcı Utility */
+.ff-cell-primary {
+    font-weight: 600 !important;
+    color: #0F172A !important;
+}
+/* Muted Data Column (Örn: Tarih) için Muted Utility */
+.ff-cell-muted {
+    color: #94A3B8 !important;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
+    font-size: 0.85rem !important;
 }
 
-.premium-table tbody tr:hover {
-  background: var(--surface-hover);
+/* primary and muted colors are kept below */
+
+/* 4. Status Badges (Hücre İçi) */
+.ff-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px; /* Pill shape */
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.ff-status-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 0.35rem;     
+}
+.-draft {
+    background-color: #F1F5F9; color: #475569;
+}
+.-draft::before { background-color: #94A3B8; }
+.-success {
+    background-color: #F0FDF4; color: #166534;
+}
+.-success::before { background-color: #22C55E; }
+.-danger {
+    background-color: #FEF2F2; color: #991B1B;
+}
+.-danger::before { background-color: #EF4444; }
+.-warning {
+    background-color: #FFFBEB; color: #92400E;
+}
+.-warning::before { background-color: #F59E0B; }
+
+/* Status badges are kept below */
+
+/* Modern Action Icons */
+.ff-action-btn {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.ff-action-btn:hover {
+    background-color: #F1F5F9;
+    color: var(--ff-primary);
 }
 
-.premium-table tbody td {
-  padding: 0.65rem 1rem;
-  vertical-align: middle;
+/* ==========================================================================
+   GLOBAL DEVEXPRESS INPUT OVERRIDES (Forms)
+   ========================================================================== */
+/* Form içindeki inputlara kalın estetik verelim, gridi etkilemeden */
+.ff-card-body .dxbs-dropdown-edit:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-textbox:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-combobox:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-date-edit:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-memo:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-spin-edit:not(.dxbs-grid-filter-row *) {
+    background-color: #FFFFFF !important;
+    border-radius: 10px !important; 
+    border: 2px solid #D1D5DB !important; 
+    box-shadow: none !important;
+    transition: all 0.25s ease-in-out;
 }
 
-/* ── 7. KPI CARD (Dashboard) ─────────────────────────────── */
-.kpi-card {
-  background: var(--surface-white);
-  border-radius: var(--radius-modern);
-  box-shadow: var(--shadow-soft);
-  padding: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all var(--transition-fast);
-  border: 1px solid var(--border-soft);
-  text-decoration: none !important;
-  color: inherit !important;
+.ff-card-body .dxbs-editor-input-container:not(.dxbs-grid-filter-row *) {
+    padding: 0.5rem 0.5rem !important; 
+}
+.ff-card-body .dxbs-editor-input-container input:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-editor-input-container textarea:not(.dxbs-grid-filter-row *) {
+    font-size: 0.95rem !important;
+    color: #4B5563 !important; 
 }
 
-.kpi-card:hover {
-  box-shadow: var(--shadow-hover);
-  transform: translateY(-2px);
-  border-color: var(--brand-copper-light);
+.ff-card-body .dxbs-dropdown-edit:hover:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-textbox:hover:not(.dxbs-grid-filter-row *) {
+    border-color: #9CA3AF !important; 
 }
 
-/* ── 8. QUICK ACTION BUTTONS (Dashboard) ─────────────────── */
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+.ff-card-body .dxbs-dropdown-edit:focus-within:not(.dxbs-grid-filter-row *), 
+.ff-card-body .dxbs-textbox:focus-within:not(.dxbs-grid-filter-row *) {
+    border-color: var(--ff-primary) !important; 
+    box-shadow: 0 0 0 4px var(--ff-ring-focus) !important;
 }
 
-.quick-action-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1.25rem;
-  border-radius: var(--radius-modern);
-  border: 2px solid var(--border-soft);
-  background: var(--surface-white);
-  color: var(--text-main);
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-decoration: none !important;
-  transition: all var(--transition-fast);
+/* DxFormLayout Label Overrides */
+.dxbs-fl-cpt {
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: var(--ff-text-secondary) !important;
+    margin-bottom: 0.35rem !important;
+    letter-spacing: 0.3px;
 }
 
-.quick-action-btn i {
-  font-size: 1.5rem;
-  color: var(--brand-copper);
+/* ==========================================================================
+   BASE UTILITIES
+   ========================================================================== */
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--ff-primary);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
 }
 
-.quick-action-btn:hover {
-  border-color: var(--brand-copper);
-  background: var(--brand-copper-glow);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-soft);
-  color: var(--brand-copper-dark);
+.page-description {
+    color: var(--ff-text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
 }
 
-/* ── 9. STATUS BADGES ────────────────────────────────────── */
-.badge-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.badge-draft {
-  background: #F1F5F9;
-  color: #475569;
-}
-
-.badge-submitted {
-  background: var(--status-info-bg);
-  color: var(--status-info);
-}
-
-.badge-approval {
-  background: var(--status-warning-bg);
-  color: var(--status-warning);
-}
-
-.badge-approved {
-  background: var(--status-success-bg);
-  color: var(--status-success);
-}
-
-.badge-rejected {
-  background: var(--status-danger-bg);
-  color: var(--status-danger);
-}
-
-.badge-cancelled {
-  background: #F1F5F9;
-  color: #94A3B8;
-}
-
-.badge-revision {
-  background: #FEF3C7;
-  color: #D97706;
-}
-
-.bg-warning-light {
-  background: var(--status-warning-bg);
-  color: var(--status-warning);
-}
-
-.bg-info-light {
-  background: var(--status-info-bg);
-}
-
-.text-info {
-  color: var(--status-info) !important;
-}
-
-/* ── 10. MODAL PREMIUM ───────────────────────────────────── */
-.modal-content {
-  border: none !important;
-  border-radius: var(--radius-modern) !important;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-}
-
-/* ── 11. GOOGLE FORMS / ENTERPRISE FORM STYLES ───────────── */
-.google-form-container {
-  background-color: var(--surface-white);
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-  padding: 2.5rem;
-  margin: 0 auto;
-  max-width: 900px;
-  border: 1px solid var(--border-soft);
-}
-
-.google-form-banner {
-  background-color: var(--status-info-bg);
-  border-left: 4px solid var(--status-info);
-  color: var(--text-main);
-  padding: 1rem 1.25rem;
-  border-radius: 0 8px 8px 0;
-  font-size: 0.95rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-}
-
-.google-form-section-title {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--brand-copper-dark);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 2rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.google-form-section-title i {
-  color: var(--brand-copper);
-}
-
-/* ── 12. FORM INPUT PREMIUM ──────────────────────────────── */
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--brand-copper);
-  box-shadow: var(--shadow-focus);
-}
-
-.input-group-text {
-  background: var(--bg-light-gray);
-  border-color: var(--border-soft);
-  color: var(--text-muted);
-}
-
-/* ── 13. BUTTON PREMIUM ──────────────────────────────────── */
-.btn-brand {
-  background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));
-  color: white;
-  border: none;
-  font-weight: 600;
-  transition: all var(--transition-fast);
-}
-
-.btn-brand:hover {
-  background: linear-gradient(135deg, var(--brand-copper-dark), #A85628);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-soft);
-}
-
-/* ── 14. SCROLLBAR (Premium) ─────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-soft);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+/* Blazor Error UI Hide */
+#blazor-error-ui {
+    display: none !important;
 }

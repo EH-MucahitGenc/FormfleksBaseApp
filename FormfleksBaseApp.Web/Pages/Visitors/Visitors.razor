@@ -3,41 +3,61 @@
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 
-<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1>Ziyaretçiler</h1>
-        <p class="page-subtitle">Firmamıza gelen ziyaretçilerin kaydı ve takibi.</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="OpenAddModal">
-            <i class="bi bi-plus-lg"></i> Yeni Ziyaretçi
-        </button>
+        <h1 class="h3 mb-1">Ziyaretçi Listesi</h1>
+        <p class="text-muted mb-0">Firmamıza gelen ziyaretçilerin kaydı ve takibi.</p>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-    <div class="card-header bg-white border-bottom py-2">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-person-lines-fill me-2 text-brand"></i>Ziyaretçi Listesi
-        </h6>
+@if (_loading)
+{
+    <div class="d-flex justify-content-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <DataTable Items="_items" IsLoading="_loading" EmptyStateTitle="Kayıt bulunamadı" EmptyStateDescription="Sistemde henüz bir ziyaretçi kaydı yok.">
-            <TableHeader>
-                <th>Ad Soyad</th>
-                <th>Firma</th>
-                <th>Ziyaret Nedeni</th>
-                <th class="text-end pe-4">Ziyaret Tarihi</th>
-            </TableHeader>
-            <RowTemplate Context="item">
-                <td class="fw-semibold">@item.FirstName @item.LastName</td>
-                <td>@item.CompanyName</td>
-                <td class="text-muted">@item.Purpose</td>
-                <td class="text-end pe-3">@item.VisitDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
-            </RowTemplate>
-        </DataTable>
+}
+else
+{
+    <div class="shadow-sm border rounded">
+        <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
+            <DxToolbarItem Text="Yeni Ziyaretçi" BeginGroup="true" IconCssClass="bi bi-plus-lg" Click="OpenAddModal" />
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+        </DxToolbar>
+
+        <DxGrid @ref="_grid"
+                Data="@_items" 
+                ShowFilterRow="true" 
+                ShowGroupPanel="true" 
+                ShowSearchBox="true" 
+                PageSize="15" 
+                PagerVisible="true" 
+                PageSizeSelectorVisible="true" 
+                PageSizeSelectorItems="@(new int[] { 15, 30, 50 })"
+                AllowSelectRowByClick="true"
+                SelectionMode="GridSelectionMode.Multiple"
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                CssClass="w-100 border-0">
+            <Columns>
+                <DxGridDataColumn FieldName="FirstName" Caption="Ad Soyad" MinWidth="200">
+                    <CellDisplayTemplate>
+                        @{ var item = (VisitorDto)context.DataItem; }
+                        <span class="ff-cell-primary">@item.FirstName @item.LastName</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="CompanyName" Caption="Firma" MinWidth="250" />
+                <DxGridDataColumn FieldName="Purpose" Caption="Ziyaret Nedeni" MinWidth="200" />
+                <DxGridDataColumn FieldName="VisitDate" Caption="Ziyaret Tarihi" MinWidth="180">
+                    <CellDisplayTemplate>
+                        @{ var item = (VisitorDto)context.DataItem; }
+                        <span class="ff-cell-muted">@item.VisitDate.ToString("dd.MM.yyyy HH:mm")</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+            </Columns>
+        </DxGrid>
     </div>
-</div>
+}
 
 @if (_isModalOpen)
 {
@@ -52,28 +72,35 @@
                     <DataAnnotationsValidator />
                     <div class="modal-body bg-light">
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Ad</label>
-                                <InputText @bind-Value="_model.FirstName" class="form-control" />
-                                <ValidationMessage For="@(() => _model.FirstName)" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Soyad</label>
-                                <InputText @bind-Value="_model.LastName" class="form-control" />
-                                <ValidationMessage For="@(() => _model.LastName)" />
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-semibold">Firma Adı</label>
-                                <InputText @bind-Value="_model.CompanyName" class="form-control" />
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-semibold">Ziyaret Nedeni</label>
-                                <InputText @bind-Value="_model.Purpose" class="form-control" />
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label fw-semibold">Ziyaret Tarihi/Saati</label>
-                                <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_model.VisitDate" class="form-control" />
-                            </div>
+                            <DxFormLayout CssClass="w-100">
+                                <DxFormLayoutItem ColSpanMd="6" Caption="Ad">
+                                    <Template Context="formLayoutCtx">
+                                        <InputText @bind-Value="_model.FirstName" class="form-control" />
+                                        <ValidationMessage For="@(() => _model.FirstName)" />
+                                    </Template>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem ColSpanMd="6" Caption="Soyad">
+                                    <Template Context="formLayoutCtx">
+                                        <InputText @bind-Value="_model.LastName" class="form-control" />
+                                        <ValidationMessage For="@(() => _model.LastName)" />
+                                    </Template>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem ColSpanMd="12" Caption="Firma Adı">
+                                    <Template Context="formLayoutCtx">
+                                        <InputText @bind-Value="_model.CompanyName" class="form-control" />
+                                    </Template>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem ColSpanMd="12" Caption="Ziyaret Nedeni">
+                                    <Template Context="formLayoutCtx">
+                                        <InputText @bind-Value="_model.Purpose" class="form-control" />
+                                    </Template>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem ColSpanMd="12" Caption="Ziyaret Tarihi/Saati">
+                                    <Template Context="formLayoutCtx">
+                                        <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="_model.VisitDate" class="form-control" />
+                                    </Template>
+                                </DxFormLayoutItem>
+                            </DxFormLayout>
                         </div>
 
                         @if (!string.IsNullOrWhiteSpace(_errorMessage))
@@ -100,6 +127,7 @@
 }
 
 @code {
+    IGrid _grid;
     private bool _loading = true;
     private bool _saving = false;
     private string? _errorMessage;

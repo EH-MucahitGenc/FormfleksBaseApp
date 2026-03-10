@@ -1,4 +1,4 @@
-﻿@page "/admin/workflow-designer"
+@page "/admin/workflow-designer"
 @attribute [Authorize(Policy = "AdminOrHr")]
 @inject ApiClient ApiClient
 
@@ -65,11 +65,11 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-8 col-xl-6">
                 <label class="form-label small text-uppercase text-muted fw-semibold">Form</label>
-                <select class="form-select" value="@_selectedFormTypeId" @onchange="OnFormChanged">
-                    <option value="">Form seciniz</option>
+                <select class="form-select" @onchange="OnFormChanged">
+                    <option value="" selected="@(_selectedFormTypeId == null)">Form seciniz</option>
                     @foreach (var form in _templates.OrderBy(x => x.Name))
                     {
-                        <option value="@form.FormTypeId">@form.Name (@form.Code)</option>
+                        <option value="@form.FormTypeId" selected="@(_selectedFormTypeId == form.FormTypeId)">@form.Name (@form.Code)</option>
                     }
                 </select>
             </div>
@@ -94,119 +94,131 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-xl-8">
-        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-                <h6 class="mb-0 fw-bold">
-                    <i class="bi bi-list-ol me-2 text-brand"></i>Workflow Adimlari
-                </h6>
-                <button class="btn btn-sm btn-outline-primary" @onclick="AddStep" disabled="@(!_selectedFormTypeId.HasValue)">
-                    <i class="bi bi-plus-lg me-1"></i>Adim Ekle
-                </button>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead>
-                            <tr style="background: var(--bg-light-gray);">
-                                <th style="width:70px">#</th>
-                                <th>Adim Adi</th>
-                                <th style="width:140px">Atama Tipi</th>
-                                <th style="width:240px">Rol</th>
-                                <th style="width:220px">Kullanici Id</th>
-                                <th class="text-end pe-3" style="width:170px">Islem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (_steps.Count == 0)
-                            {
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">
-                                        <i class="bi bi-inbox d-block fs-4 mb-1"></i>
-                                        Heniz adim tanimlanmadi.
-                                    </td>
-                                </tr>
-                            }
-
-                            @for (var i = 0; i < _steps.Count; i++)
-                            {
-                                var s = _steps[i];
-                                <tr>
-                                    <td>
-                                        <input class="form-control form-control-sm text-center" type="number" min="1" @bind="s.StepNo" />
-                                    </td>
-                                    <td>
-                                        <input class="form-control form-control-sm" @bind="s.Name" placeholder="Adim adi" />
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm" @bind="s.AssigneeType">
-                                            <option value="1">User</option>
-                                            <option value="2">Role</option>
-                                            <option value="3">DynamicRule</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm" @bind="s.AssigneeRoleIdText" disabled="@(s.AssigneeType != 2)">
-                                            <option value="">Rol seciniz</option>
-                                            @foreach (var role in _roles)
-                                            {
-                                                <option value="@role.RoleId">@role.Name (@role.Code)</option>
-                                            }
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input class="form-control form-control-sm" @bind="s.AssigneeUserIdText" placeholder="Guid" disabled="@(s.AssigneeType != 1)" />
-                                    </td>
-                                    <td class="text-end pe-3">
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-secondary" @onclick="() => MoveStepUp(i)" disabled="@(i == 0)" title="Yukari">
-                                                <i class="bi bi-chevron-up"></i>
-                                            </button>
-                                            <button class="btn btn-outline-secondary" @onclick="() => MoveStepDown(i)" disabled="@(i == _steps.Count - 1)" title="Asagi">
-                                                <i class="bi bi-chevron-down"></i>
-                                            </button>
-                                            <button class="btn btn-outline-danger" @onclick="() => RemoveStep(s)" title="Sil">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-4">
-        <div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-            <div class="card-header bg-white border-bottom py-2">
-                <h6 class="mb-0 fw-bold">
-                    <i class="bi bi-diagram-3-fill me-2 text-brand"></i>Akis Onizleme
-                </h6>
-            </div>
-            <div class="card-body">
-                @if (_steps.Count == 0)
-                {
-                    <p class="text-muted mb-0">Onizleme icin adim ekleyin.</p>
-                }
-                else
-                {
-                    <ol class="list-group list-group-numbered">
-                        @foreach (var step in _steps.OrderBy(x => x.StepNo))
-                        {
-                            <li class="list-group-item d-flex justify-content-between align-items-start">
-                                <div class="me-2">
-                                    <div class="fw-semibold">@step.Name</div>
-                                    <div class="small text-muted">@GetAssigneeLabel(step)</div>
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="ff-card">
+            <div class="ff-card-body p-0">
+                <DxTabs RenderMode="TabsRenderMode.OnDemand">
+                    <DxTabPage Text="Workflow Adımları">
+                        <div class="p-4" style="background: var(--ff-bg-main);">
+                            <div class="card border-0 shadow-sm mx-auto" style="max-width: 1000px; border-radius: var(--ff-border-radius-lg);">
+                                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                                    <h6 class="mb-0 fw-bold">
+                                        <i class="bi bi-list-ol me-2 text-brand"></i>Workflow Adimlari
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="AddStep" disabled="@(!_selectedFormTypeId.HasValue)">
+                                        <i class="bi bi-plus-lg me-1"></i>Adim Ekle
+                                    </button>
                                 </div>
-                                <span class="badge bg-light text-dark border rounded-pill">@step.StepNo</span>
-                            </li>
-                        }
-                    </ol>
-                }
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr style="background: var(--bg-light-gray);">
+                                                    <th style="width:70px">#</th>
+                                                    <th>Adim Adi</th>
+                                                    <th style="width:140px">Atama Tipi</th>
+                                                    <th style="width:240px">Rol</th>
+                                                    <th style="width:220px">Kullanici Id</th>
+                                                    <th class="text-end pe-3" style="width:170px">Islem</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (_steps.Count == 0)
+                                                {
+                                                    <tr>
+                                                        <td colspan="6" class="text-center py-4 text-muted">
+                                                            <i class="bi bi-inbox d-block fs-4 mb-1"></i>
+                                                            Heniz adim tanimlanmadi.
+                                                        </td>
+                                                    </tr>
+                                                }
+
+                                                @for (var i = 0; i < _steps.Count; i++)
+                                                {
+                                                    var s = _steps[i];
+                                                    <tr>
+                                                        <td>
+                                                            <input class="form-control form-control-sm text-center" type="number" min="1" @bind="s.StepNo" />
+                                                        </td>
+                                                        <td>
+                                                            <input class="form-control form-control-sm" @bind="s.Name" placeholder="Adim adi" />
+                                                        </td>
+                                                        <td>
+                                                            <select class="form-select form-select-sm" @bind="s.AssigneeType">
+                                                                <option value="1">User</option>
+                                                                <option value="2">Role</option>
+                                                                <option value="3">DynamicRule</option>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <select class="form-select form-select-sm" @bind="s.AssigneeRoleIdText" disabled="@(s.AssigneeType != 2)">
+                                                                <option value="">Rol seciniz</option>
+                                                                @foreach (var role in _roles)
+                                                                {
+                                                                    <option value="@role.RoleId">@role.Name (@role.Code)</option>
+                                                                }
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input class="form-control form-control-sm" @bind="s.AssigneeUserIdText" placeholder="Guid" disabled="@(s.AssigneeType != 1)" />
+                                                        </td>
+                                                        <td class="text-end pe-3">
+                                                            <div class="btn-group btn-group-sm">
+                                                                <button class="btn btn-outline-secondary" @onclick="() => MoveStepUp(i)" disabled="@(i == 0)" title="Yukari">
+                                                                    <i class="bi bi-chevron-up"></i>
+                                                                </button>
+                                                                <button class="btn btn-outline-secondary" @onclick="() => MoveStepDown(i)" disabled="@(i == _steps.Count - 1)" title="Asagi">
+                                                                    <i class="bi bi-chevron-down"></i>
+                                                                </button>
+                                                                <button class="btn btn-outline-danger" @onclick="() => RemoveStep(s)" title="Sil">
+                                                                    <i class="bi bi-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </DxTabPage>
+
+                    <DxTabPage Text="Akış Önizleme">
+                        <div class="p-4" style="background: var(--ff-bg-main);">
+                            <div class="card border-0 shadow-sm mx-auto" style="max-width: 600px; border-radius: var(--ff-border-radius-lg);">
+                                <div class="card-header bg-white border-bottom py-2">
+                                    <h6 class="mb-0 fw-bold">
+                                        <i class="bi bi-diagram-3-fill me-2 text-brand"></i>Akis Onizleme
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    @if (_steps.Count == 0)
+                                    {
+                                        <p class="text-muted mb-0">Onizleme icin adim ekleyin.</p>
+                                    }
+                                    else
+                                    {
+                                        <ol class="list-group list-group-numbered">
+                                            @foreach (var step in _steps.OrderBy(x => x.StepNo))
+                                            {
+                                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                                    <div class="me-2">
+                                                        <div class="fw-semibold">@step.Name</div>
+                                                        <div class="small text-muted">@GetAssigneeLabel(step)</div>
+                                                    </div>
+                                                    <span class="badge bg-light text-dark border rounded-pill">@step.StepNo</span>
+                                                </li>
+                                            }
+                                        </ol>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </DxTabPage>
+                </DxTabs>
             </div>
         </div>
     </div>
@@ -231,13 +243,15 @@
     {
         try
         {
-            _templates = await ApiClient.GetTemplatesAsync(CancellationToken.None);
-            _roles = await ApiClient.GetRolesAsync(CancellationToken.None);
+            _templates = await ApiClient.GetTemplatesAsync(CancellationToken.None) ?? [];
+            _roles = await ApiClient.GetRolesAsync(CancellationToken.None) ?? [];
             _selectedTemplate = _templates.FirstOrDefault(x => x.FormTypeId == _selectedFormTypeId);
         }
         catch (Exception ex)
         {
             _error = $"Workflow verileri yuklenemedi: {ex.Message}";
+            _templates ??= [];
+            _roles ??= [];
         }
     }
 

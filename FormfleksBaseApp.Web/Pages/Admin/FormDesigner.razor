@@ -2,66 +2,67 @@
 @attribute [Authorize(Policy = "AdminOrHr")]
 @inject ApiClient ApiClient
 
-<div class="row g-4">
-    @* ── SOL PANEL: FORM TASARIMCISI ── *@
-    <div class="col-lg-7">
-        @* Header Card *@
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header border-0 py-3" style="background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));">
-                <div class="d-flex flex-wrap justify-content-between align-items-center">
+<div class="ff-card mb-4">
+    <div class="ff-card-body p-0">
+        <DxTabs RenderMode="TabsRenderMode.OnDemand">
+            <DxTabPage Text="Tasarım Aracı">
+                <div class="p-4" style="background: var(--ff-bg-main);">
+        <div class="ff-card shadow-sm mb-4">
+            <div class="ff-card-header bg-white border-bottom py-4" style="border-radius: var(--ff-border-radius-lg) var(--ff-border-radius-lg) 0 0;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center w-100">
                     <div>
-                        <h1 class="h5 mb-0 text-white fw-bold">
-                            <i class="bi bi-columns-gap me-2"></i>Form Tasarım Merkezi
+                        <h1 class="h4 mb-1 fw-bold" style="color: var(--ff-primary);">
+                            <i class="bi bi-columns-gap me-2" style="color: var(--ff-accent);"></i>Form Tasarım Merkezi
                         </h1>
-                        <small class="text-white-50">Alanları tanımlayın, sağ tarafta canlı olarak görün.</small>
+                        <p class="text-muted mb-0" style="font-size: 0.95rem;">Sürükle bırak ile alanları tanımlayın, sağ tarafta anında canlı önizleyin.</p>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-light btn-sm" @onclick="ResetForm">
+                    <div class="d-flex gap-2 mt-3 mt-md-0">
+                        <button class="btn btn-outline-secondary px-3" @onclick="ResetForm">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Sıfırla
                         </button>
-                        <button class="btn btn-light btn-sm text-dark" @onclick="LoadLeaveTemplate">
-                            <i class="bi bi-download me-1"></i>Şablon Yükle
+                        <button class="btn btn-light px-3 text-dark border" @onclick="LoadLeaveTemplate">
+                            <i class="bi bi-cloud-download me-1" style="color: var(--ff-accent);"></i>Örnek Şablon
                         </button>
-                        <button class="btn btn-warning btn-sm fw-bold" @onclick="Save" disabled="@_busy">
+                        <button class="btn btn-primary px-4 fw-bold shadow-sm" @onclick="Save" disabled="@_busy">
                             @if (_busy) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            <i class="bi bi-cloud-arrow-up me-1"></i>Kaydet
+                            <i class="bi bi-check2-circle me-1"></i>Değişiklikleri Kaydet
                         </button>
                     </div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="ff-card-body p-4 p-md-5">
                 @if (!string.IsNullOrWhiteSpace(_message))
                 {
-                    <div class="alert alert-success py-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-check-circle-fill"></i> @_message
+                    <div class="alert alert-success py-3 d-flex align-items-center gap-2 shadow-sm rounded-3">
+                        <i class="bi bi-check-circle-fill fs-5"></i> @_message
                     </div>
                 }
                 @if (!string.IsNullOrWhiteSpace(_error))
                 {
-                    <div class="alert alert-danger py-2 d-flex align-items-center gap-2">
-                        <i class="bi bi-exclamation-triangle-fill"></i> @_error
+                    <div class="alert alert-danger py-3 d-flex align-items-center gap-2 shadow-sm rounded-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i> @_error
                     </div>
                 }
 
-                <div class="row g-3">
+                <div class="row g-4 bg-light p-4 rounded-3 border">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold small text-uppercase text-muted">Form Kodu</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="bi bi-code-slash"></i></span>
-                            <InputText class="form-control" @bind-Value="_model.Code" placeholder="LEAVE_REQUEST" />
+                        <label class="form-label fw-bold small text-uppercase text-muted mb-2">Form Kodu</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-code-slash"></i></span>
+                            <InputText class="form-control border-start-0 ps-0" @bind-Value="_model.Code" placeholder="Örn: LEAVE_REQUEST" />
                         </div>
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label fw-semibold small text-uppercase text-muted">Form Adı</label>
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text"><i class="bi bi-type"></i></span>
-                            <InputText class="form-control" @bind-Value="_model.Name" placeholder="İzin Formu" />
+                        <label class="form-label fw-bold small text-uppercase text-muted mb-2">Form Adı</label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-type"></i></span>
+                            <InputText class="form-control border-start-0 ps-0" @bind-Value="_model.Name" placeholder="Örn: İzin Formu" />
                         </div>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <div class="form-check form-switch">
-                            <InputCheckbox class="form-check-input" @bind-Value="_model.Active" />
-                            <label class="form-check-label fw-semibold small">Kullanıma Açık</label>
+                    <div class="col-md-3 d-flex align-items-center justify-content-end pt-md-4">
+                        <div class="form-check form-switch form-switch-lg">
+                            <InputCheckbox class="form-check-input shadow-sm" @bind-Value="_model.Active" id="activeSwitch" />
+                            <label class="form-check-label fw-bold ms-2" for="activeSwitch" style="color: var(--ff-primary);">Kullanıma Açık</label>
                         </div>
                     </div>
                 </div>
@@ -69,20 +70,23 @@
         </div>
 
         @* Alan Listesi Card - Bölümler Halinde *@
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h6 mb-0 fw-bold">
-                <i class="bi bi-list-nested me-2" style="color: var(--brand-copper);"></i>Form Bölümleri
+        <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+            <h2 class="h5 mb-0 fw-bold" style="color: var(--ff-primary);">
+                <i class="bi bi-ui-radios-grid me-2" style="color: var(--ff-accent);"></i>Form Bölümleri
             </h2>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="AddSection">
-                <i class="bi bi-layer-forward me-1"></i>Yeni Bölüm Ekle
+            <button class="btn btn-outline-primary shadow-sm fw-bold px-3 py-2" @onclick="AddSection">
+                <i class="bi bi-plus-circle-fill me-2"></i>Yeni Bölüm Ekle
             </button>
         </div>
 
         @if (_model.Sections.Count == 0)
         {
-            <div class="card border-0 shadow-sm mb-3 text-center p-5 text-muted">
-                <i class="bi bi-inbox fs-4 d-block mb-2"></i>
-                Hiç bölüm yok. "Yeni Bölüm Ekle" butonuna tıklayarak başlayın.
+            <div class="ff-card mb-4 text-center p-5" style="background-color: var(--ff-bg-main); border: 2px dashed var(--ff-border);">
+                <div class="py-4">
+                    <i class="bi bi-inbox fs-1 d-block mb-3" style="color: var(--ff-accent); opacity: 0.5;"></i>
+                    <h5 class="fw-bold text-muted">Hiç bölüm yok</h5>
+                    <p class="text-muted">Yukarıdaki "Yeni Bölüm Ekle" butonuna tıklayarak ilk bölümünüzü oluşturun.</p>
+                </div>
             </div>
         }
 
@@ -91,47 +95,52 @@
             var sec = _model.Sections[sIdx];
             var secIndex = sIdx;
             
-            <div class="card border-0 shadow-sm mb-4" style="border-top: 3px solid var(--brand-copper) !important;">
-                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-                    <div class="d-flex align-items-center gap-2 flex-grow-1">
-                        <i class="bi bi-grip-vertical text-muted cursor-move d-none d-md-block" title="Sürükle"></i>
-                        <InputText class="form-control form-control-sm fw-bold border-0 bg-light" @bind-Value="sec.Title" placeholder="Bölüm Başlığı" style="max-width: 300px;" />
+            <div class="ff-card shadow-sm mb-4" style="border-top: 4px solid var(--ff-accent);">
+                <div class="ff-card-header bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center py-3">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1 mb-2 mb-md-0">
+                        <i class="bi bi-grip-vertical fs-5 text-muted cursor-move d-none d-md-block" title="Sürükle" style="opacity: 0.5;"></i>
+                        <div class="input-group input-group-lg" style="max-width: 400px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-input-cursor-text"></i></span>
+                            <InputText class="form-control border-start-0 fw-bold" @bind-Value="sec.Title" placeholder="Bölüm Başlığı (Örn: Kişisel Bilgiler)" style="color: var(--ff-primary);" />
+                        </div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm text-secondary" @onclick="() => MoveSectionUp(secIndex)" disabled="@(secIndex == 0)" title="Yukarı">
-                            <i class="bi bi-arrow-up"></i>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-light border text-secondary" @onclick="() => MoveSectionUp(secIndex)" disabled="@(secIndex == 0)" title="Yukarı Taşı">
+                                <i class="bi bi-chevron-up"></i>
+                            </button>
+                            <button class="btn btn-light border text-secondary" @onclick="() => MoveSectionDown(secIndex)" disabled="@(secIndex == _model.Sections.Count - 1)" title="Aşağı Taşı">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-outline-danger shadow-sm ms-2" @onclick="() => RemoveSection(sec)" title="Bölümü Sil">
+                            <i class="bi bi-trash3"></i>
                         </button>
-                        <button class="btn btn-sm text-secondary" @onclick="() => MoveSectionDown(secIndex)" disabled="@(secIndex == _model.Sections.Count - 1)" title="Aşağı">
-                            <i class="bi bi-arrow-down"></i>
-                        </button>
-                        <button class="btn btn-sm text-danger" @onclick="() => RemoveSection(sec)" title="Bölümü Sil">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        <button class="btn btn-sm fw-semibold ms-2" style="background: var(--brand-copper-light); color: var(--brand-copper-dark);" @onclick="() => AddField(sec)">
-                            <i class="bi bi-plus-lg me-1"></i>Yeni Alan
+                        <button class="btn btn-primary fw-bold shadow-sm ms-3 ps-3 pe-4" @onclick="() => AddField(sec)">
+                            <i class="bi bi-plus me-1 fs-5 align-middle"></i>Alan Ekle
                         </button>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="ff-card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0" style="font-size: 0.82rem;">
+                        <table class="table align-middle mb-0" style="font-size: 0.9rem;">
                             <thead>
-                                <tr style="background: var(--bg-light-gray);">
-                                    <th class="text-center" style="width:36px">#</th>
-                                    <th style="width:110px">Anahtar</th>
-                                    <th style="width:140px">Etiket</th>
-                                    <th style="width:100px">Veri Tipi</th>
-                                    <th class="text-center" style="width:40px">Zor.</th>
-                                    <th>Placeholder / Seçenekler</th>
-                                    <th class="text-center" style="width:100px">İşlemler</th>
+                                <tr style="background-color: var(--ff-bg-main); border-bottom: 2px solid var(--ff-border);">
+                                    <th class="text-center text-muted fw-bold py-3" style="width:50px">#</th>
+                                    <th class="text-muted fw-bold py-3" style="width:140px">Alan Anahtarı</th>
+                                    <th class="text-muted fw-bold py-3" style="width:180px">Etiket (Görünen İsim)</th>
+                                    <th class="text-muted fw-bold py-3" style="width:140px">Veri Tipi</th>
+                                    <th class="text-center text-muted fw-bold py-3" style="width:80px">Zorunlu</th>
+                                    <th class="text-muted fw-bold py-3">Açıklama / İpucu / Seçenekler</th>
+                                    <th class="text-end text-muted fw-bold py-3 pe-4" style="width:120px">İşlemler</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if (sec.Fields.Count == 0)
                                 {
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-3">
-                                            Bu bölümde henüz alan yok.
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="bi bi-info-circle me-2"></i>Bu bölüme henüz alan eklemediniz. Sağ üstteki <b>Alan Ekle</b> butonuyla başlayın.
                                         </td>
                                     </tr>
                                 }
@@ -139,12 +148,16 @@
                                 {
                                     var f = sec.Fields[i];
                                     var fIndex = i;
-                                    <tr>
-                                        <td class="text-center text-muted">@(fIndex + 1)</td>
-                                        <td><InputText class="form-control form-control-sm form-input-borderless bg-light" @bind-Value="f.FieldKey" placeholder="field_key" /></td>
-                                        <td><InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.Label" placeholder="Görünen İsim" /></td>
+                                    <tr style="border-bottom: 1px solid var(--ff-border);">
+                                        <td class="text-center text-muted fw-bold">@(fIndex + 1)</td>
                                         <td>
-                                            <InputSelect class="form-select form-select-sm form-input-borderless" @bind-Value="f.FieldType">
+                                            <InputText class="form-control form-control-sm bg-light border-0 fw-semibold" style="font-family: monospace;" @bind-Value="f.FieldKey" placeholder="field_key" />
+                                        </td>
+                                        <td>
+                                            <InputText class="form-control form-control-sm border-0 bg-light" @bind-Value="f.Label" placeholder="Örn: Ad Soyad" />
+                                        </td>
+                                        <td>
+                                            <InputSelect class="form-select form-select-sm border-0 bg-light fw-medium" @bind-Value="f.FieldType" style="color: var(--ff-primary);">
                                                 @foreach (var kvp in FieldTypes)
                                                 {
                                                     <option value="@kvp.Key">@kvp.Value</option>
@@ -152,27 +165,29 @@
                                             </InputSelect>
                                         </td>
                                         <td class="text-center">
-                                            <InputCheckbox class="form-check-input" @bind-Value="f.IsRequired" />
+                                            <div class="form-check d-flex justify-content-center mb-0">
+                                                <InputCheckbox class="form-check-input" style="transform: scale(1.2);" @bind-Value="f.IsRequired" />
+                                            </div>
                                         </td>
                                         <td>
                                             @if (f.FieldType == 4) // Dropdown ise seçenekler
                                             {
-                                                <InputText class="form-control form-control-sm form-input-borderless" @bind-Value="f.OptionsJson" placeholder="A,B,C (virgülle ayırın)" />
+                                                <InputText class="form-control form-control-sm border-0 bg-light" @bind-Value="f.OptionsJson" placeholder="Örn: Seçenek A, Seçenek B, Seçenek C (virgülle ayırın)" />
                                             }
                                             else
                                             {
-                                                <InputText class="form-control form-control-sm form-input-borderless text-muted" @bind-Value="f.Placeholder" placeholder="İpucu metni..." />
+                                                <InputText class="form-control form-control-sm border-0 bg-light" @bind-Value="f.Placeholder" placeholder="Kullanıcıya gösterilecek ipucu metni..." />
                                             }
                                         </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm w-100">
-                                                <button class="btn btn-outline-secondary" @onclick="() => MoveFieldUp(sec, fIndex)" disabled="@(fIndex == 0)" title="Yukarı">
-                                                    <i class="bi bi-chevron-up"></i>
+                                        <td class="text-end pe-4">
+                                            <div class="btn-group shadow-sm">
+                                                <button class="btn btn-sm btn-light border text-secondary" @onclick="() => MoveFieldUp(sec, fIndex)" disabled="@(fIndex == 0)" title="Yukarı">
+                                                    <i class="bi bi-arrow-up-short fs-6"></i>
                                                 </button>
-                                                <button class="btn btn-outline-secondary" @onclick="() => MoveFieldDown(sec, fIndex)" disabled="@(fIndex == sec.Fields.Count - 1)" title="Aşağı">
-                                                    <i class="bi bi-chevron-down"></i>
+                                                <button class="btn btn-sm btn-light border text-secondary" @onclick="() => MoveFieldDown(sec, fIndex)" disabled="@(fIndex == sec.Fields.Count - 1)" title="Aşağı">
+                                                    <i class="bi bi-arrow-down-short fs-6"></i>
                                                 </button>
-                                                <button class="btn btn-outline-danger" @onclick="() => RemoveField(sec, f)" title="Sil">
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveField(sec, f)" title="Sil">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -186,41 +201,43 @@
             </div>
         }
     </div>
-
-    @* ── SAĞ PANEL: CANLI ÖNİZLEME ── *@
-    <div class="col-lg-5">
-        <div class="sticky-top" style="top: 80px;">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header border-0 py-2" style="background: var(--brand-copper-dark);">
-                    <div class="d-flex align-items-center text-white">
-                        <i class="bi bi-eye-fill me-2 fs-5"></i>
-                        <h2 class="h6 mb-0 fw-bold text-white">Canlı Önizleme</h2>
-                    </div>
-                </div>
-                <div class="card-body" style="max-height: calc(100vh - 160px); overflow-y: auto; background: #fafbfc;">
-                    @if (string.IsNullOrWhiteSpace(_model.Name) && !_model.Sections.SelectMany(s => s.Fields).Any())
-                    {
-                        <div class="text-center text-muted p-5">
-                            <i class="bi bi-layout-text-window fs-1 mb-2"></i>
-                            <p class="mb-0">Önizleme burada görünecek</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="card border border-light shadow-sm">
-                            <div class="card-header bg-white border-bottom">
-                                <h3 class="h5 mb-0 fw-bold text-dark">@(string.IsNullOrWhiteSpace(_model.Name) ? "İsimsiz Form" : _model.Name)</h3>
+            </DxTabPage>
+            
+            <DxTabPage Text="Canlı Önizleme">
+                <div class="p-4 p-md-5" style="background: var(--ff-bg-main);">
+                    <div class="ff-card shadow-lg mx-auto" style="max-width: 900px;">
+                        <div class="ff-card-header border-0 py-3" style="background: var(--brand-copper-dark); border-radius: var(--ff-border-radius-lg) var(--ff-border-radius-lg) 0 0;">
+                            <div class="d-flex align-items-center text-white">
+                                <i class="bi bi-laptop me-2 fs-5"></i>
+                                <h2 class="h6 mb-0 fw-bold text-white">Canlı Form Gösterimi</h2>
                             </div>
-                            <div class="card-body p-4">
-                                @* DynamicFormRenderer yerine statik görsel önizleme *@
-                                @foreach (var sec in _model.Sections.OrderBy(s => s.SortOrder))
-                                {
-                                    <h4 class="h6 fw-bold mb-3 border-bottom pb-2" style="color: var(--brand-copper-dark);">@sec.Title</h4>
-                                    <div class="row g-4 mb-4">
-                                        @foreach (var df in sec.Fields.OrderBy(f => f.SortOrder))
+                        </div>
+                        <div class="ff-card-body p-4 p-md-5" style="max-height: calc(100vh - 180px); overflow-y: auto; background-color: var(--ff-bg-body);">
+                            @if (string.IsNullOrWhiteSpace(_model.Name) && !_model.Sections.SelectMany(s => s.Fields).Any())
+                            {
+                                <div class="text-center text-muted p-5 d-flex flex-column align-items-center">
+                                    <div class="mb-3" style="width: 80px; height: 80px; border-radius: 50%; background: var(--ff-bg-hover); display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-layout-text-window-reverse fs-2" style="color: var(--ff-accent);"></i>
+                                    </div>
+                                    <h5 class="fw-bold text-dark">Önizleme boş</h5>
+                                    <p class="mb-0">Tasarıma alan eklediğinizde anında burada belirecektir.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="ff-card shadow-sm border" style="background: #ffffff;">
+                                    <div class="ff-card-header bg-white border-bottom py-3">
+                                        <h3 class="h4 mb-0 fw-bold" style="color: var(--ff-primary);">@(string.IsNullOrWhiteSpace(_model.Name) ? "İsimsiz Form" : _model.Name)</h3>
+                                    </div>
+                                    <div class="ff-card-body p-4 p-md-5">
+                                        @foreach (var sec in _model.Sections.OrderBy(s => s.SortOrder))
                                         {
-                                            var colClass = df.FieldType == 2 ? "col-12" : "col-md-6 col-xl-4";
-                                            <div class="@colClass">
+                                            <h4 class="h6 fw-bold mb-4 pb-2 border-bottom" style="color: var(--brand-copper-dark);">@sec.Title</h4>
+                                            <div class="row g-4 mb-5">
+                                                @foreach (var df in sec.Fields.OrderBy(f => f.SortOrder))
+                                                {
+                                                    var colClass = df.FieldType == 2 ? "col-12" : "col-md-6 col-xl-4";
+                                                    <div class="@colClass">
                                                 <EditForm Model="@df">
                                                 @if (df.FieldType == 1) // Textbox
                                                 {
@@ -312,17 +329,19 @@
                         </div>
                     }
                 </div>
-            </div>
-        </div>
+                    </div>
+                </div>
+            </DxTabPage>
+        </DxTabs>
     </div>
 </div>
 
 @* ── ALT BÖLÜM: MEVCUT FORM TİPLERİ ── *@
-<div class="card border-0 shadow-sm mt-4">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-        <h2 class="h6 mb-0 fw-bold">
-            <i class="bi bi-collection me-2" style="color: var(--brand-copper);"></i>Sistemdeki Formlar
-        </h2>
+<div class="ff-card mb-5">
+    <div class="ff-card-header">
+        <h3 class="ff-card-title">
+            <i class="bi bi-collection me-2" style="color: var(--ff-accent);"></i>Sistemdeki Formlar
+        </h3>
         <span class="badge bg-light text-dark border">@_templates.Count form şablonu</span>
     </div>
     <div class="card-body p-0">

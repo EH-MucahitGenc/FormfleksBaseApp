@@ -24,7 +24,7 @@
         }
         @if (Multiline)
         {
-            <textarea class="premium-control @(HasIcon ? "has-icon" : "") @CssClass"
+            <textarea class="premium-control dxbs-memo @(HasIcon ? "has-icon" : "") @CssClass"
                       id="@Id"
                       placeholder="@Placeholder"
                       disabled="@Disabled"
@@ -35,7 +35,11 @@
         }
         else
         {
-            <input class="premium-control @(HasIcon ? "has-icon" : "") @CssClass"
+            var baseTypeClass = Type == "date" ? "dxbs-date-edit" 
+                              : Type == "time" ? "dxbs-time-edit" 
+                              : "dxbs-textbox";
+                              
+            <input class="premium-control @baseTypeClass @(HasIcon ? "has-icon" : "") @CssClass"
                    id="@Id"
                    placeholder="@Placeholder"
                    type="@Type"

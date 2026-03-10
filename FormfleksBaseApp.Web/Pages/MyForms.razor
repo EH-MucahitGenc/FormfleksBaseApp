@@ -2,60 +2,96 @@
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 
-<div class="page-header">
-    <h1>Formlarım</h1>
-    <p class="page-subtitle">Gönderdiğiniz tüm form taleplerini buradan takip edebilirsiniz.</p>
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Form Talepleri</h1>
+        <p class="text-muted mb-0">Gönderdiğiniz tüm form taleplerini buradan takip edebilirsiniz.</p>
+    </div>
+    <div>
+        <a href="/forms/create" class="btn btn-primary d-flex align-items-center gap-2">
+            <i class="bi bi-plus-lg"></i> Yeni Form
+        </a>
+    </div>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-file-earmark-text me-2" style="color: var(--brand-copper);"></i>Form Talepleri
-        </h6>
-        <span class="badge bg-light text-dark border">@_items.Count kayıt</span>
+@if (_loading)
+{
+    <div class="d-flex justify-content-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <DataTable Items="_items" IsLoading="_loading" EmptyStateTitle="Henüz hiç form talebiniz yok" EmptyStateDescription="Yeni bir talep oluşturarak süreci başlatabilirsiniz.">
-            <TableHeader>
-                <th>Talep No</th>
-                <th>Form Tipi</th>
-                <th>Durum</th>
-                <th>Adım</th>
-                <th>Tarih</th>
-            </TableHeader>
-            <RowTemplate Context="item">
-                <td>
-                    @if(item.Status == 1)
-                    {
-                        <a href="/forms/request/@item.RequestId" class="text-brand text-decoration-none fw-bold d-flex align-items-center gap-1">
-                            <span>@item.RequestNo</span>
-                            <i class="bi bi-pencil-square small"></i>
-                        </a>
-                    }
-                    else
-                    {
-                        <span class="fw-bold">@item.RequestNo</span>
-                    }
-                </td>
-                <td>@item.FormTypeName</td>
-                <td>@GetStatusBadge((int)item.Status)</td>
-                <td>
-                    @if(item.CurrentStepNo.HasValue)
-                    {
-                        <span class="badge bg-light text-dark border">Adım @item.CurrentStepNo</span>
-                    }
-                    else
-                    {
-                        <span class="text-muted">—</span>
-                    }
-                </td>
-                <td class="text-muted small">@item.CreatedAt.AddHours(3).ToString("dd.MM.yyyy HH:mm")</td>
-            </RowTemplate>
-        </DataTable>
+}
+else
+{
+    <div class="shadow-sm border rounded">
+        <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+        </DxToolbar>
+        
+        <DxGrid @ref="_grid"
+                Data="@_items" 
+                ShowFilterRow="true" 
+                ShowGroupPanel="true" 
+                ShowSearchBox="true" 
+                PageSize="10" 
+                PagerVisible="true" 
+                PageSizeSelectorVisible="true" 
+                PageSizeSelectorItems="@(new int[] { 10, 20, 50, 100 })"
+                AllowSelectRowByClick="true"
+                SelectionMode="GridSelectionMode.Multiple"
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                CssClass="w-100 border-0">
+            <Columns>
+                <DxGridDataColumn FieldName="RequestNo" Caption="Talep No" MinWidth="180">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.MyFormRequestListItemDto)context.DataItem; }
+                        @if(item.Status == 1)
+                        {
+                            <a href="/forms/request/@item.RequestId" class="text-decoration-none ff-cell-primary d-flex align-items-center gap-2">
+                                <span>@item.RequestNo</span>
+                                <i class="bi bi-pencil-square text-muted" style="font-size: 0.85rem;"></i>
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="ff-cell-primary">@item.RequestNo</span>
+                        }
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="FormTypeName" Caption="Form Tipi" MinWidth="200" />
+                <DxGridDataColumn FieldName="Status" Caption="Durum" MinWidth="160">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.MyFormRequestListItemDto)context.DataItem; }
+                        @GetStatusBadge((int)item.Status)
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="CurrentStepNo" Caption="Adım" MinWidth="120">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.MyFormRequestListItemDto)context.DataItem; }
+                        @if(item.CurrentStepNo.HasValue)
+                        {
+                            <span class="badge" style="background-color: var(--ff-bg-hover); color: var(--ff-text-secondary); border: 1px solid var(--ff-border); font-weight: 500;">Adım @item.CurrentStepNo</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="CreatedAt" Caption="Tarih" MinWidth="180">
+                    <CellDisplayTemplate>
+                        @{ var item = (FormfleksBaseApp.Web.Models.MyFormRequestListItemDto)context.DataItem; }
+                        <span class="ff-cell-muted">@item.CreatedAt.AddHours(3).ToString("dd.MM.yyyy HH:mm")</span>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+            </Columns>
+        </DxGrid>
     </div>
-</div>
+}
 
 @code {
+    IGrid _grid;
     [SupplyParameterFromQuery(Name = "status")] 
     public int? StatusFilter { get; set; }
 

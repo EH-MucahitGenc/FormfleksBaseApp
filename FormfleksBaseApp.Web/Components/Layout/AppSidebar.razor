@@ -1,88 +1,100 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using System.Linq
 
-<div class="sidebar @(IsCollapsed ? "collapsed" : "")">
-    <div class="sidebar-header d-flex justify-content-center align-items-center">
-        <a href="/dashboard">
-            <img src="/images/logo.png" alt="İnsan Kaynakları Form Takip" class="sidebar-logo" style="max-height: 38px;" />
-        </a>
-    </div>
-
-    <div class="sidebar-content">
+<div class="ff-sidebar @(IsCollapsed ? "collapsed" : "")">
+    <div class="overflow-auto py-3">
         @if (HasAppRole)
         {
-            <p class="nav-section-title @(IsCollapsed ? "d-none" : "")">Ana Menü</p>
+            <p class="text-uppercase fw-semibold px-4 mb-2 mt-2 sidebar-text" style="color: var(--ff-text-muted); font-size: 0.70rem; letter-spacing: 0.5px;">Ana Menü</p>
 
-            <NavLink class="app-nav-link" href="/dashboard" Match="NavLinkMatch.All" title="Panel">
-                <i class="bi bi-grid-1x2-fill nav-icon"></i>
-                <span class="nav-text @(IsCollapsed ? "d-none" : "")">Panel</span>
+            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/dashboard" Match="NavLinkMatch.All" title="Panel" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                <i class="bi bi-grid-1x2-fill fs-5 me-3"></i>
+                <span class="fw-medium sidebar-text">Panel</span>
             </NavLink>
 
-            <NavLink class="app-nav-link" href="/my-forms" title="Formlarım">
-                <i class="bi bi-file-earmark-text nav-icon"></i>
-                <span class="nav-text @(IsCollapsed ? "d-none" : "")">Formlarım</span>
+            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/my-forms" title="Formlarım" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                <i class="bi bi-file-earmark-text fs-5 me-3"></i>
+                <span class="fw-medium sidebar-text">Formlarım</span>
             </NavLink>
 
-            <NavLink class="app-nav-link" href="/approvals" title="Onay Bekleyenler">
-                <i class="bi bi-check2-square nav-icon"></i>
-                <span class="nav-text @(IsCollapsed ? "d-none" : "")">Onay Bekleyenler</span>
+            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/approvals" title="Onay Bekleyenler" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                <i class="bi bi-check2-square fs-5 me-3"></i>
+                <span class="fw-medium sidebar-text">Onay Bekleyenler</span>
             </NavLink>
 
-            <NavLink class="app-nav-link" href="/visitors" title="Ziyaretçiler">
-                <i class="bi bi-person-lines-fill nav-icon"></i>
-                <span class="nav-text @(IsCollapsed ? "d-none" : "")">Ziyaretçiler</span>
+            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/visitors" title="Ziyaretçiler" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                <i class="bi bi-person-lines-fill fs-5 me-3"></i>
+                <span class="fw-medium sidebar-text">Ziyaretçiler</span>
             </NavLink>
 
-            <hr class="nav-divider" />
+            <hr class="mx-4 my-3" style="border-color: var(--ff-sidebar-border);" />
         }
 
         @if (CanAccessTemplateAdmin || CanAccessUserAdmin)
         {
-            <p class="nav-section-title @(IsCollapsed ? "d-none" : "")">Yönetim</p>
+            <p class="text-uppercase fw-semibold px-4 mb-2 sidebar-text" style="color: var(--ff-text-muted); font-size: 0.70rem; letter-spacing: 0.5px;">Yönetim</p>
 
             @if (CanAccessTemplateAdmin)
             {
-                <NavLink class="app-nav-link" href="/admin/form-designer" title="Form Tasarımcısı">
-                    <i class="bi bi-columns-gap nav-icon"></i>
-                    <span class="nav-text @(IsCollapsed ? "d-none" : "")">Form Tasarımcısı</span>
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/form-designer" title="Form Tasarımcısı" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-columns-gap fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Form Tasarımcısı</span>
                 </NavLink>
 
-                <NavLink class="app-nav-link" href="/admin/workflow-designer" title="Onay Rotaları">
-                    <i class="bi bi-diagram-3 nav-icon"></i>
-                    <span class="nav-text @(IsCollapsed ? "d-none" : "")">Onay Rotaları</span>
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/workflow-designer" title="Onay Rotaları" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-diagram-3 fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Onay Rotaları</span>
                 </NavLink>
 
-                <NavLink class="app-nav-link" href="/admin/audit-logs" title="Eylem Geçmişi">
-                    <i class="bi bi-shield-check nav-icon"></i>
-                    <span class="nav-text @(IsCollapsed ? "d-none" : "")">Eylem Geçmişi</span>
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/audit-logs" title="Eylem Geçmişi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-shield-check fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Eylem Geçmişi</span>
                 </NavLink>
             }
 
             @if (CanAccessUserAdmin)
             {
-                <NavLink class="app-nav-link" href="/admin/users" title="Kullanıcı Yönetimi">
-                    <i class="bi bi-people nav-icon"></i>
-                    <span class="nav-text @(IsCollapsed ? "d-none" : "")">Kullanıcı Yönetimi</span>
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/users" title="Kullanıcı Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-people fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Kullanıcı Yönetimi</span>
+                </NavLink>
+                
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/roles" title="Rol Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-shield-lock fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Rol Yönetimi</span>
+                </NavLink>
+
+                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/departments" title="Departman Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
+                    <i class="bi bi-building fs-5 me-3"></i>
+                    <span class="fw-medium sidebar-text">Departman Yönetimi</span>
                 </NavLink>
             }
 
-            <hr class="nav-divider" />
+            <hr class="mx-4 my-3" style="border-color: var(--ff-sidebar-border);" />
         }
 
         @if (HasAppRole)
         {
-            <p class="nav-section-title @(IsCollapsed ? "d-none" : "")">Formlar</p>
+            <div class="nav-item-group">
+                <a @onclick="ToggleForms" class="d-flex align-items-center px-4 py-2 text-decoration-none w-100" style="color: var(--ff-sidebar-text); cursor: pointer; transition: all 0.2s; background-color: @(_formsExpanded && !IsCollapsed ? "rgba(246, 137, 76, 0.05)" : "transparent");">
+                    <i class="bi bi-folder-fill fs-5 me-3" style="color: @(_formsExpanded && !IsCollapsed ? "var(--ff-primary)" : "inherit");"></i>
+                    <span class="fw-medium sidebar-text" style="flex-grow: 1;">Açılabilir Formlar</span>
+                    <i class="bi bi-chevron-@( _formsExpanded ? "up" : "down" ) ms-auto sidebar-text" style="font-size: 0.8rem;"></i>
+                </a>
 
-            @if (FormTypes is not null)
-            {
-                foreach (var ft in FormTypes.Where(x => x.Active))
+                @if (_formsExpanded && !IsCollapsed && FormTypes is not null)
                 {
-                    <NavLink class="app-nav-link" href="@($"/forms/{ft.Code.ToLowerInvariant()}")" title="@ft.Name">
-                        <i class="bi bi-pencil-square nav-icon"></i>
-                        <span class="nav-text @(IsCollapsed ? "d-none" : "")">@ft.Name</span>
-                    </NavLink>
+                    <div class="forms-submenu py-1" style="background-color: rgba(0,0,0,0.01); border-left: 2px solid var(--ff-primary); margin-left: 1.5rem;">
+                        @foreach (var ft in FormTypes.Where(x => x.Active))
+                        {
+                            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="@($"/forms/{ft.Code.ToLowerInvariant()}")" title="@ft.Name" style="color: var(--ff-sidebar-text); transition: all 0.2s; padding-left: 1.5rem !important;">
+                                <i class="bi bi-pencil-square fs-6 me-2" style="opacity: 0.7;"></i>
+                                <span class="fw-medium sidebar-text" style="font-size: 0.9em;">@ft.Name</span>
+                            </NavLink>
+                        }
+                    </div>
                 }
-            }
+            </div>
         }
     </div>
 </div>
@@ -102,4 +114,11 @@
 
     [Parameter]
     public bool CanAccessUserAdmin { get; set; }
+
+    private bool _formsExpanded = true;
+
+    private void ToggleForms()
+    {
+        _formsExpanded = !_formsExpanded;
+    }
 }

@@ -1,66 +1,74 @@
-﻿@page "/dashboard"
+@page "/dashboard"
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 
-<div class="page-header">
-    <h1>Hoş geldiniz, @(TokenStore.UserName ?? "Kullanıcı") 👋</h1>
-    <p class="page-subtitle">İşlerinizi hızlıca takip edin.</p>
-</div>
+<div class="page-title mb-1">Hoş geldiniz, @(TokenStore.UserName ?? "Kullanıcı") 👋</div>
+<div class="page-description mb-4">İş akışlarınızı ve form taleplerinizi buradan takip edebilirsiniz.</div>
 
-<div class="row g-4 mb-4">
+<div class="row g-4 mb-5">
     <div class="col-sm-6 col-xl-3">
         <KpiCard Title="Toplam Formlarım" 
                  Value="@_myFormsCount.ToString()" 
                  IconClass="bi bi-file-earmark-text"
+                 IconBackgroundColor="rgba(15, 98, 254, 0.1)"
+                 IconColor="var(--ff-accent)"
                  Href="/my-forms" />
     </div>
     <div class="col-sm-6 col-xl-3">
         <KpiCard Title="Onay Bekleyen" 
                  Value="@_pendingCount.ToString()" 
                  IconClass="bi bi-hourglass-split"
-                 IconBackgroundColor="rgba(245, 158, 11, 0.12)"
-                 IconColor="#F59E0B"
+                 IconBackgroundColor="rgba(241, 194, 27, 0.12)"
+                 IconColor="var(--ff-warning)"
                  Href="/approvals" />
     </div>
     <div class="col-sm-6 col-xl-3">
         <KpiCard Title="Onaylanan" 
                  Value="@_approvedCount.ToString()" 
                  IconClass="bi bi-check-circle"
-                 IconBackgroundColor="rgba(16, 185, 129, 0.12)"
-                 IconColor="#10B981"
+                 IconBackgroundColor="rgba(36, 161, 72, 0.12)"
+                 IconColor="var(--ff-success)"
                  Href="/my-forms?status=4" />
     </div>
     <div class="col-sm-6 col-xl-3">
         <KpiCard Title="Reddedilen" 
                  Value="@_rejectedCount.ToString()" 
                  IconClass="bi bi-x-circle"
-                 IconBackgroundColor="rgba(239, 68, 68, 0.12)"
-                 IconColor="#EF4444"
+                 IconBackgroundColor="rgba(218, 30, 40, 0.12)"
+                 IconColor="var(--ff-danger)"
                  Href="/my-forms?status=5" />
     </div>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius: var(--radius-modern);">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-lightning-charge me-2" style="color: var(--brand-copper);"></i>Hızlı İşlemler
-        </h6>
+<div class="ff-card">
+    <div class="ff-card-header">
+        <h3 class="ff-card-title">
+            <i class="bi bi-lightning-charge-fill me-2" style="color: var(--ff-accent);"></i>Hızlı İşlemler
+        </h3>
     </div>
-    <div class="card-body">
-        <div class="quick-actions-grid">
-            <a href="/forms/leave" class="quick-action-btn">
-                <i class="bi bi-plus-circle"></i> 
-                <span>Yeni İzin Talebi</span>
-            </a>
-            <a href="/my-forms" class="quick-action-btn">
-                <i class="bi bi-list-ul"></i> 
-                <span>Tüm Formlarım</span>
-            </a>
-            <a href="/approvals" class="quick-action-btn">
-                <i class="bi bi-check2-square"></i> 
-                <span>Onay Bekleyenler</span>
-            </a>
+    <div class="ff-card-body p-4">
+        <div class="d-flex flex-wrap gap-3">
+            <DxButton RenderStyle="ButtonRenderStyle.Primary"
+                      RenderStyleMode="ButtonRenderStyleMode.Contained"
+                      Text="Yeni İzin Talebi"
+                      IconCssClass="bi bi-calendar-plus"
+                      NavigateUrl="/forms/leave"
+                      CssClass="px-4 py-2 fw-semibold" />
+                      
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary"
+                      RenderStyleMode="ButtonRenderStyleMode.Outline"
+                      Text="Tüm Formlarım"
+                      IconCssClass="bi bi-list-ul"
+                      NavigateUrl="/my-forms"
+                      CssClass="px-4 py-2 fw-medium text-dark border-secondary" />
+
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary"
+                      RenderStyleMode="ButtonRenderStyleMode.Outline"
+                      Text="Onay Bekleyenler"
+                      IconCssClass="bi bi-check2-square"
+                      NavigateUrl="/approvals"
+                      CssClass="px-4 py-2 fw-medium text-dark border-secondary" />
         </div>
     </div>
 </div>

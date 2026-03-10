@@ -170,7 +170,7 @@
 
 @code {
     private List<FormfleksBaseApp.Web.Services.AdminUserDto> _users = [];
-    private IReadOnlyList<FormfleksBaseApp.Web.Services.RoleLookupItem> _allRoles = [];
+    private IReadOnlyList<FormfleksBaseApp.Application.Features.AdminRoles.Dtos.AdminRoleDto> _allRoles = [];
     private string? _successMsg;
     private string? _errorMsg;
     private bool _saving;
@@ -188,7 +188,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadUsers();
-        _allRoles = await ApiClient.GetUserRolesAsync(CancellationToken.None);
+        _allRoles = await ApiClient.GetAdminRolesAsync(CancellationToken.None);
     }
 
     private async Task LoadUsers()
