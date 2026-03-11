@@ -21,12 +21,7 @@
     </div>
 }
 
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">Departman Yönetimi</h1>
-        <p class="text-muted mb-0">Kurumsal departmanları yönetin ve listeye yeni departmanlar ekleyin.</p>
-    </div>
-</div>
+<AppPageHeader Title="Departman Yönetimi" Subtitle="Kurumsal departmanları yönetin ve listeye yeni departmanlar ekleyin." />
 
 @if (_loading)
 {
@@ -41,7 +36,7 @@ else
     <div class="shadow-sm border rounded">
         <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
             <DxToolbarItem Text="Yeni Departman" BeginGroup="true" IconCssClass="bi bi-plus-lg" Click="OpenCreateModal" />
-            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click='@(() => _grid.ShowColumnChooser(".col-chooser-btn"))' />
         </DxToolbar>
 
         <DxGrid @ref="_grid"
@@ -66,14 +61,7 @@ else
                 <DxGridDataColumn FieldName="Active" Caption="Durum" MinWidth="150">
                     <CellDisplayTemplate Context="deptContext">
                         @{ var d = (AdminDepartmentDto)deptContext.DataItem; }
-                        @if (d.Active)
-                        {
-                            <span class="ff-status-badge -success">Aktif</span>
-                        }
-                        else
-                        {
-                            <span class="ff-status-badge -draft">Pasif</span>
-                        }
+                        <AppStatusBadge IsBooleanMode="true" Active="d.Active" />
                     </CellDisplayTemplate>
                 </DxGridDataColumn>
                 <DxGridDataColumn Caption="İşlem" AllowFilter="false" AllowSort="false" MinWidth="120" Width="120px">
@@ -94,73 +82,44 @@ else
     </div>
 }
 
-@* ===== EKLE/DÜZENLE MODAL ===== *@
-@if (_showModal)
-{
-    <div class="modal-backdrop fade show" style="z-index: 1050;"></div>
-    <div class="modal fade show d-block" tabindex="-1" style="z-index: 1055;">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: var(--ff-border-radius-lg);">
-                <div class="modal-header bg-light border-bottom py-3">
-                    <h5 class="modal-title fw-bold">@(_editId.HasValue ? "Departman Düzenle" : "Yeni Departman Ekle")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <div class="mb-3">
-                        <label class="form-label small text-muted text-uppercase fw-semibold">Departman Kodu</label>
-                        <input type="text" class="form-control" @bind="_editCode" placeholder="Örn: IT" />
-                        <small class="text-muted">Sistemde benzersiz olmalıdır.</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted text-uppercase fw-semibold">Departman Adı</label>
-                        <input type="text" class="form-control" @bind="_editName" placeholder="Örn: Bilgi Teknolojileri" />
-                    </div>
-                    <div class="form-check form-switch mt-4">
-                        <input class="form-check-input" type="checkbox" id="deptActive" @bind="_editActive">
-                        <label class="form-check-label ms-2" for="deptActive">Bu departman sistemde aktif olsun</label>
-                    </div>
-                </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-light border" @onclick="CloseModal">İptal</button>
-                    <button type="button" class="btn btn-primary" @onclick="Save" disabled="@_saving">
-                        @if (_saving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
-                        }
-                        Kaydet
-                    </button>
-                </div>
-            </div>
+@* ===== EKLE/DÜZENLE POPUP ===== *@
+<DxPopup Visible="@_showModal" 
+         VisibleChanged="@((bool v) => _showModal = v)" 
+         HeaderText="@(_editId.HasValue ? "Departman Düzenle" : "Yeni Departman Ekle")" 
+         Width="500px" 
+         ShowCloseButton="true">
+    <BodyTemplate>
+        <div class="mb-3">
+            <label class="form-label small text-muted text-uppercase fw-semibold">Departman Kodu</label>
+            <input type="text" class="form-control" @bind="_editCode" placeholder="Örn: IT" />
+            <small class="text-muted">Sistemde benzersiz olmalıdır.</small>
         </div>
-    </div>
-}
+        <div class="mb-3">
+            <label class="form-label small text-muted text-uppercase fw-semibold">Departman Adı</label>
+            <input type="text" class="form-control" @bind="_editName" placeholder="Örn: Bilgi Teknolojileri" />
+        </div>
+        <div class="form-check form-switch mt-4">
+            <input class="form-check-input" type="checkbox" id="deptActive" @bind="_editActive">
+            <label class="form-check-label ms-2" for="deptActive">Bu departman sistemde aktif olsun</label>
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <button type="button" class="btn btn-light border" @onclick="CloseModal">İptal</button>
+        <button type="button" class="btn btn-primary ms-2" @onclick="Save" disabled="@_saving">
+            @if (_saving) { <span class="spinner-border spinner-border-sm me-2"></span> } Kaydet
+        </button>
+    </FooterTemplate>
+</DxPopup>
 
-@* ===== SİLME ONAY MODAL ===== *@
-@if (_showDeleteModal && _deleteDepartment is not null)
-{
-    <div class="modal-backdrop fade show" style="z-index: 1050;"></div>
-    <div class="modal fade show d-block" tabindex="-1" style="z-index: 1055;">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: var(--ff-border-radius-lg);">
-                <div class="modal-header bg-danger text-white border-0 py-3">
-                    <h5 class="modal-title fw-bold">Departmanı Sil</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
-                </div>
-                <div class="modal-body text-center py-4">
-                    <i class="bi bi-exclamation-circle text-danger mb-3" style="font-size: 3rem;"></i>
-                    <p class="mb-0"><strong>@_deleteDepartment.Name</strong> departmanını silmek istediğinize emin misiniz?</p>
-                    <p class="small text-muted mt-2">Bu departmana kayıtlı kullanıcılar varsa hata alırsınız.</p>
-                </div>
-                <div class="modal-footer border-0 justify-content-center bg-light">
-                    <button type="button" class="btn btn-light border" @onclick="CloseDeleteModal">Vazgeç</button>
-                    <button type="button" class="btn btn-danger px-4" @onclick="Delete" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                        Evet, Sil
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+@* ===== SİLME ONAY POPUP ===== *@
+<AppConfirmPopup @bind-Visible="_showDeleteModal"
+                 Title="Departmanı Sil"
+                 Message="@($"{_deleteDepartment?.Name} departmanını silmek istediğinize emin misiniz?")"
+                 SubMessage="Bu departmana kayıtlı kullanıcılar varsa hata alırsınız."
+                 ConfirmButtonText="Evet, Sil"
+                 IsProcessing="_saving"
+                 OnConfirm="Delete"
+                 OnCancel="CloseDeleteModal" />
 }
 
 @code {

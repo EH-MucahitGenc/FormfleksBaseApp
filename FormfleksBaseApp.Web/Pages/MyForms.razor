@@ -2,17 +2,11 @@
 @attribute [Authorize(Policy = "HasAppRole")]
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">Form Talepleri</h1>
-        <p class="text-muted mb-0">Gönderdiğiniz tüm form taleplerini buradan takip edebilirsiniz.</p>
-    </div>
-    <div>
-        <a href="/forms/create" class="btn btn-primary d-flex align-items-center gap-2">
-            <i class="bi bi-plus-lg"></i> Yeni Form
-        </a>
-    </div>
-</div>
+<AppPageHeader Title="Form Talepleri" Subtitle="Gönderdiğiniz tüm form taleplerini buradan takip edebilirsiniz.">
+    <a href="/forms/create" class="btn btn-primary d-flex align-items-center gap-2">
+        <i class="bi bi-plus-lg"></i> Yeni Form
+    </a>
+</AppPageHeader>
 
 @if (_loading)
 {
@@ -26,7 +20,7 @@ else
 {
     <div class="shadow-sm border rounded">
         <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
-            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click='@(() => _grid.ShowColumnChooser(".col-chooser-btn"))' />
         </DxToolbar>
         
         <DxGrid @ref="_grid"
@@ -63,7 +57,7 @@ else
                 <DxGridDataColumn FieldName="Status" Caption="Durum" MinWidth="160">
                     <CellDisplayTemplate>
                         @{ var item = (FormfleksBaseApp.Web.Models.MyFormRequestListItemDto)context.DataItem; }
-                        @GetStatusBadge((int)item.Status)
+                        <AppStatusBadge Status="(int)item.Status" />
                     </CellDisplayTemplate>
                 </DxGridDataColumn>
                 <DxGridDataColumn FieldName="CurrentStepNo" Caption="Adım" MinWidth="120">
@@ -117,15 +111,5 @@ else
         finally { _loading = false; }
     }
 
-    private RenderFragment GetStatusBadge(int status) => status switch
-    {
-        1 => @<span class="badge-status badge-draft"><i class="bi bi-pencil"></i> Taslak</span>,
-        2 => @<span class="badge-status badge-submitted"><i class="bi bi-send"></i> Gönderildi</span>,
-        3 => @<span class="badge-status badge-approval"><i class="bi bi-hourglass-split"></i> Onayda</span>,
-        4 => @<span class="badge-status badge-approved"><i class="bi bi-check-circle"></i> Onaylandı</span>,
-        5 => @<span class="badge-status badge-rejected"><i class="bi bi-x-circle"></i> Reddedildi</span>,
-        6 => @<span class="badge-status badge-cancelled"><i class="bi bi-slash-circle"></i> İptal</span>,
-        7 => @<span class="badge-status badge-revision"><i class="bi bi-arrow-counterclockwise"></i> Revizyon</span>,
-        _ => @<span class="badge-status badge-draft">Bilinmiyor</span>
-    };
+
 }

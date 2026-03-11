@@ -1,55 +1,92 @@
 /* ==========================================================================
    FORM FLEKS BASE APP - PREMIUM DESIGN SYSTEM (DevExpress Native)
-   Based on Logo Monochromatic (#2A2F35) + Vurgu (#0F62FE)
+   Logo.svg Referenced: #f6894c (Copper/Orange) + #414042 / #231f20 (Neutral Grays)
    ========================================================================== */
 
 :root {
-    /* Brand Colors (Derived from logo.svg - f6894c gradient) */
-    --ff-primary: #F6894C;
-    --ff-primary-hover: #E0753A;
-    --ff-primary-active: #D1652C;
+    /* Brand Colors (Strictly from logo.svg gradient & shapes) */
+    --ff-primary: #f6894c; /* Logo Copper/Orange */
+    --ff-primary-hover: #e0753a;
+    --ff-primary-active: #c56029;
     --ff-primary-soft: rgba(246, 137, 76, 0.1);
     
-    /* Accent Color */
-    --ff-accent: #414042;
-    --ff-accent-hover: #231F20;
+    /* Logo Dark Grays */
+    --ff-brand-dark: #231f20; /* Logo Almost Black */
+    --ff-accent: #414042;     /* Logo Dark Gray */
+    --ff-accent-hover: #231f20;
     
-    /* Backgrounds & Surfaces (Premium SaaS) */
-    --ff-bg-body: #F1F5F9; /* Muted modern gray background */
-    --ff-bg-surface: #FFFFFF; /* Pure white cards */
-    --ff-bg-hover: #FFF5F0; 
-    --ff-input-bg: #F8FAFC; /* Inputs separated from cards */
+    /* Neutral Grays (Derived from #414042 instead of cool blue slates) */
+    --ff-gray-50:  #f8f8f9;
+    --ff-gray-100: #f0f0f1;
+    --ff-gray-200: #dfdfe0;
+    --ff-gray-300: #c4c3c5;
+    --ff-gray-400: #a8a7a9;
+    --ff-gray-500: #8c8b8d;
+    --ff-gray-600: #717072;
+    --ff-gray-700: #59585a;
+    --ff-gray-800: #414042;
+    --ff-gray-900: #231f20;
+
+    /* Backgrounds & Surfaces */
+    --ff-bg-body: var(--ff-gray-50); 
+    --ff-bg-surface: #ffffff; 
+    --ff-bg-hover: #fff5f0; 
+    --ff-input-bg: var(--ff-gray-100); 
     
     /* Borders */
-    --ff-border: #E2E8F0;
+    --ff-border: var(--ff-gray-200);
     --ff-border-focus: var(--ff-primary);
     
     /* Shadows & Rings */
     --ff-ring-focus: rgba(246, 137, 76, 0.25);
-    --ff-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05); /* Subtle depth */
-    --ff-shadow-md: 0 4px 10px rgba(15, 23, 42, 0.08); /* Card shadow */
-    --ff-shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.1); /* Modal shadow */
+    --ff-shadow-sm: 0 1px 3px rgba(35, 31, 32, 0.05);
+    --ff-shadow-md: 0 4px 10px rgba(35, 31, 32, 0.08);
+    --ff-shadow-lg: 0 10px 25px rgba(35, 31, 32, 0.1);
     
-    /* Typography Colors */
-    --ff-text-main: #1E293B;  /* Very dark blue/gray */
-    --ff-text-secondary: #475569;
-    --ff-text-muted: #94A3B8;
-    --ff-text-inverse: #FFFFFF;
+    /* Typography Colors (Strict Harmony) */
+    --ff-text-main: var(--ff-brand-dark);     /* #231f20 */
+    --ff-text-secondary: var(--ff-gray-700);
+    --ff-text-muted: var(--ff-gray-500);
+    --ff-text-inverse: #ffffff;
     
     /* Theme Specific Components */
-    --ff-sidebar-bg: #FFFFFF;
-    --ff-sidebar-text: #475569;
-    --ff-sidebar-border: #E2E8F0;
+    --ff-sidebar-bg: #ffffff;
+    --ff-sidebar-text: var(--ff-gray-800);
+    --ff-sidebar-border: var(--ff-gray-200);
     --ff-sidebar-active-bg: var(--ff-primary-soft);
     --ff-sidebar-active-text: var(--ff-primary);
-    --ff-topbar-bg: #FFFFFF;
-    --ff-topbar-border: #E2E8F0;
+    
+    --ff-topbar-bg: #ffffff;
+    --ff-topbar-border: var(--ff-gray-200);
+    
+    /* Semantic Status Colors */
+    --ff-success: #16a34a;
+    --ff-warning: #d97706;
+    --ff-danger: #dc2626;
+    --ff-info: #2563eb;
     
     /* Spacing & Layout */
-    --ff-border-radius: 6px; /* Slightly more rounded */
+    --ff-border-radius: 6px; 
     --ff-border-radius-lg: 12px;
     --ff-sidebar-width: 260px;
-    --ff-topbar-height: 68px; /* Taller navbar */
+    --ff-topbar-height: 68px;
+    
+    /* Legacy aliases (used by scoped .razor.css files) */
+    --brand-copper: var(--ff-primary);
+    --text-muted: var(--ff-text-muted);
+    --text-main: var(--ff-text-main);
+    --text-secondary: var(--ff-text-secondary);
+    --border-soft: var(--ff-gray-300);
+    --border-focus: var(--ff-gray-400);
+    --surface-white: #ffffff;
+    --bg-light-gray: var(--ff-gray-100);
+    --radius-sm: 8px;
+    --radius-md: var(--ff-border-radius-lg);
+    --shadow-focus: 0 0 0 3px var(--ff-ring-focus);
+    --transition-fast: 0.2s ease;
+    --status-danger: var(--ff-danger);
+    --status-success: var(--ff-success);
+    --status-warning: var(--ff-warning);
 }
 
 /* ==========================================================================
@@ -59,10 +96,10 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     font-size: 14px;
     background-color: var(--ff-bg-body);
-    color: var(--ff-text-primary);
+    color: var(--ff-text-main);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -235,7 +272,7 @@ a:hover {
 .ff-data-module-header .module-title {
     font-size: 1.15rem;
     font-weight: 600;
-    color: #1E293B; /* Koyu slate gri */
+    color: var(--ff-text-main); /* Ana renk ile eşleştirildi */
     margin: 0;
     display: flex;
     align-items: center;
@@ -250,11 +287,11 @@ a:hover {
 /* Primary Data Column (Örn: Talep No) için Boldlaştırıcı Utility */
 .ff-cell-primary {
     font-weight: 600 !important;
-    color: #0F172A !important;
+    color: var(--ff-brand-dark) !important;
 }
 /* Muted Data Column (Örn: Tarih) için Muted Utility */
 .ff-cell-muted {
-    color: #94A3B8 !important;
+    color: var(--ff-gray-500) !important;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important;
     font-size: 0.85rem !important;
 }
@@ -281,21 +318,21 @@ a:hover {
     margin-right: 0.35rem;     
 }
 .-draft {
-    background-color: #F1F5F9; color: #475569;
+    background-color: var(--ff-gray-100); color: var(--ff-gray-700);
 }
-.-draft::before { background-color: #94A3B8; }
+.-draft::before { background-color: var(--ff-gray-400); }
 .-success {
     background-color: #F0FDF4; color: #166534;
 }
-.-success::before { background-color: #22C55E; }
+.-success::before { background-color: var(--ff-success); }
 .-danger {
     background-color: #FEF2F2; color: #991B1B;
 }
-.-danger::before { background-color: #EF4444; }
+.-danger::before { background-color: var(--ff-danger); }
 .-warning {
     background-color: #FFFBEB; color: #92400E;
 }
-.-warning::before { background-color: #F59E0B; }
+.-warning::before { background-color: var(--ff-warning); }
 
 /* Status badges are kept below */
 
@@ -303,7 +340,7 @@ a:hover {
 .ff-action-btn {
     background: transparent;
     border: none;
-    color: #94A3B8;
+    color: var(--ff-gray-400);
     width: 32px;
     height: 32px;
     border-radius: 6px;
@@ -314,45 +351,137 @@ a:hover {
     cursor: pointer;
 }
 .ff-action-btn:hover {
-    background-color: #F1F5F9;
+    background-color: var(--ff-gray-100);
     color: var(--ff-primary);
 }
 
 /* ==========================================================================
    GLOBAL DEVEXPRESS INPUT OVERRIDES (Forms)
+   Wider scope: targets ALL DX editors outside grid filter rows.
    ========================================================================== */
-/* Form içindeki inputlara kalın estetik verelim, gridi etkilemeden */
-.ff-card-body .dxbs-dropdown-edit:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-textbox:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-combobox:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-date-edit:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-memo:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-spin-edit:not(.dxbs-grid-filter-row *) {
-    background-color: #FFFFFF !important;
-    border-radius: 10px !important; 
-    border: 2px solid #D1D5DB !important; 
-    box-shadow: none !important;
-    transition: all 0.25s ease-in-out;
+
+/* Base editor styling — strong visible borders */
+.dxbs-dropdown-edit,
+.dxbs-textbox,
+.dxbs-combobox,
+.dxbs-date-edit,
+.dxbs-time-edit,
+.dxbs-memo,
+.dxbs-spin-edit {
+    background-color: #ffffff !important;
+    border-radius: 8px !important;
+    border: 1.5px solid var(--ff-gray-300) !important;
+    box-shadow: 0 1px 2px rgba(35, 31, 32, 0.04) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ff-card-body .dxbs-editor-input-container:not(.dxbs-grid-filter-row *) {
-    padding: 0.5rem 0.5rem !important; 
+/* Hover — border darkens noticeably */
+.dxbs-dropdown-edit:hover,
+.dxbs-textbox:hover,
+.dxbs-combobox:hover,
+.dxbs-date-edit:hover,
+.dxbs-time-edit:hover,
+.dxbs-memo:hover,
+.dxbs-spin-edit:hover {
+    border-color: var(--ff-gray-500) !important;
 }
-.ff-card-body .dxbs-editor-input-container input:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-editor-input-container textarea:not(.dxbs-grid-filter-row *) {
+
+/* Focus — branded copper ring + strong border */
+.dxbs-dropdown-edit:focus-within,
+.dxbs-textbox:focus-within,
+.dxbs-combobox:focus-within,
+.dxbs-date-edit:focus-within,
+.dxbs-time-edit:focus-within,
+.dxbs-memo:focus-within,
+.dxbs-spin-edit:focus-within {
+    border-color: var(--ff-primary) !important;
+    box-shadow: 0 0 0 3px var(--ff-ring-focus) !important;
+}
+
+/* Input container padding — spacious but refined */
+.dxbs-editor-input-container {
+    padding: 0.55rem 0.75rem !important;
+}
+.dxbs-editor-input-container input,
+.dxbs-editor-input-container textarea {
     font-size: 0.95rem !important;
-    color: #4B5563 !important; 
+    font-family: 'Outfit', system-ui, sans-serif !important;
+    color: var(--ff-text-main) !important;
 }
 
-.ff-card-body .dxbs-dropdown-edit:hover:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-textbox:hover:not(.dxbs-grid-filter-row *) {
-    border-color: #9CA3AF !important; 
+/* Placeholder text */
+.dxbs-editor-input-container input::placeholder,
+.dxbs-editor-input-container textarea::placeholder {
+    color: var(--ff-gray-400) !important;
+    font-weight: 400;
 }
 
-.ff-card-body .dxbs-dropdown-edit:focus-within:not(.dxbs-grid-filter-row *), 
-.ff-card-body .dxbs-textbox:focus-within:not(.dxbs-grid-filter-row *) {
-    border-color: var(--ff-primary) !important; 
-    box-shadow: 0 0 0 4px var(--ff-ring-focus) !important;
+/* Disabled editors — clearly grayed out */
+.dxbs-dropdown-edit.dxbs-disabled,
+.dxbs-textbox.dxbs-disabled,
+.dxbs-combobox.dxbs-disabled,
+.dxbs-date-edit.dxbs-disabled,
+.dxbs-memo.dxbs-disabled,
+.dxbs-spin-edit.dxbs-disabled {
+    background-color: var(--ff-gray-100) !important;
+    border-color: var(--ff-gray-200) !important;
+    color: var(--ff-gray-500) !important;
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+/* Grid filter row — Modern borderless look using logo colors */
+.dxbs-grid-filter-row td, 
+.dxbl-grid-filter-row td {
+    border-top: none !important;
+    border-bottom: none !important;
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    background-color: var(--ff-bg-surface) !important; 
+}
+
+.dxbs-grid-filter-row .dxbs-dropdown-edit,
+.dxbs-grid-filter-row .dxbs-textbox,
+.dxbs-grid-filter-row .dxbs-combobox,
+.dxbs-grid-filter-row .dxbs-date-edit,
+.dxbl-grid-filter-row .dxbl-text-edit,
+.dxbl-grid-filter-row .dxbl-spin-edit,
+.dxbl-grid-filter-row .dxbl-date-edit,
+.dxbl-grid-filter-row .dxbl-cb {
+    border: 1px solid transparent !important;
+    background-color: var(--ff-gray-100) !important;
+    border-radius: var(--ff-border-radius-lg) !important;
+    box-shadow: none !important;
+}
+
+.dxbs-grid-filter-row .dxbs-editor-input-container,
+.dxbl-grid-filter-row .dxbl-text-edit-input {
+    padding: 0.35rem 0.75rem !important;
+}
+
+.dxbs-grid-filter-row .dxbs-dropdown-edit:hover,
+.dxbs-grid-filter-row .dxbs-textbox:hover,
+.dxbs-grid-filter-row .dxbs-combobox:hover,
+.dxbs-grid-filter-row .dxbs-date-edit:hover,
+.dxbl-grid-filter-row .dxbl-text-edit:hover,
+.dxbl-grid-filter-row .dxbl-spin-edit:hover,
+.dxbl-grid-filter-row .dxbl-date-edit:hover,
+.dxbl-grid-filter-row .dxbl-cb:hover {
+    background-color: var(--ff-gray-200) !important;
+    border-color: transparent !important;
+}
+
+.dxbs-grid-filter-row .dxbs-dropdown-edit:focus-within,
+.dxbs-grid-filter-row .dxbs-textbox:focus-within,
+.dxbs-grid-filter-row .dxbs-combobox:focus-within,
+.dxbs-grid-filter-row .dxbs-date-edit:focus-within,
+.dxbl-grid-filter-row .dxbl-text-edit:focus-within,
+.dxbl-grid-filter-row .dxbl-spin-edit:focus-within,
+.dxbl-grid-filter-row .dxbl-date-edit:focus-within,
+.dxbl-grid-filter-row .dxbl-cb:focus-within {
+    background-color: #ffffff !important;
+    border-color: var(--ff-primary) !important;
+    box-shadow: 0 0 0 3px var(--ff-ring-focus) !important;
 }
 
 /* DxFormLayout Label Overrides */
@@ -360,8 +489,42 @@ a:hover {
     font-weight: 600 !important;
     font-size: 0.85rem !important;
     color: var(--ff-text-secondary) !important;
-    margin-bottom: 0.35rem !important;
+    margin-bottom: 0.4rem !important;
     letter-spacing: 0.3px;
+    text-transform: none;
+}
+
+/* ==========================================================================
+   DEVEXPRESS GRID REFINEMENTS (Phase 20)
+   ========================================================================== */
+
+/* Grid header — subtle gray background to separate from data */
+.dxbs-grid-header-row th,
+.dxbl-grid-header-row th {
+    background-color: var(--ff-gray-50) !important;
+    color: var(--ff-gray-700) !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    border-bottom: 2px solid var(--ff-gray-200) !important;
+}
+
+/* Grid row hover */
+.dxbs-grid-table tbody tr:hover,
+.dxbl-grid-table tbody tr:hover {
+    background-color: var(--ff-bg-hover) !important;
+}
+
+/* Grid cell vertical alignment and padding */
+.dxbs-grid-table td,
+.dxbl-grid-table td {
+    vertical-align: middle !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    border-bottom: 1px solid var(--ff-gray-100) !important;
+    color: var(--ff-text-main) !important;
+    font-size: 0.9rem !important;
 }
 
 /* ==========================================================================
@@ -379,6 +542,166 @@ a:hover {
     color: var(--ff-text-secondary);
     font-size: 0.95rem;
     margin-bottom: 2rem;
+}
+
+/* ==========================================================================
+   BOOTSTRAP FORM-CONTROL OVERRIDES (Modal / Popup Forms)
+   Aligns native <input class="form-control"> with the DevExpress editor look.
+   ========================================================================== */
+.form-control {
+    border: 1.5px solid var(--ff-gray-300);
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+    font-family: 'Outfit', system-ui, sans-serif;
+    color: var(--ff-text-main);
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(35, 31, 32, 0.04);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-control:hover {
+    border-color: var(--ff-gray-500);
+}
+.form-control:focus {
+    border-color: var(--ff-primary);
+    box-shadow: 0 0 0 3px var(--ff-ring-focus);
+    outline: none;
+}
+.form-control::placeholder {
+    color: var(--ff-gray-400);
+    font-weight: 400;
+}
+.form-control:disabled {
+    background-color: var(--ff-gray-100);
+    border-color: var(--ff-gray-200);
+    color: var(--ff-gray-500);
+    cursor: not-allowed;
+}
+
+/* Form labels in modals */
+.form-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--ff-text-secondary);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.3px;
+}
+
+/* Form switch (checkbox toggle) styling */
+.form-check-input:checked {
+    background-color: var(--ff-primary);
+    border-color: var(--ff-primary);
+}
+.form-check-input:focus {
+    box-shadow: 0 0 0 3px var(--ff-ring-focus);
+    border-color: var(--ff-primary);
+}
+
+/* ==========================================================================
+   DEVEXPRESS POPUP (DxPopup) REFINEMENTS
+   ========================================================================== */
+
+/* Popup body spacing */
+.dxbs-popup-body,
+.dxbl-popup-body {
+    padding: 1.5rem !important;
+}
+
+/* Popup footer button alignment */
+.dxbs-popup-footer,
+.dxbl-popup-footer {
+    padding: 1rem 1.5rem !important;
+    border-top: 1px solid var(--ff-gray-200) !important;
+    background-color: var(--ff-gray-50) !important;
+}
+
+/* Popup header styling */
+.dxbs-popup-header,
+.dxbl-popup-header {
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    color: var(--ff-text-main) !important;
+    border-bottom: 1px solid var(--ff-gray-200) !important;
+    padding: 1rem 1.5rem !important;
+}
+
+/* ==========================================================================
+   DEVEXPRESS TABS (DxTabs) - Brand Indicator
+   ========================================================================== */
+
+/* Active tab indicator uses brand copper color */
+.dxbs-ta .nav-link.active,
+.dxbl-tabs .dxbl-tab-active {
+    color: var(--ff-primary) !important;
+    font-weight: 600 !important;
+    border-bottom-color: var(--ff-primary) !important;
+}
+.dxbs-ta .nav-link,
+.dxbl-tabs .dxbl-tab {
+    color: var(--ff-text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+.dxbs-ta .nav-link:hover,
+.dxbl-tabs .dxbl-tab:hover {
+    color: var(--ff-primary-hover) !important;
+}
+
+/* ==========================================================================
+   CARD REFINEMENTS (Global Consistency)
+   ========================================================================== */
+
+/* Standardize all cards with consistent border-radius and border */
+.card {
+    border-radius: var(--ff-border-radius-lg) !important;
+    border: 1px solid var(--ff-gray-200) !important;
+}
+.card-header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid var(--ff-gray-200) !important;
+    border-radius: var(--ff-border-radius-lg) var(--ff-border-radius-lg) 0 0 !important;
+}
+.card-body {
+    font-size: 0.95rem;
+}
+
+/* Info panels (form info sidebar, etc.) */
+.sticky-top .card-body .text-muted.small {
+    color: var(--ff-text-muted) !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px;
+}
+
+/* Badge overrides for brand consistency */
+.badge.bg-primary {
+    background-color: var(--ff-primary) !important;
+}
+.badge.bg-warning {
+    background-color: var(--ff-warning) !important;
+}
+.badge.bg-success {
+    background-color: var(--ff-success) !important;
+}
+.badge.bg-danger {
+    background-color: var(--ff-danger) !important;
+}
+
+/* Text color helpers aligned to brand */
+.text-primary {
+    color: var(--ff-primary) !important;
+}
+.text-muted {
+    color: var(--ff-text-muted) !important;
+}
+
+/* ==========================================================================
+   ALERT REFINEMENTS
+   ========================================================================== */
+.alert {
+    border-radius: 8px;
+    border: none;
+    font-size: 0.9rem;
 }
 
 /* Blazor Error UI Hide */

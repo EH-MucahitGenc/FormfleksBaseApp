@@ -3,10 +3,7 @@
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 
-<div class="page-header mb-4">
-    <h1 class="h3 mb-1">Bekleyen Onaylar</h1>
-    <p class="text-muted mb-0">Size atanan bekleyen onay talepleri.</p>
-</div>
+<AppPageHeader Title="Bekleyen Onaylar" Subtitle="Size atanan bekleyen onay talepleri." />
 
 @if (_loading)
 {
@@ -20,7 +17,7 @@ else
 {
     <div class="shadow-sm border rounded">
         <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
-            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click="@(() => _grid.ShowColumnChooser(".col-chooser-btn"))" />
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="true" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click='@(() => _grid.ShowColumnChooser(".col-chooser-btn"))' />
         </DxToolbar>
 
         <DxGrid @ref="_grid"

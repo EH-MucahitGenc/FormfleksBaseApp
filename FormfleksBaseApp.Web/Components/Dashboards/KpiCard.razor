@@ -1,22 +1,31 @@
 @inject NavigationManager Navigation
 
-<div class="kpi-card @CssClass @(!string.IsNullOrEmpty(Href) ? "kpi-clickable" : "")" @onclick="HandleClick">
-    <div class="kpi-card-header">
-        <div class="kpi-title">@Title</div>
-        @if (!string.IsNullOrEmpty(IconClass))
-        {
-            <div class="kpi-icon" style="background-color: @IconBackgroundColor; color: @IconColor;">
-                <i class="@IconClass"></i>
-            </div>
-        }
+<div class="card border-0 shadow-sm h-100 @CssClass @(!string.IsNullOrEmpty(Href) ? "position-relative" : "")" 
+     @onclick="HandleClick" 
+     style="border-radius: var(--ff-border-radius-lg); overflow: hidden; @(!string.IsNullOrEmpty(Href) ? "cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;" : "")">
+    <div class="card-body p-4 d-flex flex-column justify-content-between h-100">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h6 class="text-muted text-uppercase fw-bold mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">@Title</h6>
+            @if (!string.IsNullOrEmpty(IconClass))
+            {
+                <div class="d-flex align-items-center justify-content-center rounded-3" 
+                     style="width: 42px; height: 42px; background-color: @IconBackgroundColor; color: @IconColor;">
+                    <i class="@IconClass fs-5"></i>
+                </div>
+            }
+        </div>
+        <div>
+            <h3 class="fw-bold mb-0" style="color: var(--ff-text-main); font-size: 2rem;">@Value</h3>
+            @if (!string.IsNullOrEmpty(Subtitle))
+            {
+                <div class="text-muted small mt-2">@Subtitle</div>
+            }
+        </div>
     </div>
-    <div class="kpi-card-body">
-        <div class="kpi-value">@Value</div>
-        @if (!string.IsNullOrEmpty(Subtitle))
-        {
-            <div class="kpi-subtitle">@Subtitle</div>
-        }
-    </div>
+    @if (!string.IsNullOrEmpty(Href))
+    {
+        <a href="@Href" class="stretched-link"></a>
+    }
 </div>
 
 @code {

@@ -5,57 +5,31 @@
 @inject ApiClient ApiClient
 @inject FormfleksBaseApp.Web.Auth.AuthTokenStore TokenStore
 
-<div class="d-flex justify-content-between align-items-end mb-4">
-    <div>
-        <h1 class="fw-bold mb-1" style="color: var(--ff-text-main); font-size: 1.8rem; letter-spacing: -0.5px;">@_formTitle</h1>
-        <div class="text-muted d-flex align-items-center gap-2" style="font-size: 0.9rem;">
-            <i class="bi bi-folder2-open" style="color: var(--ff-primary);"></i>
-            <span>Formlarım</span> 
-            <i class="bi bi-chevron-right" style="font-size: 0.7rem;"></i> 
-            <span class="fw-medium" style="color: var(--ff-text-secondary);">@_formTitle</span>
-        </div>
-    </div>
+<AppPageHeader Title="@_formTitle" Subtitle="@_formSubtitle">
     @if (RequestId.HasValue)
     {
-        <div class="px-3 py-1 fw-bold text-uppercase d-flex align-items-center gap-2" style="background-color: var(--ff-bg-surface); border: 1px solid var(--ff-border); border-radius: 50px; color: var(--ff-text-secondary); font-size: 0.8rem; box-shadow: var(--ff-shadow-sm);">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background-color: var(--ff-warning);"></div>
-            İnceleniyor
-        </div>
+        <span class="badge bg-warning text-dark border rounded-pill px-3 py-2"><i class="bi bi-hourglass-split me-1"></i> İnceleniyor</span>
     }
-</div>
+</AppPageHeader>
 
-<div class="alert d-flex align-items-center gap-3 mb-4 shadow-sm" style="background-color: var(--ff-bg-surface); border: 1px solid var(--ff-border); border-left: 4px solid var(--ff-info); border-radius: var(--ff-border-radius-lg);">
-    <i class="bi bi-info-circle-fill fs-3" style="color: var(--ff-info);"></i>
-    <div style="color: var(--ff-text-secondary); font-size: 0.95rem;">
-        <strong class="d-block" style="color: var(--ff-text-main);">Bilgilendirme</strong>
-        @_formSubtitle
-    </div>
-</div>
-
-<div class="row justify-content-center">
-    <div class="col-12 col-xl-11">
-        <div class="ff-card shadow-lg border-0" style="border-radius: var(--ff-border-radius-lg);">
-            <div class="ff-card-header bg-white" style="border-bottom: 2px solid var(--ff-bg-body); padding: 1.5rem 2rem;">
-                <h6 class="mb-0 fw-bold d-flex align-items-center" style="font-size: 1.15rem; color: var(--ff-text-main);">
-                    <i class="bi bi-ui-checks-grid me-3 fs-4" style="color: var(--ff-primary);"></i>Form Kayıt Detayları
-                </h6>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-ui-checks-grid me-2 text-primary"></i>Form Kayıt Detayları</h6>
             </div>
-            <div class="ff-card-body p-4 p-md-5" style="background-color: #FAFCFF;">
+            <div class="card-body p-4">
                 @if (_loading)
                 {
                     <div class="text-center py-5">
-                        <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem; opacity: 0.5;" role="status"></div>
-                        <h5 class="fw-bold text-muted">Form Hazırlanıyor...</h5>
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2 text-muted">Form Hazırlanıyor...</div>
                     </div>
                 }
                 else if (_definition is null)
                 {
-                    <div class="alert alert-warning py-4 px-4 d-flex align-items-center gap-3 rounded-4">
-                        <i class="bi bi-exclamation-triangle-fill fs-2"></i> 
-                        <div>
-                            <strong class="d-block mb-1">Şablon Bulunamadı</strong>
-                            Aradığınız form şablonu pasif durumda veya silinmiş olabilir. Lütfen yönetici ile iletişime geçin.
-                        </div>
+                    <div class="alert alert-warning py-3 mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Şablon Bulunamadı veya pasif durumda.
                     </div>
                 }
                 else
@@ -63,15 +37,12 @@
                     <EditForm EditContext="@_editContext" OnValidSubmit="HandleValidSubmit">
                         <DataAnnotationsValidator />
                         
-                        @* Dinamik Form Render - Premium Styling *@
-                        @foreach (var sec in _definition.Sections.OrderBy(s => s.SortOrder))
-                        {
-                            <div class="mb-5 bg-white p-4 p-md-5 rounded-4 shadow-sm border" style="border-color: var(--ff-border) !important;">
-                                <h4 class="fw-bold mb-4 pb-3" style="color: var(--ff-text-main); border-bottom: 2px solid var(--ff-bg-body);">
-                                    @sec.Title
-                                </h4>
-                                
-                                <DxFormLayout CssClass="w-100">
+                        <DxTabs>
+                            @foreach (var sec in _definition.Sections.OrderBy(s => s.SortOrder))
+                            {
+                                <DxTabPage Text="@sec.Title">
+                                    <div class="py-4">
+                                        <DxFormLayout CssClass="w-100">
                                     @foreach (var field in sec.Fields.OrderBy(f => f.SortOrder))
                                     {
                                         <DxFormLayoutItem ColSpanMd="12" CssClass="mb-3">
@@ -158,40 +129,37 @@
                                             </Template>
                                         </DxFormLayoutItem>
                                     }
-                                </DxFormLayout>
-                            </div>
-                        }
+                                        </DxFormLayout>
+                                    </div>
+                                </DxTabPage>
+                            }
+                        </DxTabs>
 
                         @if (!string.IsNullOrWhiteSpace(_message))
                         {
-                            <div class="alert mt-3 py-2 d-flex align-items-center gap-2" style="background-color: var(--ff-success); color: white; border-radius: var(--ff-border-radius);">
+                            <div class="alert alert-success mt-4 py-2 d-flex align-items-center gap-2">
                                 <i class="bi bi-check-circle-fill"></i> @_message
                             </div>
                         }
                         @if (!string.IsNullOrWhiteSpace(_error))
                         {
-                            <div class="alert alert-danger mt-3 py-2">
+                            <div class="alert alert-danger mt-4 py-2">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i> @_error
                             </div>
                         }
 
                         @if (!_isReadOnly)
                         {
-                            <div class="d-flex justify-content-end gap-3 mt-5 px-4 py-3 sticky-bottom" style="background-color: var(--ff-bg-surface); border-top: 1px solid var(--ff-border); border-radius: 0 0 var(--ff-border-radius-lg) var(--ff-border-radius-lg); margin-left: -3rem; margin-right: -3rem; margin-bottom: -3rem; box-shadow: 0 -4px 15px rgba(0,0,0,0.03);">
+                            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                                 <DxButton RenderStyle="ButtonRenderStyle.Secondary"
-                                          RenderStyleMode="ButtonRenderStyleMode.Outline"
                                           Text="Taslak Kaydet"
                                           Click="SaveDraft"
-                                          Enabled="@(!_busy)"
-                                          CssClass="px-5 py-2 fw-semibold" />
-
+                                          Enabled="@(!_busy)" />
                                 <DxButton RenderStyle="ButtonRenderStyle.Primary"
-                                          RenderStyleMode="ButtonRenderStyleMode.Contained"
                                           Text="Onayı Başlat"
                                           SubmitFormOnClick="true"
-                                          IconCssClass="bi bi-send-fill"
-                                          Enabled="@(!_busy)"
-                                          CssClass="px-5 py-2 fw-bold" />
+                                          IconCssClass="bi bi-send"
+                                          Enabled="@(!_busy)" />
                             </div>
                         }
                     </EditForm>
@@ -199,24 +167,25 @@
             </div>
         </div>
     </div>
+    
     <div class="col-lg-4">
         @if (_definition is not null)
         {
-            <div class="card border-0 shadow-sm sticky-top" style="top: 80px; border-radius: var(--radius-modern);">
-                <div class="card-header bg-white border-bottom py-3" style="border-radius: var(--radius-modern) var(--radius-modern) 0 0;">
-                    <h6 class="mb-0 fw-bold">
-                        <i class="bi bi-info-circle me-2" style="color: var(--brand-copper);"></i>Form Bilgileri
-                    </h6>
+            <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2 text-muted"></i>Form Bilgileri</h6>
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled mb-0">
                         <li class="mb-3">
-                            <span class="text-muted small text-uppercase fw-semibold d-block">Form Tipi</span>
-                            <span class="fw-bold fs-6">@_definition.Name</span>
+                            <span class="text-muted small fw-semibold d-block text-uppercase">Form Tipi</span>
+                            <span class="fw-bold">@_definition.Name</span>
                         </li>
-                        <li class="mb-3">
-                            <span class="text-muted small text-uppercase fw-semibold d-block">Durum</span>
-                            <span class="badge-status badge-draft mt-1">@(RequestId.HasValue ? "İnceleniyor" : "Yeni Kayıt")</span>
+                        <li class="mb-0">
+                            <span class="text-muted small fw-semibold d-block text-uppercase">Durum</span>
+                            <span class="badge @(RequestId.HasValue ? "bg-warning text-dark" : "bg-primary") mt-1 rounded-pill px-3">
+                                @(RequestId.HasValue ? "İnceleniyor" : "Yeni Kayıt")
+                            </span>
                         </li>
                     </ul>
                 </div>

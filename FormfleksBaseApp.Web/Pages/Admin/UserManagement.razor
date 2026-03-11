@@ -3,172 +3,134 @@
 @inject FormfleksBaseApp.Web.Services.ApiClient ApiClient
 @attribute [Authorize(Policy = "AdminOnly")]
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="h4 mb-0 fw-bold">Kullanıcı Yönetimi</h2>
-        <p class="text-muted mb-0">Sistemdeki tüm kullanıcıları, rollerini ve durumlarını yönetin.</p>
-    </div>
-</div>
+<AppPageHeader Title="Kullanıcı Yönetimi" Subtitle="Sistemdeki tüm kullanıcıları, rollerini ve durumlarını yönetin." />
 
-@if (!string.IsNullOrWhiteSpace(_successMsg))
+@if (_loading)
 {
-    <div class="alert alert-success alert-dismissible fade show py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="bi bi-check-circle-fill"></i> @_successMsg
-        <button type="button" class="btn-close btn-sm" @onclick="() => _successMsg = null"></button>
-    </div>
-}
-@if (!string.IsNullOrWhiteSpace(_errorMsg))
-{
-    <div class="alert alert-danger alert-dismissible fade show py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="bi bi-exclamation-triangle-fill"></i> @_errorMsg
-        <button type="button" class="btn-close btn-sm" @onclick="() => _errorMsg = null"></button>
-    </div>
-}
-
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-people me-2" style="color: var(--brand-copper);"></i>Kullanıcı Listesi
-        </h6>
-        <span class="badge bg-light text-dark border">@_users.Count kullanıcı</span>
-    </div>
-    <div class="card-body p-0">
-        <PremiumDataTable Items="_users" ShowPagination="true" TotalPages="1" CurrentPage="1">
-            <TableHeader>
-                <th>Ad Soyad</th>
-                <th>E-Posta</th>
-                <th>Rol / Yetki Grupları</th>
-                <th>Durum</th>
-            </TableHeader>
-            <RowTemplate Context="user">
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="avatar rounded-circle me-3 d-flex justify-content-center align-items-center text-white fw-bold" style="width: 36px; height: 36px; font-size: 0.85rem; background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));">
-                            @(user.Name.Length > 0 ? user.Name.Substring(0, 1).ToUpper() : "?")
-                        </div>
-                        <span class="fw-medium">@user.Name</span>
-                    </div>
-                </td>
-                <td class="text-muted">@user.Email</td>
-                <td>
-                    @foreach (var role in user.Roles)
-                    {
-                        <span class="badge rounded-pill px-3 me-1" style="background: var(--brand-copper-light); color: var(--brand-copper-dark);">@role</span>
-                    }
-                </td>
-                <td>
-                    @if (user.IsActive)
-                    {
-                        <span class="badge bg-success rounded-pill px-3">Aktif</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-danger rounded-pill px-3">Pasif</span>
-                    }
-                </td>
-            </RowTemplate>
-            <ActionsTemplate Context="user">
-                <button class="btn btn-sm btn-outline-secondary me-1" title="Düzenle" @onclick="() => OpenEditModal(user)">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger" title="Sil" @onclick="() => ConfirmDelete(user)">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </ActionsTemplate>
-        </PremiumDataTable>
-    </div>
-</div>
-
-@* ===== DÜZENLEME MODAL ===== *@
-@if (_showEditModal && _editUser is not null)
-{
-    <div class="modal-backdrop fade show" style="z-index:1050"></div>
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="z-index:1055">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header border-0 py-3" style="background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));">
-                    <h5 class="modal-title text-white fw-bold">
-                        <i class="bi bi-pencil-square me-2"></i>Kullanıcıyı Düzenle
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseEditModal"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted">E-Posta <small>(değiştirilemez)</small></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="text" class="form-control bg-light" value="@_editUser.Email" disabled />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-uppercase text-muted">Ad Soyad</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control" @bind="_editName" placeholder="Kullanıcının adı soyadı" />
-                        </div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-semibold small text-uppercase text-muted">Yetki / Rol</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                            <select class="form-select" @bind="_editRoleId">
-                                <option value="@Guid.Empty">— Rol Seçin —</option>
-                                @foreach (var r in _allRoles)
-                                {
-                                    <option value="@r.Id">@r.Name</option>
-                                }
-                            </select>
-                        </div>
-                        <small class="text-muted">Kullanıcının birincil yetkisi</small>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseEditModal">İptal</button>
-                    <button type="button" class="btn text-white fw-semibold" style="background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));" @onclick="SaveEdit" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-check-lg me-1"></i>Kaydet
-                    </button>
-                </div>
-            </div>
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
         </div>
     </div>
 }
-
-@* ===== SİLME ONAY MODAL ===== *@
-@if (_showDeleteModal && _deleteUser is not null)
+else
 {
-    <div class="modal-backdrop fade show" style="z-index:1050"></div>
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="z-index:1055">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header bg-danger text-white border-0">
-                    <h5 class="modal-title fw-bold">
-                        <i class="bi bi-exclamation-triangle me-2"></i>Kullanıcıyı Sil
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
-                </div>
-                <div class="modal-body text-center py-4">
-                    <div class="mb-3">
-                        <div class="avatar rounded-circle mx-auto d-flex justify-content-center align-items-center text-white fw-bold" style="width: 56px; height: 56px; font-size: 1.4rem; background: linear-gradient(135deg, #EF4444, #B91C1C);">
-                            @(_deleteUser.Name.Length > 0 ? _deleteUser.Name.Substring(0, 1).ToUpper() : "?")
+    <div class="shadow-sm border rounded">
+        <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Plain" CssClass="px-2 py-1 border-bottom">
+            <DxToolbarItem Text="Sütun Seçici" BeginGroup="false" IconCssClass="bi bi-layout-three-columns" CssClass="col-chooser-btn" Click='@(() => _grid.ShowColumnChooser(".col-chooser-btn"))' />
+        </DxToolbar>
+
+        <DxGrid @ref="_grid"
+                Data="@_users" 
+                ShowFilterRow="true" 
+                ShowGroupPanel="false" 
+                ShowSearchBox="true" 
+                PageSize="15" 
+                PagerVisible="true"
+                AllowSelectRowByClick="true"
+                SelectionMode="GridSelectionMode.Multiple"
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                CssClass="w-100 border-0">
+            <Columns>
+                <DxGridDataColumn FieldName="Name" Caption="Ad Soyad" MinWidth="250">
+                    <CellDisplayTemplate Context="userCtx">
+                        @{ var u = (FormfleksBaseApp.Web.Services.AdminUserDto)userCtx.DataItem; }
+                        <div class="d-flex align-items-center">
+                            <div class="avatar rounded-circle me-3 d-flex justify-content-center align-items-center text-white fw-bold" style="width: 32px; height: 32px; font-size: 0.8rem; background: linear-gradient(135deg, var(--brand-copper), var(--brand-copper-dark));">
+                                @(u.Name.Length > 0 ? u.Name.Substring(0, 1).ToUpper() : "?")
+                            </div>
+                            <span class="fw-medium ff-cell-primary">@u.Name</span>
                         </div>
-                    </div>
-                    <p class="mb-1 fw-bold">@_deleteUser.Name</p>
-                    <p class="text-muted mb-0 small">kullanıcısını pasif duruma almak istediğinize emin misiniz?</p>
-                </div>
-                <div class="modal-footer border-0 justify-content-center">
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseDeleteModal">Vazgeç</button>
-                    <button type="button" class="btn btn-danger fw-semibold" @onclick="ExecuteDelete" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-trash me-1"></i>Evet, Sil
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="Email" Caption="E-Posta" MinWidth="220" />
+                <DxGridDataColumn Caption="Rol / Yetki Grupları" AllowFilter="false" AllowSort="false" MinWidth="200">
+                    <CellDisplayTemplate Context="userCtx">
+                        @{ var u = (FormfleksBaseApp.Web.Services.AdminUserDto)userCtx.DataItem; }
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var role in u.Roles)
+                            {
+                                <span class="badge rounded-pill" style="background: var(--brand-copper-light); color: var(--brand-copper-dark); border: 1px solid rgba(215,108,60,0.2);">@role</span>
+                            }
+                        </div>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="IsActive" Caption="Durum" MinWidth="120">
+                    <CellDisplayTemplate Context="userCtx">
+                        @{ var u = (FormfleksBaseApp.Web.Services.AdminUserDto)userCtx.DataItem; }
+                        <AppStatusBadge IsBooleanMode="true" Active="u.IsActive" />
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn Caption="İşlem" AllowFilter="false" AllowSort="false" MinWidth="120" Width="120px">
+                    <CellDisplayTemplate Context="userCtx">
+                        @{ var u = (FormfleksBaseApp.Web.Services.AdminUserDto)userCtx.DataItem; }
+                        <div class="d-flex gap-2">
+                            <button class="ff-action-btn" title="Düzenle" @onclick="() => OpenEditModal(u)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="ff-action-btn text-danger" title="Sil" @onclick="() => ConfirmDelete(u)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+            </Columns>
+        </DxGrid>
     </div>
 }
+
+@* ===== DÜZENLEME POPUP ===== *@
+<DxPopup Visible="@_showEditModal" 
+         VisibleChanged="@((bool v) => _showEditModal = v)" 
+         HeaderText="Kullanıcıyı Düzenle" 
+         Width="550px" 
+         ShowCloseButton="true">
+    <BodyTemplate>
+        <DxFormLayout CssClass="w-100">
+            <DxFormLayoutItem Caption="E-Posta" ColSpanMd="12">
+                <Template Context="formLayoutCtx">
+                    <InputText class="form-control bg-light" value="@_editUser?.Email" disabled />
+                    <small class="text-muted d-block mt-1">E-Posta adresi güncellenemez.</small>
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Ad Soyad" ColSpanMd="12">
+                <Template Context="formLayoutCtx">
+                    <DxTextBox @bind-Text="_editName" NullText="Kullanıcının adı soyadı..." />
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Yetki / Rol" ColSpanMd="12">
+                <Template Context="formLayoutCtx">
+                    <DxComboBox Data="@_allRoles"
+                                TextFieldName="Name"
+                                ValueFieldName="Id"
+                                @bind-Value="@_editRoleId"
+                                NullText="— Rol Seçin —"
+                                CssClass="w-100" />
+                    <small class="text-muted d-block mt-1">Kullanıcının sisteme giriş yetki seviyesi.</small>
+                </Template>
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    </BodyTemplate>
+    <FooterTemplate>
+        <button type="button" class="btn btn-light border" @onclick="CloseEditModal">İptal</button>
+        <button type="button" class="btn btn-primary ms-2" @onclick="SaveEdit" disabled="@_saving">
+            @if (_saving) { <span class="spinner-border spinner-border-sm me-2"></span> } Kaydet
+        </button>
+    </FooterTemplate>
+</DxPopup>
+
+@* ===== SİLME ONAY POPUP ===== *@
+<AppConfirmPopup @bind-Visible="_showDeleteModal"
+                 Title="Kullanıcıyı Sil"
+                 Message="@($"{_deleteUser?.Name} kullanıcısını pasif duruma almak istediğinize emin misiniz?")"
+                 ConfirmButtonText="Evet, Sil"
+                 IsProcessing="_saving"
+                 OnConfirm="ExecuteDelete"
+                 OnCancel="CloseDeleteModal" />
 
 @code {
+    IGrid _grid;
+    private bool _loading = true;
     private List<FormfleksBaseApp.Web.Services.AdminUserDto> _users = [];
     private IReadOnlyList<FormfleksBaseApp.Application.Features.AdminRoles.Dtos.AdminRoleDto> _allRoles = [];
     private string? _successMsg;
@@ -193,6 +155,7 @@
 
     private async Task LoadUsers()
     {
+        _loading = true;
         try
         {
             _users = (await ApiClient.GetUsersAsync(CancellationToken.None)).ToList();
@@ -200,6 +163,10 @@
         catch (Exception ex)
         {
             _errorMsg = "Kullanıcılar yüklenirken hata oluştu: " + ex.Message;
+        }
+        finally
+        {
+            _loading = false;
         }
     }
 

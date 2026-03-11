@@ -7,21 +7,15 @@
 @inject NavigationManager Navigation
 
 <div class="login-card-wrapper">
-    <div class="text-center mb-5">
-        <img src="/images/logo.svg" alt="Formfleks" style="height: 40px; margin-bottom: 2rem;" />
-        <div class="d-flex justify-content-center mb-3">
-            <div style="width: 70px; height: 70px; border-radius: 50%; background-color: var(--ff-bg-hover); display: flex; align-items: center; justify-content: center;">
-                <i class="bi bi-person-fill" style="color: var(--ff-primary); font-size: 2.5rem;"></i>
-            </div>
-        </div>
-        <h2 class="login-title" style="letter-spacing: 2px;">HOŞ GELDİNİZ</h2>
-        <p class="login-subtitle">Devam etmek için hesap bilgilerinizi giriniz.</p>
+    <div class="login-title-wrapper">
+        <h2 class="login-title">Giriş Yap</h2>
+        <p class="login-subtitle">Formfleks sistemine devam etmek için kimliğinizi doğrulayın.</p>
     </div>
 
     @if (!string.IsNullOrEmpty(_error))
     {
         <div class="login-alert" role="alert">
-            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <i class="bi bi-shield-exclamation" style="font-size: 1.25rem;"></i>
             <div>@_error</div>
         </div>
     }
@@ -29,29 +23,29 @@
     <EditForm Model="_model" OnValidSubmit="HandleLogin">
         <DataAnnotationsValidator />
         
-        <div class="mb-4">
-            <label class="login-form-label">Kullanıcı Adı</label>
+        <div class="mb-4" style="margin-bottom: 2rem !important;">
+            <label class="ultra-label">Kullanıcı Adı</label>
             <DxTextBox @bind-Text="@_model.Username"
                        NullText="ornek.kullanici"
                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                        CssClass="w-100" />
-            <ValidationMessage For="@(() => _model.Username)" class="text-danger mt-1" style="font-size:0.8rem;" />
+            <ValidationMessage For="@(() => _model.Username)" class="text-danger mt-2" style="font-size:0.8rem;" />
         </div>
 
-        <div class="mb-5">
-            <label class="login-form-label">Şifre</label>
+        <div class="mb-4" style="margin-bottom: 2.5rem !important;">
+            <label class="ultra-label">Parola</label>
             <DxTextBox @bind-Text="@_model.Password"
                        Password="true"
                        NullText="••••••••"
                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                        CssClass="w-100" />
-            <ValidationMessage For="@(() => _model.Password)" class="text-danger mt-1" style="font-size:0.8rem;" />
+            <ValidationMessage For="@(() => _model.Password)" class="text-danger mt-2" style="font-size:0.8rem;" />
         </div>
 
         <DxButton SubmitFormOnClick="true"
-                  Text="@(_loading ? "Giriş yapılıyor..." : "Giriş Yap")"
-                  RenderStyle="ButtonRenderStyle.Primary"
-                  CssClass="w-100 py-2 fs-6 fw-bold"
+                  Text="@(_loading ? "Bağlanıyor..." : "Giriş Yap")"
+                  RenderStyle="ButtonRenderStyle.None"
+                  CssClass="btn-luxury w-100"
                   Enabled="@(!_loading)" />
     </EditForm>
 </div>

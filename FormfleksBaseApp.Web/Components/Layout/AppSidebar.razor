@@ -1,102 +1,51 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using System.Linq
 
-<div class="ff-sidebar @(IsCollapsed ? "collapsed" : "")">
-    <div class="overflow-auto py-3">
-        @if (HasAppRole)
-        {
-            <p class="text-uppercase fw-semibold px-4 mb-2 mt-2 sidebar-text" style="color: var(--ff-text-muted); font-size: 0.70rem; letter-spacing: 0.5px;">Ana Menü</p>
-
-            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/dashboard" Match="NavLinkMatch.All" title="Panel" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                <i class="bi bi-grid-1x2-fill fs-5 me-3"></i>
-                <span class="fw-medium sidebar-text">Panel</span>
-            </NavLink>
-
-            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/my-forms" title="Formlarım" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                <i class="bi bi-file-earmark-text fs-5 me-3"></i>
-                <span class="fw-medium sidebar-text">Formlarım</span>
-            </NavLink>
-
-            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/approvals" title="Onay Bekleyenler" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                <i class="bi bi-check2-square fs-5 me-3"></i>
-                <span class="fw-medium sidebar-text">Onay Bekleyenler</span>
-            </NavLink>
-
-            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/visitors" title="Ziyaretçiler" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                <i class="bi bi-person-lines-fill fs-5 me-3"></i>
-                <span class="fw-medium sidebar-text">Ziyaretçiler</span>
-            </NavLink>
-
-            <hr class="mx-4 my-3" style="border-color: var(--ff-sidebar-border);" />
-        }
-
-        @if (CanAccessTemplateAdmin || CanAccessUserAdmin)
-        {
-            <p class="text-uppercase fw-semibold px-4 mb-2 sidebar-text" style="color: var(--ff-text-muted); font-size: 0.70rem; letter-spacing: 0.5px;">Yönetim</p>
-
-            @if (CanAccessTemplateAdmin)
+<div class="ff-sidebar @(IsCollapsed ? "collapsed" : "") ff-sidebar-dx-wrapper h-100 overflow-auto" style="border-right: 1px solid var(--ff-border); background-color: var(--ff-sidebar-bg);">
+    <DxTreeView AllowSelectNodes="true" AnimationType="TreeViewAnimationType.Slide" CssClass="w-100 mt-2 ff-main-treeview">
+        <Nodes>
+            @if (HasAppRole)
             {
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/form-designer" title="Form Tasarımcısı" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-columns-gap fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Form Tasarımcısı</span>
-                </NavLink>
-
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/workflow-designer" title="Onay Rotaları" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-diagram-3 fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Onay Rotaları</span>
-                </NavLink>
-
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/audit-logs" title="Eylem Geçmişi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-shield-check fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Eylem Geçmişi</span>
-                </NavLink>
-            }
-
-            @if (CanAccessUserAdmin)
-            {
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/users" title="Kullanıcı Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-people fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Kullanıcı Yönetimi</span>
-                </NavLink>
+                <DxTreeViewNode NavigateUrl="/dashboard" Text="Panel" IconCssClass="bi bi-grid-1x2-fill" CssClass="fw-medium mb-1 px-2" />
+                <DxTreeViewNode NavigateUrl="/my-forms" Text="Formlarım" IconCssClass="bi bi-file-earmark-text" CssClass="fw-medium mb-1 px-2" />
+                <DxTreeViewNode NavigateUrl="/approvals" Text="Onay Bekleyenler" IconCssClass="bi bi-check2-square" CssClass="fw-medium mb-1 px-2" />
+                <DxTreeViewNode NavigateUrl="/visitors" Text="Ziyaretçiler" IconCssClass="bi bi-person-lines-fill" CssClass="fw-medium mb-1 px-2" />
                 
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/roles" title="Rol Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-shield-lock fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Rol Yönetimi</span>
-                </NavLink>
-
-                <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="/admin/departments" title="Departman Yönetimi" style="color: var(--ff-sidebar-text); transition: all 0.2s;">
-                    <i class="bi bi-building fs-5 me-3"></i>
-                    <span class="fw-medium sidebar-text">Departman Yönetimi</span>
-                </NavLink>
+                @if (FormTypes is not null && FormTypes.Any(x => x.Active))
+                {
+                    <DxTreeViewNode Text="Açılabilir Formlar" IconCssClass="bi bi-folder-fill" Expanded="true" CssClass="fw-medium mb-1 px-2">
+                        <Nodes>
+                            @foreach (var ft in FormTypes.Where(x => x.Active))
+                            {
+                                <DxTreeViewNode NavigateUrl="@($"/forms/{ft.Code.ToLowerInvariant()}")" Text="@ft.Name" IconCssClass="bi bi-pencil-square" CssClass="fw-medium mb-1" />
+                            }
+                        </Nodes>
+                    </DxTreeViewNode>
+                }
             }
 
-            <hr class="mx-4 my-3" style="border-color: var(--ff-sidebar-border);" />
-        }
-
-        @if (HasAppRole)
-        {
-            <div class="nav-item-group">
-                <a @onclick="ToggleForms" class="d-flex align-items-center px-4 py-2 text-decoration-none w-100" style="color: var(--ff-sidebar-text); cursor: pointer; transition: all 0.2s; background-color: @(_formsExpanded && !IsCollapsed ? "rgba(246, 137, 76, 0.05)" : "transparent");">
-                    <i class="bi bi-folder-fill fs-5 me-3" style="color: @(_formsExpanded && !IsCollapsed ? "var(--ff-primary)" : "inherit");"></i>
-                    <span class="fw-medium sidebar-text" style="flex-grow: 1;">Açılabilir Formlar</span>
-                    <i class="bi bi-chevron-@( _formsExpanded ? "up" : "down" ) ms-auto sidebar-text" style="font-size: 0.8rem;"></i>
-                </a>
-
-                @if (_formsExpanded && !IsCollapsed && FormTypes is not null)
-                {
-                    <div class="forms-submenu py-1" style="background-color: rgba(0,0,0,0.01); border-left: 2px solid var(--ff-primary); margin-left: 1.5rem;">
-                        @foreach (var ft in FormTypes.Where(x => x.Active))
+            @if (CanAccessTemplateAdmin || CanAccessUserAdmin)
+            {
+                <DxTreeViewNode Text="Yönetim" IconCssClass="bi bi-gear-fill" Expanded="true" CssClass="fw-medium mb-1 px-2 mt-3 border-top pt-2">
+                    <Nodes>
+                        @if (CanAccessTemplateAdmin)
                         {
-                            <NavLink class="d-flex align-items-center px-4 py-2 text-decoration-none" href="@($"/forms/{ft.Code.ToLowerInvariant()}")" title="@ft.Name" style="color: var(--ff-sidebar-text); transition: all 0.2s; padding-left: 1.5rem !important;">
-                                <i class="bi bi-pencil-square fs-6 me-2" style="opacity: 0.7;"></i>
-                                <span class="fw-medium sidebar-text" style="font-size: 0.9em;">@ft.Name</span>
-                            </NavLink>
+                            <DxTreeViewNode NavigateUrl="/admin/form-designer" Text="Form Tasarımcısı" IconCssClass="bi bi-columns-gap" CssClass="fw-medium mb-1" />
+                            <DxTreeViewNode NavigateUrl="/admin/workflow-designer" Text="Onay Rotaları" IconCssClass="bi bi-diagram-3" CssClass="fw-medium mb-1" />
+                            <DxTreeViewNode NavigateUrl="/admin/audit-logs" Text="Eylem Geçmişi" IconCssClass="bi bi-shield-check" CssClass="fw-medium mb-1" />
                         }
-                    </div>
-                }
-            </div>
-        }
-    </div>
+
+                        @if (CanAccessUserAdmin)
+                        {
+                            <DxTreeViewNode NavigateUrl="/admin/users" Text="Kullanıcı Yönetimi" IconCssClass="bi bi-people" CssClass="fw-medium mb-1" />
+                            <DxTreeViewNode NavigateUrl="/admin/roles" Text="Rol Yönetimi" IconCssClass="bi bi-shield-lock" CssClass="fw-medium mb-1" />
+                            <DxTreeViewNode NavigateUrl="/admin/departments" Text="Departman Yönetimi" IconCssClass="bi bi-building" CssClass="fw-medium mb-1" />
+                        }
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+        </Nodes>
+    </DxTreeView>
 </div>
 
 @code {
