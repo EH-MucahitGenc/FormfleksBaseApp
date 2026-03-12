@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --color-brand-primary: #f6894c;
+  --color-brand-dark: #231f20;
+  --color-brand-gray: #414042;
+  
+  --color-surface-base: #ffffff;
+  --color-surface-ground: #f8fafc;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-hover: #f8f9fa;
+  
+  --color-status-success: #10b981;
+  --color-status-warning: #f59e0b;
+  --color-status-danger: #ef4444;
+  --color-status-info: #3b82f6;
+  --color-status-draft: #64748b;
+  
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 8px 30px rgba(0,0,0,0.04);
+  
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-brand-dark bg-surface-ground;
+  }
+}
+
+/* User specifically dislikes the DevExtreme analog clock UI but needs time input */
+.dx-timeview-clock {
+  display: none !important;
+}
+
+/* Adjust timeview container to account for hidden clock */
+.dx-timeview {
+  min-height: auto !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Make the hour and minute spinners large and prominent */
+.dx-timeview-field {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 0 !important;
+}
+
+.dx-timeview-field .dx-numberbox {
+  width: 80px !important;
+  flex: none !important;
+}
+
+.dx-timeview-field .dx-numberbox .dx-texteditor-input {
+  text-align: center !important;
+  font-size: 1.125rem !important;
+  font-weight: 500 !important;
+}

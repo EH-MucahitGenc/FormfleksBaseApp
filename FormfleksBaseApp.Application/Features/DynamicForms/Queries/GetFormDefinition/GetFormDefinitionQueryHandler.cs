@@ -17,9 +17,32 @@ public sealed class GetFormDefinitionQueryHandler : IRequestHandler<GetFormDefin
 
     public async Task<FormDefinitionDto?> Handle(GetFormDefinitionQuery request, CancellationToken ct)
     {
+        var inputCode = request.FormCode.Trim();
+        
         var formType = await _db.FormTypes
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Code.Trim().ToLower() == request.FormCode.Trim().ToLower() && t.Active, ct);
+            .FirstOrDefaultAsync(t => t.Code == inputCode || t.Code.ToLower() == inputCode.ToLower(), ct);
+
+        // Yukarıdaki ToLower() veritabanında LOWER() olarak çalışır.
+        // Ama eğer C# tarafında Turkish locale ToLower('I') sorunu yaşıyorsak, fallback olarak EF.Functions kullanabiliriz.
+        if (formType is null)
+        {
+             // Olası i/ı sorunu nedeniyle bir de InvariantCulture ile deneyelim
+             formType = await _db.FormTypes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Code == inputCode && t.Active, ct);
+                
+             if (formType is null)
+             {
+                 // Tüm Active FormType'ları çekip Invariant ile C# tarafında eşleştir (küçük veri setinde güvenli)
+                 var allActive = await _db.FormTypes.AsNoTracking().Where(x => x.Active).ToListAsync(ct);
+                 formType = allActive.FirstOrDefault(t => string.Equals(t.Code.Trim(), inputCode, StringComparison.OrdinalIgnoreCase));
+             }
+        }
+        else if (!formType.Active) 
+        {
+             formType = null;
+        }
 
         if (formType is null) return null;
 
