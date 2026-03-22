@@ -5,34 +5,40 @@
 
 .formfleks-premium-grid {
   border: none !important;
-  border-radius: 0 0 12px 12px;
-}
-
-.formfleks-premium-grid .dx-datagrid-headers {
-  border-bottom: 2px solid var(--surface-muted, #f1f5f9) !important;
-  color: var(--brand-dark, #231f20) !important;
-  font-weight: 600 !important;
   background-color: transparent !important;
 }
 
+.formfleks-premium-grid .dx-datagrid-headers {
+  border-bottom: 2px solid rgba(0,0,0,0.03) !important;
+  color: var(--brand-dark, #231f20) !important;
+  font-weight: 700 !important;
+  background-color: transparent !important;
+  padding: 4px 0 !important;
+}
+
 .formfleks-premium-grid .dx-datagrid-headers .dx-datagrid-text-content {
-  color: var(--brand-gray, #414042) !important;
-  font-size: 0.8rem !important;
+  color: var(--brand-gray, #64748b) !important;
+  font-size: 0.75rem !important;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row {
-  border-bottom: 1px solid var(--surface-muted, #f1f5f9) !important;
-  transition: background-color 0.2s ease;
+  border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.formfleks-premium-grid .dx-datagrid-rowsview .dx-row > td {
+  padding: 14px 12px !important;
+  vertical-align: middle !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row:hover {
-  background-color: var(--surface-hover, #f8f9fa) !important;
+  background-color: rgba(246, 137, 76, 0.04) !important; /* Soft brand primary hover */
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row-alt > td {
-  background-color: rgba(246, 137, 76, 0.02) !important; /* Extremely subtle primary tint */
+  background-color: rgba(246, 137, 76, 0.015) !important; /* Extremely subtle primary tint */
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-selection > td {
@@ -110,8 +116,9 @@
 
 /* Pagination Overrides */
 .dx-datagrid-pager {
-  padding: 16px 8px !important;
-  border-top: 1px solid var(--surface-muted, #f1f5f9) !important;
+  padding: 16px 12px !important;
+  border-top: 1px solid rgba(0,0,0,0.03) !important;
+  background-color: transparent !important;
 }
 
 .dx-page-size, .dx-page {
@@ -149,4 +156,59 @@
 .dx-button-mode-text.dx-state-hover .dx-icon,
 .dx-button-mode-text.dx-state-focused .dx-icon {
   color: #d97743 !important; /* Darker primary for hover */
+}
+
+/* DateBox & TimeBox Premium Popup and Calendar Overrides */
+.dx-dropdowneditor-overlay .dx-popup-content,
+.dx-dropdowneditor-overlay .dx-popup-bottom {
+  border: none !important;
+  background-color: var(--surface-base, #ffffff) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1) !important;
+}
+
+.dx-dropdowneditor-overlay .dx-calendar {
+  padding: 8px !important;
+  font-family: inherit !important;
+}
+
+.dx-dropdowneditor-overlay .dx-calendar-navigator {
+  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 8px !important;
+  border-top: none !important;
+}
+
+.dx-dropdowneditor-overlay .dx-calendar-navigator .dx-button-content {
+  font-weight: 700 !important;
+  color: var(--brand-dark, #231f20) !important;
+}
+
+.dx-dropdowneditor-overlay .dx-calendar-cell {
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.dx-calendar-views-wrapper .dx-state-hover {
+  background-color: rgba(246, 137, 76, 0.1) !important;
+  color: var(--brand-primary, #f6894c) !important;
+}
+
+.dx-calendar-views-wrapper .dx-calendar-selected-date {
+  background-color: var(--brand-primary, #f6894c) !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.dx-dropdowneditor-overlay .dx-timeview-hour,
+.dx-dropdowneditor-overlay .dx-timeview-minute {
+  border-radius: 8px !important;
+  border: 1px solid var(--surface-muted, #e2e8f0) !important;
+  background-color: var(--surface-ground, #f8fafc) !important;
+}
+
+.dx-dropdowneditor-overlay .dx-timeview-hour.dx-state-focused,
+.dx-dropdowneditor-overlay .dx-timeview-minute.dx-state-focused {
+  border-color: var(--brand-primary, #f6894c) !important;
+  box-shadow: 0 0 0 3px rgba(246, 137, 76, 0.15) !important;
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { PremiumInput, PremiumSelect, PremiumCheckbox } from '@/components/forms';
 import { settingsService, type UserProfileDto } from '@/services/settings.service';
 import { Save, User, Lock, Bell, Camera, CheckCircle } from 'lucide-react';
@@ -29,10 +29,14 @@ export const UserProfile: React.FC = () => {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 w-full max-w-[1600px] mx-auto">
+    <PageContainer>
       <PageHeader
         title="Hesabım"
         description="Kişisel bilgilerinizi, şifrenizi ve bildirim tercihlerinizi yönetin."
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Hesap & Profil' }
+        ]}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -99,7 +103,7 @@ export const UserProfile: React.FC = () => {
           {activeTab === 'preferences' && <PreferencesForm data={data} mutation={profileMutation} />}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 
@@ -108,7 +112,7 @@ export const UserProfile: React.FC = () => {
 const ProfileInfoForm = ({ data, mutation }: { data: UserProfileDto, mutation: any }) => {
   const { control, handleSubmit } = useForm<UserProfileDto>({ defaultValues: data });
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+    <GlassCard noPadding className="overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Kişisel Bilgiler</h3>
         {mutation.isSuccess && (
@@ -143,14 +147,14 @@ const ProfileInfoForm = ({ data, mutation }: { data: UserProfileDto, mutation: a
           Bilgilerimi Kaydet
         </FfButton>
       </div>
-    </div>
+    </GlassCard>
   );
 };
 
 const PreferencesForm = ({ data, mutation }: { data: UserProfileDto, mutation: any }) => {
   const { control, handleSubmit } = useForm<UserProfileDto>({ defaultValues: data });
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+    <GlassCard noPadding className="overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Sistem Tercihleri ve Bildirimler</h3>
         {mutation.isSuccess && (
@@ -189,7 +193,7 @@ const PreferencesForm = ({ data, mutation }: { data: UserProfileDto, mutation: a
           Tercihleri Kaydet
         </FfButton>
       </div>
-    </div>
+    </GlassCard>
   );
 };
 
@@ -209,7 +213,7 @@ const SecurityForm = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+    <GlassCard noPadding className="overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Şifre Değiştir</h3>
         {passMutation.isSuccess && (
@@ -236,6 +240,6 @@ const SecurityForm = () => {
           Şifreyi Güncelle
         </FfButton>
       </div>
-    </div>
+    </GlassCard>
   );
 };

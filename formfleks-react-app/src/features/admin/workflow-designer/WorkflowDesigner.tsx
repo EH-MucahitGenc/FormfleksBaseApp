@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Route, Save, Plus, Trash2, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, GitMerge } from 'lucide-react';
-
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { systemAdminService, type FormTemplateWorkflowStepUpsertDto } from '@/services/system-admin.service';
 
 export const WorkflowDesigner: React.FC = () => {
@@ -143,11 +142,17 @@ export const WorkflowDesigner: React.FC = () => {
   const selectedTemplateDetails = templates.find(t => t.formTypeId === selectedFormId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader 
+    <PageContainer>
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <PageHeader 
         title="Onay Akışı (Workflow) Tasarımcısı" 
         description="Form bazlı onay/ret rotalarını oluşturun, sıralamayı belirleyin." 
         className="shrink-0 mb-4"
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
+          { label: 'Onay Akışı Tasarımcısı' }
+        ]}
         actions={
           <div className="flex items-center gap-2">
             <FfButton variant="outline" leftIcon={<GitMerge className="h-4 w-4 text-brand-accent" />} onClick={loadDefaultPreset} disabled={!selectedFormId}>2 Adım Standart</FfButton>
@@ -167,7 +172,7 @@ export const WorkflowDesigner: React.FC = () => {
         
         {/* Left Panel: Form Selector & Overview */}
         <div className="w-full md:w-80 flex flex-col gap-4">
-            <div className="bg-surface-base rounded-xl shadow-soft border border-surface-muted p-5">
+            <GlassCard noPadding className="p-5">
                 <h3 className="font-bold text-brand-dark mb-4 flex items-center gap-2">
                     <Route className="h-5 w-5 text-brand-primary" />
                     Hedef Form Seçimi
@@ -210,7 +215,7 @@ export const WorkflowDesigner: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
+            </GlassCard>
 
             {/* Quick Helper Panel */}
             <div className="bg-status-info/10 rounded-xl border border-status-info/20 p-4">
@@ -226,7 +231,7 @@ export const WorkflowDesigner: React.FC = () => {
         </div>
 
         {/* Right Panel: Workflow Builder */}
-        <div className="flex-1 min-w-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted flex flex-col overflow-hidden">
+        <GlassCard noPadding className="flex-1 min-w-0 flex flex-col overflow-hidden">
             <div className="bg-surface-hover border-b border-surface-muted px-6 py-4 flex justify-between items-center">
                 <div>
                    <h3 className="font-bold text-brand-dark">Akış Adımları Listesi</h3>
@@ -306,9 +311,10 @@ export const WorkflowDesigner: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </GlassCard>
 
       </div>
-    </div>
+      </div>
+    </PageContainer>
   );
 };

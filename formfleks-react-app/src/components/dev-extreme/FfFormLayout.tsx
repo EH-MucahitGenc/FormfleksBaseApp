@@ -2,8 +2,6 @@ import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import TextBox from 'devextreme-react/text-box';
 import DateBox from 'devextreme-react/date-box';
-import SelectBox from 'devextreme-react/select-box';
-import NumberBox from 'devextreme-react/number-box';
 import { cn } from '../ui';
 
 // ----------------------------------------------------------------------
@@ -35,6 +33,7 @@ export const FormSection: React.FC<FormSectionProps> = ({ title, description, ch
 
 // ----------------------------------------------------------------------
 // Controlled Form Fields (React Hook Form + DevExpress Adapters)
+// NOTE: Use the dedicated wrapper components (FfTextBox, FfSelectBox, etc.) with FfField instead for new development.
 // ----------------------------------------------------------------------
 
 export interface FfFieldProps {
@@ -91,7 +90,7 @@ export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, pla
   );
 };
 
-export const FfDateBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
+export const FfTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
     const { control } = useFormContext();
   
     return (
@@ -102,149 +101,57 @@ export const FfDateBox: React.FC<FfFieldProps> = ({ name, label, required, place
           <FieldWrapper label={label} required={required} error={error?.message} className={className}>
             <DateBox
               {...restField}
+              type="time"
               value={value || null}
               onValueChanged={(e) => {
                 if (e.value !== value) {
                   onChange(e.value);
                 }
               }}
-              placeholder={placeholder || "Tarih Seçin"}
+              placeholder={placeholder || "SS:DD"}
               disabled={disabled}
               stylingMode="outlined"
-              displayFormat="dd.MM.yyyy"
+              displayFormat="HH:mm"
               useMaskBehavior={true}
+              adaptivityEnabled={false}
+              dateSerializationFormat="HH:mm:ss"
+              pickerType="list"
               className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
             />
           </FieldWrapper>
         )}
       />
     );
-  };
-  
-  export const FfTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
-      const { control } = useFormContext();
-    
-      return (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
-            <FieldWrapper label={label} required={required} error={error?.message} className={className}>
-              <DateBox
-                {...restField}
-                type="time"
-                value={value || null}
-                onValueChanged={(e) => {
-                  if (e.value !== value) {
-                    onChange(e.value);
-                  }
-                }}
-                placeholder={placeholder || "SS:DD"}
-                disabled={disabled}
-                stylingMode="outlined"
-                displayFormat="HH:mm"
-                useMaskBehavior={true}
-                className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
-              />
-            </FieldWrapper>
-          )}
-        />
-      );
-  };
+};
 
-  export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
-    const { control } = useFormContext();
-  
-    return (
-      <Controller
-        name={name}
-        control={control}
-        render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
-          <FieldWrapper label={label} required={required} error={error?.message} className={className}>
-            <DateBox
-              {...restField}
-              type="datetime"
-              value={value || null}
-              onValueChanged={(e) => {
-                if (e.value !== value) {
-                  onChange(e.value);
-                }
-              }}
-              placeholder={placeholder || "Tarih ve Saat Seçin"}
-              disabled={disabled}
-              stylingMode="outlined"
-              displayFormat="dd.MM.yyyy HH:mm"
-              useMaskBehavior={true}
-              className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
-            />
-          </FieldWrapper>
-        )}
-      />
-    );
-  };
-  
-  export const FfNumberBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
-      const { control } = useFormContext();
-    
-      return (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
-            <FieldWrapper label={label} required={required} error={error?.message} className={className}>
-              <NumberBox
-                {...restField}
-                value={value}
-                onValueChanged={(e) => {
-                  if (e.value !== value) {
-                    onChange(e.value);
-                  }
-                }}
-                placeholder={placeholder || ""}
-                disabled={disabled}
-                stylingMode="outlined"
-                className={cn("w-full transition-all", error && "border-status-danger")}
-              />
-            </FieldWrapper>
-          )}
-        />
-      );
-  };
+export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
+  const { control } = useFormContext();
 
-  export interface FfSelectBoxProps extends FfFieldProps {
-    dataSource: any[];
-    displayExpr: string;
-    valueExpr: string;
-  }
-  
-  export const FfSelectBox: React.FC<FfSelectBoxProps> = ({ name, label, required, placeholder, dataSource, displayExpr, valueExpr, className, disabled }) => {
-      const { control } = useFormContext();
-    
-      return (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
-            <FieldWrapper label={label} required={required} error={error?.message} className={className}>
-              <SelectBox
-                {...restField}
-                value={value || ''}
-                onValueChanged={(e) => {
-                  if (e.value !== value) {
-                    onChange(e.value);
-                  }
-                }}
-                dataSource={dataSource}
-                displayExpr={displayExpr}
-                valueExpr={valueExpr}
-                placeholder={placeholder || "Seçim Yapın"}
-                disabled={disabled}
-                stylingMode="outlined"
-                searchEnabled={true}
-                className={cn("w-full", error && "border-status-danger")}
-              />
-            </FieldWrapper>
-          )}
-        />
-      );
-    };
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
+        <FieldWrapper label={label} required={required} error={error?.message} className={className}>
+          <DateBox
+            {...restField}
+            type="datetime"
+            value={value || null}
+            onValueChanged={(e) => {
+              if (e.value !== value) {
+                onChange(e.value);
+              }
+            }}
+            placeholder={placeholder || "Tarih ve Saat Seçin"}
+            disabled={disabled}
+            stylingMode="outlined"
+            displayFormat="dd.MM.yyyy HH:mm"
+            useMaskBehavior={true}
+            adaptivityEnabled={false}
+            className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
+          />
+        </FieldWrapper>
+      )}
+    />
+  );
+};

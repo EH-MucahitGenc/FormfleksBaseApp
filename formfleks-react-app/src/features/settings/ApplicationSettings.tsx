@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { PremiumInput, PremiumCheckbox } from '@/components/forms';
 import toast from 'react-hot-toast';
 import { settingsService, type AppSettingsDto, type EmailSettingsDto } from '@/services/settings.service';
@@ -61,10 +61,15 @@ export const ApplicationSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6 w-full max-w-[1600px] mx-auto">
+    <PageContainer>
       <PageHeader
         title="Sistem Ayarları"
         description="Uygulama genel davranışlarını ve e-posta konfigürasyonlarını yapılandırın."
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Ayarlar', href: '#' },
+          { label: 'Sistem' }
+        ]}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -112,7 +117,7 @@ export const ApplicationSettings: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };
 
@@ -128,7 +133,7 @@ const AppForm = ({ data, mutation }: { data: AppSettingsDto, mutation: any }) =>
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+    <GlassCard noPadding className="overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Genel Ayarlar</h3>
         
@@ -217,7 +222,7 @@ const AppForm = ({ data, mutation }: { data: AppSettingsDto, mutation: any }) =>
           Değişiklikleri Kaydet
         </FfButton>
       </div>
-    </div>
+    </GlassCard>
   );
 };
 
@@ -230,7 +235,7 @@ const EmailForm = ({ data, mutation, onTest, testStatus }: { data: EmailSettings
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+    <GlassCard noPadding className="overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <div className="flex items-center justify-between border-b pb-2 mb-4">
           <h3 className="text-lg font-bold text-brand-dark">SMTP Konfigürasyonu</h3>
@@ -357,6 +362,6 @@ const EmailForm = ({ data, mutation, onTest, testStatus }: { data: EmailSettings
           Konfigürasyonu Kaydet
         </FfButton>
       </div>
-    </div>
+    </GlassCard>
   );
 };

@@ -9,13 +9,15 @@ import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 import { 
   FfTextField, 
-  FfSelectBox, 
-  FfDateBox,
   FfTimeBox,
   FfDateTimeBox,
-  FfNumberBox,
   FormSection 
 } from '@/components/dev-extreme/FfFormLayout';
+import {
+  FfSelectBox,
+  FfDateBox,
+  FfNumberBox
+} from '@/components/dev-extreme/index';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
 
 export const DynamicFormViewer: React.FC = () => {
@@ -31,6 +33,7 @@ export const DynamicFormViewer: React.FC = () => {
   const methods = useForm({
     defaultValues: {} // This can be dynamically populated if editing an existing record
   });
+  const { getValues, trigger } = methods;
 
   const submitMutation = useMutation({
     mutationFn: (payload: any) => dynamicFormService.submitFormData(formCode!, payload),
@@ -52,9 +55,16 @@ export const DynamicFormViewer: React.FC = () => {
     submitMutation.mutate(data);
   };
 
-  const onSaveDraft = () => {
-    // Trigger RHF's handleSubmit manually but map to draft mutation
-    methods.handleSubmit((data) => draftMutation.mutate(data))();
+  const onSaveDraft = async () => {
+    // Eksik alanları kırmızı renkle ekranda belirtmek için trigger'ı çağırıyoruz.
+    const isValid = await trigger();
+    if (!isValid) {
+      alert("UYARI: Eksik bıraktığınız zorunlu alanlar var! Yine de taslak olarak kaydediliyor...");
+    }
+    
+    // Taslak kaydedilirken formun o anki verilerini al (validasyon bloğuna takılmadan)
+    const data = getValues();
+    draftMutation.mutate(data);
   };
 
   // Maps a dynamic schema field to the corresponding standard Formfleks wrapper

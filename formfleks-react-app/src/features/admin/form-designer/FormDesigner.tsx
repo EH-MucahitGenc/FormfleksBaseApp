@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List } from 'lucide-react';
 
 import { systemAdminService, type FormTemplateUpsertDto } from '@/services/system-admin.service';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 
 // Form Builder Types (Local State overrides)
 interface FieldState {
@@ -185,11 +185,17 @@ export const FormDesigner: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader 
-        title="Form Şablon Tasarımcısı" 
-        description="Sürükle bırak benzeri mantıkla dinamik referans formlarınızı tasarlayın, eylem kurallarını belirleyin." 
+    <PageContainer>
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <PageHeader 
+          title="Form Şablon Tasarımcısı" 
+          description="Sürükle bırak benzeri mantıkla dinamik referans formlarınızı tasarlayın, eylem kurallarını belirleyin." 
         className="shrink-0 mb-4"
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
+          { label: 'Form Şablon Tasarımcısı' }
+        ]}
         actions={
           <div className="flex items-center gap-2">
             <FfButton variant="outline" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={handleReset}>Temizle</FfButton>
@@ -229,7 +235,7 @@ export const FormDesigner: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted flex flex-col overflow-hidden">
+      <GlassCard noPadding className="flex-1 min-h-0 flex flex-col overflow-hidden">
         
         {activeTab === 'list' && (
           <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-surface-base scrollbar-thin">
@@ -486,7 +492,8 @@ export const FormDesigner: React.FC = () => {
             </div>
           </div>
         )}
+      </GlassCard>
       </div>
-    </div>
+    </PageContainer>
   );
 };

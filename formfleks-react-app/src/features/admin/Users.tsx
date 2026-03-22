@@ -5,9 +5,9 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Trash2, Edit3, ShieldAlert } from 'lucide-react';
 
-import { PageHeader, FfButton, FfDrawer, FfStatusBadge } from '@/components/ui/index';
-import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
-import { FfTextField, FfSelectBox, FormSection } from '@/components/dev-extreme/FfFormLayout';
+import { PageHeader, FfButton, FfDrawer, FfStatusBadge, PageContainer, GlassCard } from '@/components/ui/index';
+import { FfDataGrid, FfSelectBox } from '@/components/dev-extreme/index';
+import { FfTextField, FormSection } from '@/components/dev-extreme/FfFormLayout';
 import { adminService, type AdminUserDto, type UpdateUserRequest } from '@/services/admin.service';
 
 // --- SCHEMA & TYPES ---
@@ -126,21 +126,26 @@ export const Users: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <PageContainer>
       <PageHeader 
         title="Kullanıcı Yönetimi" 
         description="Sistemdeki tüm kullanıcıları, rollerini ve durumlarını yönetin." 
-        className="shrink-0 mb-4"
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Sistem Yönetimi', href: '#' },
+          { label: 'Kullanıcılar' }
+        ]}
       />
 
-      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted overflow-hidden flex flex-col">
+      <GlassCard noPadding className="mt-6 overflow-hidden">
         <FfDataGrid 
           queryKey={['adminUsers']}
           fetchFn={adminService.getUsers}
           columns={columns}
           pageSize={15}
+          className="border-0"
         />
-      </div>
+      </GlassCard>
 
       {/* Edit Drawer */}
       <FfDrawer
@@ -150,7 +155,7 @@ export const Users: React.FC = () => {
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-brand-primary" />
             Kullanıcı Yetkilerini Düzenle
-          </div> as unknown as string
+          </div>
         }
         subtitle={`${selectedUser?.email} hesap erişim ve yetki tanımlarını güncelliyorsunuz.`}
         size="md"
@@ -202,6 +207,6 @@ export const Users: React.FC = () => {
           </form>
         </FormProvider>
       </FfDrawer>
-    </div>
+    </PageContainer>
   );
 };

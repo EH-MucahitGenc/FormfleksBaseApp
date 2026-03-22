@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { PageHeader, FfButton, FfDrawer } from '@/components/ui/index';
-import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
-import { FfTextField, FfDateBox, FormSection } from '@/components/dev-extreme/FfFormLayout';
+import { FfDataGrid, FfDateBox } from '@/components/dev-extreme/index';
+import { FfTextField, FormSection } from '@/components/dev-extreme/FfFormLayout';
 import { Plus, Save } from 'lucide-react';
 import { visitorService, type VisitorDto, type CreateVisitorRequestDto } from '@/services/visitor.service';
 import { useForm, FormProvider } from 'react-hook-form';

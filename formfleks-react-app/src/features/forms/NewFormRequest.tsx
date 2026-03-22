@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { PremiumInput, PremiumSelect, PremiumCheckbox } from '@/components/forms';
-import { formService } from '@/services/form.service';
-import { systemAdminService } from '@/services/system-admin.service';
+import { useFormDefinition, useSubmitForm, useSaveDraft } from './hooks/useForms';
 import { Save, Send, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 export const NewFormRequest: React.FC = () => {
@@ -14,13 +12,9 @@ export const NewFormRequest: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   // Fetch the form definition
-  const { data: formDef, isLoading: isDefLoading, error: defError } = useQuery({
-    queryKey: ['form-definition', formCode],
-    queryFn: () => systemAdminService.getTemplateDetailed(formCode || 'IT_REQ'),
-    enabled: !!formCode || !formCode // For demo purposes, if formCode is missing, fallback to IT_REQ or load a default. Actually the routing will provide this.
-  });
+  const { data: formDef, isLoading: isDefLoading, error: defError } = useFormDefinition(formCode);
 
-  const { control, handleSubmit, reset } = useForm({
+  const { control, handleSubmit, reset, getValues, trigger } = useForm({
     mode: 'onTouched'
   });
 
@@ -38,17 +32,8 @@ export const NewFormRequest: React.FC = () => {
     }
   }, [formDef, reset]);
 
-  const submitMutation = useMutation({
-    mutationFn: async (data: any) => formService.submitForm(data),
-    onSuccess: () => {
-      navigate('/forms');
-    }
-  });
-
-  // Draft Save uses the same logic
-  const draftMutation = useMutation({
-    mutationFn: async (data: any) => formService.saveDraft(data)
-  });
+  const submitMutation = useSubmitForm();
+  const draftMutation = useSaveDraft();
 
   if (isDefLoading) {
     return (
@@ -81,16 +66,31 @@ export const NewFormRequest: React.FC = () => {
   };
 
   const onSubmit = (data: any) => {
-    submitMutation.mutate(data);
+    submitMutation.mutate(data, {
+      onSuccess: () => navigate('/forms')
+    });
   };
 
-  const onSaveDraft = () => {
-    handleSubmit((data) => draftMutation.mutate(data))();
+  const onSaveDraft = async () => {
+    // 1. Check validation state visually but don't block
+    const isValid = await trigger();
+    const data = getValues();
+    
+    draftMutation.mutate(data, {
+      onSuccess: () => {
+        if (!isValid) {
+          // It's a draft, so we saved it, but we let them know they have unfinished required fields.
+          // The useSaveDraft mutation already shows a success toast, so we might not need an extra warning, 
+          // or we can just rely on the form highlighting the invalid fields in red (which trigger() does).
+        }
+        navigate('/forms');
+      }
+    });
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
+    <PageContainer>
+      <div className="flex items-center gap-4 mb-2">
         <button 
           onClick={() => navigate('/forms')}
           className="p-2 hover:bg-surface-muted rounded-full text-brand-gray transition-colors"
@@ -100,13 +100,18 @@ export const NewFormRequest: React.FC = () => {
         <PageHeader
           title={formDef.name}
           description="Lütfen form alanlarını eksiksiz doldurun."
+          breadcrumbs={[
+            { label: 'Anasayfa', href: '/' },
+            { label: 'Taleplerim', href: '/forms' },
+            { label: 'Yeni Talep' }
+          ]}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form Body */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
+          <GlassCard noPadding className="overflow-hidden">
             {/* Tabs */}
             <div className="flex overflow-x-auto border-b border-surface-muted hide-scrollbar">
               {(formDef.sections || []).sort((a: any, b: any) => a.sortOrder - b.sortOrder).map((sec: any, idx: number) => (
@@ -237,12 +242,12 @@ export const NewFormRequest: React.FC = () => {
                 Onayı Başlat
               </FfButton>
             </div>
-          </div>
+          </GlassCard>
         </div>
 
         {/* Sidebar Info */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted p-6 sticky top-24">
+          <GlassCard noPadding className="p-6 sticky top-24">
             <h3 className="text-sm font-bold text-brand-dark mb-4 pb-4 border-b">Form Bilgileri</h3>
             <div className="space-y-4">
               <div>
@@ -256,9 +261,9 @@ export const NewFormRequest: React.FC = () => {
                 </span>
               </div>
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };

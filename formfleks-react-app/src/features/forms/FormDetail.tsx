@@ -1,45 +1,14 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PageHeader } from '@/components/ui/index';
-import { useQuery } from '@tanstack/react-query';
-import { formService } from '@/services/form.service';
+import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
+import { useFormDetail } from './hooks/useForms';
 import { ArrowLeft, CheckCircle, Clock, FileText } from 'lucide-react';
 
 export const FormDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Load request details. Since we don't have a specific getRequestById in our mock yet, we simulate one.
-  const { data, isLoading } = useQuery({
-    queryKey: ['form-request', id],
-    queryFn: async () => {
-      // Find from my requests as a fallback
-      const requests = await formService.getMyRequests();
-      const req = requests.find(r => r.requestId === id) || {
-        requestId: id,
-        requestNo: `REQ_${id}`,
-        formTypeName: 'Örnek Form (Detay Görünümü)',
-        status: 2, // Pending
-        createdAt: new Date().toISOString()
-      };
-      
-      // Simulate fetch delay
-      await new Promise(r => setTimeout(r, 600));
-
-      return {
-        ...req,
-        fields: [
-          { label: 'Talep Açıklaması', value: 'Yeni bir monitör ihtiyacım var.' },
-          { label: 'Öncelik', value: 'Yüksek' },
-          { label: 'Gerekçe', value: 'Mevcut monitör ekranında sorunlar var ve verimliliğimi düşürüyor.' }
-        ],
-        workflow: [
-          { step: 'Bölüm Yöneticisi Onayı', status: 'Approved', actor: 'Ahmet Yılmaz', date: new Date().toISOString() },
-          { step: 'IT Departmanı Onayı', status: 'Pending', actor: 'IT Destek Grubu', date: null }
-        ]
-      };
-    }
-  });
+  const { data, isLoading } = useFormDetail(id || '');
 
   if (isLoading) {
     return (
@@ -52,8 +21,8 @@ export const FormDetail: React.FC = () => {
   if (!data) return null;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
+    <PageContainer>
+      <div className="flex items-center gap-4 mb-2">
         <button 
           onClick={() => navigate('/forms')}
           className="p-2 hover:bg-surface-muted rounded-full text-brand-gray transition-colors"
@@ -63,12 +32,17 @@ export const FormDetail: React.FC = () => {
         <PageHeader
           title={`${data.formTypeName} - Detay`}
           description={`${data.requestNo || data.requestId} numaralı talebin detayları`}
+          breadcrumbs={[
+            { label: 'Anasayfa', href: '/' },
+            { label: 'Taleplerim', href: '/forms' },
+            { label: 'Form Detayı' }
+          ]}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted p-6">
+          <GlassCard noPadding className="p-6">
             <h3 className="text-lg font-bold text-brand-dark mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-brand-primary" />
               Form İçeriği
@@ -83,11 +57,11 @@ export const FormDetail: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted p-6">
+          <GlassCard noPadding className="p-6">
             <h3 className="text-sm font-bold text-brand-dark mb-4 pb-3 border-b border-surface-muted">
               Durum Bilgileri
             </h3>
@@ -116,9 +90,9 @@ export const FormDetail: React.FC = () => {
                 ))}
               </div>
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 };

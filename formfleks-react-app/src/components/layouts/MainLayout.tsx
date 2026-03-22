@@ -10,7 +10,7 @@ export const MainLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen w-full bg-surface-ground overflow-hidden">
+    <div className="flex h-screen w-full bg-premium-mesh overflow-hidden">
       
       {/* Sidebar */}
       <DynamicSidebar 
@@ -19,10 +19,10 @@ export const MainLayout: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-surface-ground">
+      <div className="flex-1 flex flex-col min-w-0 bg-transparent">
         
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-surface-muted flex items-center justify-between px-6 shrink-0 relative z-10 shadow-sm">
+        <header className="h-16 bg-white/70 backdrop-blur-md border-b border-surface-muted flex items-center justify-between px-6 shrink-0 relative z-10 glass-glow">
           {/* Left: Mobile Toggle & Global Search */}
           <div className="flex items-center gap-4 flex-1">
             <div className="relative max-w-md w-full hidden md:block group">
@@ -45,7 +45,7 @@ export const MainLayout: React.FC = () => {
         </header>
 
         {/* Page Content Rendered Here */}
-        <main className="flex-1 overflow-y-auto w-full p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full p-4 md:p-6 lg:p-8">
            <Outlet />
         </main>
       </div>

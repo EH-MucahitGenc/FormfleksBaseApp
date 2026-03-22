@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { ShieldCheck, Code, Settings2 } from 'lucide-react';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { systemAdminService } from '@/services/system-admin.service';
 
@@ -114,11 +114,17 @@ export const AuditLogs: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <PageHeader 
-        title="Sistem Logları (Audit)" 
+    <PageContainer>
+      <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <PageHeader 
+          title="Sistem Logları (Audit)" 
         description="Sistem içerisindeki tüm kritik işlemlerin, form onay süreçlerinin ve yetki değişimlerinin detaylı log kayıtları." 
         className="shrink-0 mb-4"
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
+          { label: 'Sistem Logları (Audit)' }
+        ]}
         actions={
           <FfButton variant="outline" leftIcon={<Settings2 className="h-4 w-4" />}>
             Dışa Aktar (CSV)
@@ -126,7 +132,7 @@ export const AuditLogs: React.FC = () => {
         }
       />
 
-      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted overflow-hidden flex flex-col">
+      <GlassCard noPadding className="flex-1 min-h-0 flex flex-col">
         <div className="px-5 py-3 border-b border-surface-muted bg-surface-hover flex items-center justify-between">
             <div className="flex items-center gap-2 text-brand-primary font-bold">
                 <ShieldCheck className="h-5 w-5" />
@@ -140,7 +146,7 @@ export const AuditLogs: React.FC = () => {
           columns={columns}
           pageSize={20}
         />
-      </div>
+      </GlassCard>
 
       {/* JSON Viewer Modal Overlay */}
       {modalContent && (
@@ -171,6 +177,7 @@ export const AuditLogs: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PageContainer>
   );
 };

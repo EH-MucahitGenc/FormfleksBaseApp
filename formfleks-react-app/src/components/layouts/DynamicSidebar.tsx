@@ -16,7 +16,7 @@ export const NavItem = ({ to, icon: Icon, label, isCollapsed }: { to: string, ic
     className={({ isActive }) => cn(
       "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group",
       isActive 
-        ? "bg-brand-primary text-white shadow-sm" 
+        ? "bg-brand-primary/10 text-brand-primary font-semibold sidebar-active-indicator" 
         : "text-brand-gray hover:bg-brand-primary/10 hover:text-brand-primary"
     )}
     title={isCollapsed ? label : undefined}

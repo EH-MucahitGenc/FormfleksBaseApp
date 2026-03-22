@@ -5,6 +5,8 @@
   --color-brand-primary: #f6894c;
   --color-brand-dark: #231f20;
   --color-brand-gray: #414042;
+  --color-brand-copper: #c27234;
+  --color-brand-copper-dark: #8a4e1f;
   
   --color-surface-base: #ffffff;
   --color-surface-ground: #f8fafc;
@@ -21,6 +23,9 @@
   
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-premium: 0 8px 30px rgba(0,0,0,0.04);
+  --shadow-glow: 0 0 20px -5px rgba(246, 137, 76, 0.2);
+  --shadow-card-hover: 0 12px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-card-lift: 0 20px 60px -15px rgba(0, 0, 0, 0.1);
   
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -30,6 +35,106 @@
   body {
     @apply font-sans antialiased text-brand-dark bg-surface-ground;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Premium V4 Animation & Utility System
+   ═══════════════════════════════════════════════════════ */
+
+/* --- Dynamic Mesh Background --- */
+@keyframes premiumMesh {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bg-premium-mesh {
+  background: linear-gradient(-45deg, #f8fafc, #fff4ed, #fef2f2, #f5f3ff);
+  background-size: 400% 400%;
+  animation: premiumMesh 20s ease infinite;
+}
+
+/* --- Fade In Up Entrance --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+
+/* --- Glass Glow (Topbar, premium surfaces) --- */
+.glass-glow {
+  box-shadow: 0 0 40px -10px rgba(246, 137, 76, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+/* --- Shimmer Skeleton Loading --- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 25%,
+    #e8ecf1 37%,
+    #f1f5f9 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* --- Hover Lift (Cards, interactive surfaces) --- */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* --- Sidebar Active Gradient Indicator --- */
+.sidebar-active-indicator {
+  position: relative;
+}
+
+.sidebar-active-indicator::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #f6894c, #c27234);
+  box-shadow: 0 0 8px rgba(246, 137, 76, 0.4);
+}
+
+/* --- Focus Ring (Premium glow ring on inputs) --- */
+.focus-ring-brand:focus-within {
+  box-shadow: 0 0 0 3px rgba(246, 137, 76, 0.15);
+  border-color: #f6894c !important;
+}
+
+/* --- Count-Up Number Animation --- */
+@keyframes countPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-count-pulse {
+  animation: countPulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* User specifically dislikes the DevExtreme analog clock UI but needs time input */

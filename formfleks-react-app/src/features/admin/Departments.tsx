@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, Edit3, Building2 } from 'lucide-react';
 
-import { PageHeader, FfButton, FfDrawer, FfStatusBadge } from '@/components/ui/index';
+import { PageHeader, FfButton, FfDrawer, FfStatusBadge, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { FfTextField, FormSection } from '@/components/dev-extreme/FfFormLayout';
 import { adminService, type AdminDepartmentDto, type CreateDepartmentCommand, type UpdateDepartmentCommand } from '@/services/admin.service';
@@ -111,11 +111,15 @@ export const Departments: React.FC = () => {
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <PageContainer>
       <PageHeader 
         title="Departman Yönetimi" 
         description="Kurumsal departmanları yönetin ve listeye yeni departmanlar ekleyin." 
-        className="shrink-0 mb-4"
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Sistem Yönetimi', href: '#' },
+          { label: 'Departmanlar' }
+        ]}
         actions={
           <FfButton 
             variant="primary" 
@@ -127,14 +131,15 @@ export const Departments: React.FC = () => {
         }
       />
 
-      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted overflow-hidden flex flex-col">
+      <GlassCard noPadding className="mt-6 overflow-hidden">
         <FfDataGrid 
           queryKey={['adminDepartments']}
           fetchFn={adminService.getDepartments}
           columns={columns}
           pageSize={15}
+          className="border-0"
         />
-      </div>
+      </GlassCard>
 
       {/* Create/Edit Drawer */}
       <FfDrawer
@@ -196,6 +201,6 @@ export const Departments: React.FC = () => {
           </form>
         </FormProvider>
       </FfDrawer>
-    </div>
+    </PageContainer>
   );
 };

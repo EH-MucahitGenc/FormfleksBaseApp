@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { formService, type PendingApprovalListItemDto } from '@/services/form.service';
 import { Check, X, CornerUpLeft, Info } from 'lucide-react';
@@ -107,25 +107,31 @@ export const PendingApprovals: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 md:p-8 space-y-6 w-full">
+    <PageContainer>
       <PageHeader
         title="Bekleyen Onaylar"
         description="Size atanan bekleyen onay talepleri."
+        breadcrumbs={[
+          { label: 'Anasayfa', href: '/' },
+          { label: 'Onay Merkezi' }
+        ]}
       />
 
       {message && (
-        <div className="p-4 rounded-lg bg-status-info/10 border border-status-info/20 text-status-info flex items-center gap-2">
+        <div className="p-4 mb-6 rounded-lg bg-status-info/10 border border-status-info/20 text-status-info flex items-center gap-2">
           <Info className="h-5 w-5" />
           <span className="font-medium text-sm">{message}</span>
         </div>
       )}
 
-      <FfDataGrid
-        queryKey={['pending-approvals']}
-        fetchFn={formService.getPendingApprovals}
-        columns={columns}
-        className="mt-6"
-      />
+      <GlassCard noPadding className="overflow-hidden">
+        <FfDataGrid
+          queryKey={['pending-approvals']}
+          fetchFn={formService.getPendingApprovals}
+          columns={columns}
+          className="border-0"
+        />
+      </GlassCard>
 
       {/* Action Modal */}
       {modalState.isOpen && modalState.item && (
@@ -192,6 +198,6 @@ export const PendingApprovals: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
