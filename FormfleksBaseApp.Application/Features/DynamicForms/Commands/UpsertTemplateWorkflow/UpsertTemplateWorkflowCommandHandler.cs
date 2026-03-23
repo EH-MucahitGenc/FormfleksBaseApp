@@ -17,42 +17,54 @@ public sealed class UpsertTemplateWorkflowCommandHandler : IRequestHandler<Upser
 
     public async Task<int> Handle(UpsertTemplateWorkflowCommand request, CancellationToken ct)
     {
-        // Mevcut aktif workflow definition bul veya oluştur
-        var wfDef = await _db.WorkflowDefinitions
+        // Mevcut aktif workflow definition bul
+        var oldWfDef = await _db.WorkflowDefinitions
             .FirstOrDefaultAsync(w => w.FormTypeId == request.FormTypeId && w.IsActive, ct);
 
-        if (wfDef is null)
+        WorkflowDefinitionEntity newWfDef;
+
+        if (oldWfDef != null)
         {
-            wfDef = new WorkflowDefinitionEntity
+            oldWfDef.IsActive = false; // Deactivate old version
+            
+            newWfDef = new WorkflowDefinitionEntity
+            {
+                FormTypeId = request.FormTypeId,
+                VersionNo = oldWfDef.VersionNo + 1,
+                IsActive = true
+            };
+            _db.WorkflowDefinitions.Add(newWfDef);
+        }
+        else
+        {
+            newWfDef = new WorkflowDefinitionEntity
             {
                 FormTypeId = request.FormTypeId,
                 VersionNo = 1,
                 IsActive = true
             };
-            _db.WorkflowDefinitions.Add(wfDef);
-            await _db.SaveChangesAsync(ct);
+            _db.WorkflowDefinitions.Add(newWfDef);
         }
+        
+        await _db.SaveChangesAsync(ct);
 
-        // Eski adımları sil
-        var existingSteps = await _db.WorkflowSteps
-            .Where(s => s.WorkflowDefinitionId == wfDef.Id)
-            .ToListAsync(ct);
-        _db.WorkflowSteps.RemoveRange(existingSteps);
-
-        // Yeni adımları ekle
+        // Yeni adımları yeni workflow ID'sine ekle
         int stepNo = 1;
         foreach (var sDto in request.Steps.OrderBy(x => x.StepNo))
         {
             _db.WorkflowSteps.Add(new WorkflowStepEntity
             {
-                WorkflowDefinitionId = wfDef.Id,
+                WorkflowDefinitionId = newWfDef.Id,
                 StepNo = sDto.StepNo,
                 Name = sDto.Name ?? $"Adım {sDto.StepNo}",
                 AssigneeType = (short)sDto.AssigneeType,
                 AssigneeUserId = sDto.AssigneeUserId,
                 AssigneeRoleId = sDto.AssigneeRoleId,
                 DynamicRuleJson = sDto.DynamicRuleJson,
-                AllowReturnForRevision = sDto.AllowReturnForRevision
+                AllowReturnForRevision = sDto.AllowReturnForRevision,
+                FallbackAction = sDto.FallbackAction,
+                FallbackUserId = sDto.FallbackUserId,
+                IsParallel = sDto.IsParallel
             });
             stepNo++;
         }

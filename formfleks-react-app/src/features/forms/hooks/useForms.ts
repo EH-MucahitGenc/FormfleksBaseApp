@@ -28,29 +28,7 @@ export const useFormDefinition = (formCode?: string) =>
 export const useFormDetail = (id: string) =>
   useQuery({
     queryKey: queryKeys.forms.detail(id),
-    queryFn: async () => {
-      const requests = await formService.getMyRequests();
-      const req = requests.find((r) => r.requestId === id) || {
-        requestId: id,
-        requestNo: `REQ_${id}`,
-        formTypeName: 'Örnek Form (Detay Görünümü)',
-        status: 2 as const,
-        createdAt: new Date().toISOString(),
-      };
-
-      return {
-        ...req,
-        fields: [
-          { label: 'Talep Açıklaması', value: 'Yeni bir monitör ihtiyacım var.' },
-          { label: 'Öncelik', value: 'Yüksek' },
-          { label: 'Gerekçe', value: 'Mevcut monitör ekranında sorunlar var ve verimliliğimi düşürüyor.' },
-        ],
-        workflow: [
-          { step: 'Bölüm Yöneticisi Onayı', status: 'Approved', actor: 'Ahmet Yılmaz', date: new Date().toISOString() },
-          { step: 'IT Departmanı Onayı', status: 'Pending', actor: 'IT Destek Grubu', date: null },
-        ],
-      };
-    },
+    queryFn: () => formService.getRequestDetailed(id),
     enabled: !!id,
   });
 

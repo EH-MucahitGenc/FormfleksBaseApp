@@ -35,20 +35,74 @@ public sealed class GetRequestDetailedQueryHandler
             .Where(x => x.RequestId == query.RequestId)
             .ToListAsync(ct);
 
+        var formFields = await _db.FormFields
+            .AsNoTracking()
+            .Where(x => x.FormTypeId == request.FormTypeId)
+            .ToListAsync(ct);
+
+        var approvals = await _db.FormRequestApprovals
+            .AsNoTracking()
+            .Where(x => x.RequestId == query.RequestId)
+            .OrderBy(x => x.StepNo)
+            .ToListAsync(ct);
+
+        var approvalStepIds = approvals.Select(a => a.WorkflowStepId).ToList();
+        var workflowSteps = await _db.WorkflowSteps
+            .AsNoTracking()
+            .Where(s => approvalStepIds.Contains(s.Id))
+            .ToListAsync(ct);
+
+        var actorUserIds = approvals.Select(a => a.ActionByUserId ?? a.AssigneeUserId).Where(x => x.HasValue).Select(x => x!.Value).ToList();
+        var actors = await _db.QdmsPersoneller
+            .AsNoTracking()
+            .Where(p => p.LinkedUserId.HasValue && actorUserIds.Contains(p.LinkedUserId.Value))
+            .ToListAsync(ct);
+
+        var actorRoleIds = approvals.Select(a => a.AssigneeRoleId).Where(x => x.HasValue).Select(x => x!.Value).ToList();
+        var roles = await _db.Roles
+            .AsNoTracking()
+            .Where(r => actorRoleIds.Contains(r.Id))
+            .ToListAsync(ct);
+
         return new FormRequestDetailedDto
         {
             RequestId = request.Id,
             RequestNo = request.RequestNo,
             FormTypeCode = formType?.Code ?? "",
+            FormTypeName = formType?.Name ?? "",
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
             Values = values.Select(v => new FormRequestValueDto
             {
                 FieldKey = v.FieldKey,
+                Label = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey)?.Label ?? v.FieldKey,
                 ValueText = v.ValueText
                     ?? v.ValueNumber?.ToString()
                     ?? v.ValueDateTime?.ToString("O")
                     ?? v.ValueBool?.ToString().ToLowerInvariant()
+            }).ToList(),
+            Workflow = approvals.Select(a => {
+                string actorName = "Bilinmiyor";
+
+                if (a.ActionByUserId.HasValue || a.AssigneeUserId.HasValue)
+                {
+                    var targetUserId = a.ActionByUserId ?? a.AssigneeUserId;
+                    var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
+                    actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
+                }
+                else if (a.AssigneeRoleId.HasValue)
+                {
+                    var roleObj = roles.FirstOrDefault(r => r.Id == a.AssigneeRoleId.Value);
+                    actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {a.AssigneeRoleId.Value}";
+                }
+
+                return new FormRequestWorkflowStepDto
+                {
+                    Step = workflowSteps.FirstOrDefault(s => s.Id == a.WorkflowStepId)?.Name ?? $"Adım {a.StepNo}",
+                    Status = ((FormRequestStatus)a.Status).ToString(),
+                    Actor = actorName,
+                    Date = a.ActionAt
+                };
             }).ToList()
         };
     }

@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Trash2, Edit3, ShieldAlert } from 'lucide-react';
 
 import { PageHeader, FfButton, FfDrawer, FfStatusBadge, PageContainer, GlassCard } from '@/components/ui/index';
-import { FfDataGrid, FfSelectBox } from '@/components/dev-extreme/index';
+import { FfDataGrid, FfSelectBox, FfField } from '@/components/dev-extreme/index';
 import { FfTextField, FormSection } from '@/components/dev-extreme/FfFormLayout';
-import { adminService, type AdminUserDto, type UpdateUserRequest } from '@/services/admin.service';
+import { adminService, type AdminUserDto, type UpdateUserRequest, type AdminRoleDto } from '@/services/admin.service';
 
 // --- SCHEMA & TYPES ---
 const userSchema = z.object({
@@ -23,6 +23,11 @@ export const Users: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUserDto | null>(null);
   
+  const { data: roles = [] } = useQuery({
+    queryKey: ['adminRolesLookup'],
+    queryFn: adminService.getRoles
+  });
+
   // Modals for deletion would typically go here, but for brevity we'll focus on the Edit Drawer
 
   const methods = useForm<UserFormValues>({
@@ -45,10 +50,12 @@ export const Users: React.FC = () => {
 
   const handleEdit = (user: AdminUserDto) => {
     setSelectedUser(user);
-    // In a real app, map exact role ID. For mock, just use index logic.
+    // Finds the exact role ID from the database payload
+    const existingRoleId = roles.find((r: AdminRoleDto) => user.roles.includes(r.name))?.id || '';
+    
     methods.reset({
       displayName: user.name,
-      roleId: user.roles.includes('SysAdmin') ? '101' : '103'
+      roleId: existingRoleId
     });
     setIsDrawerOpen(true);
   };
@@ -190,17 +197,16 @@ export const Users: React.FC = () => {
                  required
                  className="col-span-full"
               />
-              <FfSelectBox 
+               <FfField 
+                 component={FfSelectBox}
                  name="roleId"
                  label="Yetki / Rol"
-                 required
-                 dataSource={[
-                   { id: '101', name: 'Sistem Yöneticisi' },
-                   { id: '102', name: 'Departman Yöneticisi' },
-                   { id: '103', name: 'Standart Kullanıcı' },
-                 ]}
-                 displayExpr="name"
-                 valueExpr="id"
+                 componentProps={{
+                   required: true,
+                   dataSource: roles,
+                   displayExpr: "name",
+                   valueExpr: "id"
+                 }}
                  className="col-span-full"
               />
             </FormSection>

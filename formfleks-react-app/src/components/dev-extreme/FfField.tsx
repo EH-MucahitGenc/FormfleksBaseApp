@@ -40,7 +40,11 @@ export function FfField<TFieldValues extends FieldValues>({
              helperText={helperText}
              error={error?.message}
              value={value}
-             onValueChanged={(e: any) => onChange(e.value)}
+             onValueChanged={(e: any) => {
+               if (e.value !== value) {
+                 onChange(e.value);
+               }
+             }}
              onFocusOut={onBlur}
              {...(componentProps as any)}
              {...rest}

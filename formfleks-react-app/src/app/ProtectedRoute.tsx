@@ -1,17 +1,25 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 
-export const ProtectedRoute = () => {
-  const { isAuthenticated, token } = useAuthStore();
+export interface ProtectedRouteProps {
+  allowedRoles?: string[];
+}
+
+export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+  const { isAuthenticated, token, user } = useAuthStore();
   const location = useLocation();
 
-  // Check if token exists and user is authenticated
   if (!isAuthenticated || !token) {
-    // Redirect them to the /auth/login page, but save the current location they were
-    // trying to go to when they were redirected. This allows us to send them
-    // along to that page after they login, which is a nicer user experience
-    // than dropping them off on the home page.
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRoles = user?.roles || [];
+    const hasRole = allowedRoles.some(role => userRoles.includes(role));
+    
+    if (!hasRole) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <Outlet />;

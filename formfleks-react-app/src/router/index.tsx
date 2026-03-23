@@ -25,6 +25,8 @@ const FormDesigner = lazy(() => import('@/features/admin/form-designer/FormDesig
 const WorkflowDesigner = lazy(() => import('@/features/admin/workflow-designer/WorkflowDesigner').then(m => ({ default: m.WorkflowDesigner })));
 const ApplicationSettings = lazy(() => import('@/features/settings/ApplicationSettings').then(m => ({ default: m.ApplicationSettings })));
 const UserProfile = lazy(() => import('@/features/settings/UserProfile').then(m => ({ default: m.UserProfile })));
+const Delegations = lazy(() => import('@/features/profile/Delegations').then(m => ({ default: m.Delegations })));
+const PersonnelSync = lazy(() => import('@/features/admin/personnel-sync/PersonnelSyncDashboard'));
 
 // ─── Suspense Fallback ───────────────────────────────────────────────
 const PageFallback = () => (
@@ -74,22 +76,35 @@ export const router = createBrowserRouter([
           },
           { path: 'approvals', element: <Suspense fallback={<PageFallback />}><PendingApprovals /></Suspense> },
           { path: 'visitors', element: <Suspense fallback={<PageFallback />}><VisitorManagement /></Suspense> },
-          { path: 'users', element: <Suspense fallback={<PageFallback />}><Users /></Suspense> },
+          {
+            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin']} />,
+            children: [
+              { path: 'users', element: <Suspense fallback={<PageFallback />}><Users /></Suspense> },
+              {
+                path: 'admin',
+                children: [
+                  { path: 'roles', element: <Suspense fallback={<PageFallback />}><Roles /></Suspense> },
+                  { path: 'departments', element: <Suspense fallback={<PageFallback />}><Departments /></Suspense> },
+                  { path: 'audit-logs', element: <Suspense fallback={<PageFallback />}><AuditLogs /></Suspense> },
+                  { path: 'personnel-sync', element: <Suspense fallback={<PageFallback />}><PersonnelSync /></Suspense> },
+                  { path: 'system-settings', element: <Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense> }
+                ]
+              }
+            ]
+          },
           {
             path: 'admin',
+            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin', 'HumanResources', 'IK', 'IK-Admin', 'HR']} />,
             children: [
-              { path: 'roles', element: <Suspense fallback={<PageFallback />}><Roles /></Suspense> },
-              { path: 'departments', element: <Suspense fallback={<PageFallback />}><Departments /></Suspense> },
-              { path: 'audit-logs', element: <Suspense fallback={<PageFallback />}><AuditLogs /></Suspense> },
               { path: 'form-designer', element: <Suspense fallback={<PageFallback />}><FormDesigner /></Suspense> },
-              { path: 'workflow-designer', element: <Suspense fallback={<PageFallback />}><WorkflowDesigner /></Suspense> },
-              { path: 'system-settings', element: <Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense> }
+              { path: 'workflow-designer', element: <Suspense fallback={<PageFallback />}><WorkflowDesigner /></Suspense> }
             ]
           },
           {
             path: 'settings',
             children: [
-              { path: 'profile', element: <Suspense fallback={<PageFallback />}><UserProfile /></Suspense> }
+              { path: 'profile', element: <Suspense fallback={<PageFallback />}><UserProfile /></Suspense> },
+              { path: 'delegations', element: <Suspense fallback={<PageFallback />}><Delegations /></Suspense> }
             ]
           },
           { path: '*', element: <Navigate to="/dashboard" replace /> }

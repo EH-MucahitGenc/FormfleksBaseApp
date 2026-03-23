@@ -66,14 +66,17 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
         // Yeni değerleri ekle
         foreach (var v in dto.Values)
         {
-            var fieldDef = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey);
-            var actualFieldId = fieldDef?.Id ?? Guid.NewGuid();
+            var fieldDef = formFields.FirstOrDefault(f => 
+                string.Equals(f.FieldKey, v.FieldKey, StringComparison.OrdinalIgnoreCase));
+            
+            if (fieldDef == null)
+                continue; // Ignore fields that do not belong to this form template
 
             _db.FormRequestValues.Add(new FormRequestValueEntity
             {
                 RequestId = req.Id,
-                FieldId = actualFieldId,
-                FieldKey = v.FieldKey,
+                FieldId = fieldDef.Id,
+                FieldKey = fieldDef.FieldKey, // Ensure we use the exact casing from the DB
                 ValueText = v.ValueText,
                 ValueNumber = v.ValueNumber,
                 ValueDateTime = v.ValueDateTime,

@@ -4,6 +4,7 @@ import type { PendingApprovalListItemDto } from './form.service';
 export interface DashboardStatsDto {
   totalFormsSubmitted: number;
   pendingApprovalsCount: number;
+  inProgressFormsCount: number;
   approvedFormsCount: number;
   rejectedFormsCount: number;
 }
@@ -32,8 +33,9 @@ class DashboardService {
     return {
       totalFormsSubmitted: myRequests?.length || 0,
       pendingApprovalsCount: pendingApprovals?.length || 0,
-      approvedFormsCount: myRequests?.filter(r => r.status === 3)?.length || 0,
-      rejectedFormsCount: myRequests?.filter(r => r.status === 4)?.length || 0,
+      inProgressFormsCount: myRequests?.filter(r => r.status === 2 || r.status === 3)?.length || 0,
+      approvedFormsCount: myRequests?.filter(r => r.status === 4)?.length || 0,
+      rejectedFormsCount: myRequests?.filter(r => r.status === 5)?.length || 0,
     };
   }
 

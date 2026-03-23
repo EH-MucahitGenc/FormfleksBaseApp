@@ -10,15 +10,23 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using FormfleksBaseApp.Application.Auth.Interfaces;
+
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
 
 public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<ExecuteApprovalActionCommand, ApprovalActionResponseDto>
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly IApprovalEngineService _engine;
+    private readonly IEmailService _emailService;
+    private readonly IUserRepository _userRepository;
 
-    public ExecuteApprovalActionCommandHandler(IDynamicFormsDbContext db)
+    public ExecuteApprovalActionCommandHandler(IDynamicFormsDbContext db, IApprovalEngineService engine, IEmailService emailService, IUserRepository userRepository)
     {
         _db = db;
+        _engine = engine;
+        _emailService = emailService;
+        _userRepository = userRepository;
     }
 
     public async Task<ApprovalActionResponseDto> Handle(ExecuteApprovalActionCommand request, CancellationToken ct)
@@ -42,56 +50,60 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             .FirstOrDefaultAsync(s => s.WorkflowDefinitionId == wfDef.Id && s.StepNo == req.CurrentStepNo, ct)
             ?? throw new BusinessException("Geçersiz onay adımı durumu.");
 
-        // Yetki kontrolü
+        // Kademeye ait aktif Onay kaydını al
+        var approval = await _db.FormRequestApprovals
+            .FirstOrDefaultAsync(a => a.RequestId == req.Id && a.StepNo == req.CurrentStepNo && a.Status == (short)ApprovalStatus.Pending, ct)
+            ?? throw new BusinessException("Bu adım için aktif bir onay talebi bulunamadı.");
+
+        // Yetki kontrolü (Onay kaydı üzerinden yapılır, şablon üzerinden değil)
         var userRoleIds = await _db.UserRoles
             .AsNoTracking()
             .Where(ur => ur.UserId == reqDto.ActorUserId)
             .Select(ur => ur.RoleId)
             .ToListAsync(ct);
 
-        if (!currentStep.AssigneeRoleId.HasValue || !userRoleIds.Contains(currentStep.AssigneeRoleId.Value))
+        bool hasUserAuth = approval.AssigneeUserId == reqDto.ActorUserId;
+        bool hasRoleAuth = approval.AssigneeRoleId.HasValue && userRoleIds.Contains(approval.AssigneeRoleId.Value);
+
+        if (!hasUserAuth && !hasRoleAuth)
             throw new BusinessException("Bu dokümanı şu anki kademede onaylama/reddetme yetkiniz bulunmuyor.");
 
-        // Onay kaydını güncelle
-        var approval = await _db.FormRequestApprovals
-            .FirstOrDefaultAsync(a => a.RequestId == req.Id && a.StepNo == req.CurrentStepNo, ct);
-
-        if (approval is not null)
-        {
-            approval.ActionByUserId = reqDto.ActorUserId;
-            approval.ActionComment = reqDto.Comment;
-            approval.ActionAt = DateTime.UtcNow;
-        }
+        approval.ActionByUserId = reqDto.ActorUserId;
+        approval.ActionComment = reqDto.Comment;
+        approval.ActionAt = DateTime.UtcNow;
 
         if (reqDto.ActionType == ApprovalActionType.Reject)
         {
             req.Reject((short)FormRequestStatus.Rejected);
 
             if (approval is not null)
-                approval.Status = (short)FormRequestStatus.Rejected;
+                approval.Status = (short)ApprovalStatus.Rejected;
+                
+            await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.FormTypeId, false, ct);
         }
         else if (reqDto.ActionType == ApprovalActionType.ReturnForRevision)
         {
             req.ReturnForRevision((short)FormRequestStatus.ReturnedForRevision);
 
             if (approval is not null)
-                approval.Status = (short)FormRequestStatus.ReturnedForRevision;
+                approval.Status = (short)ApprovalStatus.ReturnedForRevision;
         }
         else // Approve
         {
             if (approval is not null)
-                approval.Status = (short)FormRequestStatus.Approved;
+                approval.Status = (short)ApprovalStatus.Approved;
 
-            // Sonraki adımı bul
-            var nextStep = await _db.WorkflowSteps
-                .AsNoTracking()
-                .Where(s => s.WorkflowDefinitionId == wfDef.Id && s.StepNo > req.CurrentStepNo)
-                .OrderBy(s => s.StepNo)
-                .FirstOrDefaultAsync(ct);
+            // Sonraki adımı bul (Auto-skip özelliği ile hiyerarşiyi atlar)
+            var (nextStep, assignedUser, assignedRole) = await _engine.ResolveNextValidStepAsync(
+                wfDef.Id, 
+                req.CurrentStepNo ?? 0, 
+                req.RequestorUserId, 
+                ct);
 
             if (nextStep is null)
             {
                 req.Approve((short)FormRequestStatus.Approved);
+                await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.FormTypeId, true, ct);
             }
             else
             {
@@ -103,10 +115,12 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     RequestId = req.Id,
                     StepNo = nextStep.StepNo,
                     WorkflowStepId = nextStep.Id,
-                    Status = (short)FormRequestStatus.InApproval,
-                    AssigneeRoleId = nextStep.AssigneeRoleId,
-                    AssigneeUserId = nextStep.AssigneeUserId
+                    Status = (short)ApprovalStatus.Pending,
+                    AssigneeRoleId = assignedRole,
+                    AssigneeUserId = assignedUser
                 });
+                
+                await NotifyNextAssigneeAsync(assignedUser, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
             }
         }
 
@@ -124,5 +138,62 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         await _db.SaveChangesAsync(ct);
 
         return new ApprovalActionResponseDto { Success = true };
+    }
+    
+    private async Task NotifyNextAssigneeAsync(Guid? assignedUserId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
+    {
+        if (!assignedUserId.HasValue) return;
+
+        var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
+        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
+        var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
+
+        string? targetEmail = assgnPers?.Email;
+        string assgnName = assgnPers != null ? $"{assgnPers.Adi} {assgnPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+
+        if (string.IsNullOrWhiteSpace(targetEmail))
+        {
+            var baseUser = await _userRepository.GetByIdAsync(assignedUserId.Value, ct, false);
+            targetEmail = baseUser?.Email;
+            if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
+                assgnName = baseUser.DisplayName;
+        }
+
+        string? reqEmail = reqPers?.Email;
+        string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+
+        if (string.IsNullOrWhiteSpace(reqEmail))
+        {
+            var baseReqUser = await _userRepository.GetByIdAsync(requestorUserId, ct, false);
+            if (baseReqUser != null && !string.IsNullOrWhiteSpace(baseReqUser.DisplayName))
+                reqName = baseReqUser.DisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
+        {
+            await _emailService.SendApprovalRequestEmailAsync(targetEmail, assgnName, requestNo, formType.Name, reqName, ct);
+        }
+    }
+
+    private async Task NotifyRequesterFinalStatusAsync(Guid requestorUserId, string requestNo, Guid formTypeId, bool isApproved, CancellationToken ct)
+    {
+        var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
+        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
+
+        string? targetEmail = reqPers?.Email;
+        string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+
+        if (string.IsNullOrWhiteSpace(targetEmail))
+        {
+            var baseReqUser = await _userRepository.GetByIdAsync(requestorUserId, ct, false);
+            targetEmail = baseReqUser?.Email;
+            if (baseReqUser != null && !string.IsNullOrWhiteSpace(baseReqUser.DisplayName))
+                reqName = baseReqUser.DisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
+        {
+            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, formType.Name, isApproved, ct);
+        }
     }
 }

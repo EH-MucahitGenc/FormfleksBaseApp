@@ -24,9 +24,30 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
     public DbSet<AuthorizationMatrixEntity> AuthorizationMatrix => Set<AuthorizationMatrixEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
+    public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
+    public DbSet<UserDelegationEntity> UserDelegations => Set<UserDelegationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<UserDelegationEntity>(e =>
+        {
+            e.ToTable("user_delegations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.DelegatorUserId).HasColumnName("delegator_user_id").HasColumnType("uuid");
+            e.Property(x => x.DelegateeUserId).HasColumnName("delegatee_user_id").HasColumnType("uuid");
+            e.Property(x => x.StartDate).HasColumnName("start_date").HasColumnType("timestamp with time zone");
+            e.Property(x => x.EndDate).HasColumnName("end_date").HasColumnType("timestamp with time zone");
+            e.Property(x => x.IsActive).HasColumnName("is_active").HasColumnType("boolean");
+            e.Property(x => x.Reason).HasColumnName("reason").HasColumnType("character varying(300)").HasMaxLength(300);
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+            
+            e.HasIndex(x => x.DelegatorUserId);
+            e.HasIndex(x => new { x.DelegatorUserId, x.IsActive });
+            e.HasIndex(x => new { x.StartDate, x.EndDate });
+        });
+
         modelBuilder.Entity<RoleEntity>(e =>
         {
             e.ToTable("roles");
@@ -139,6 +160,9 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.AssigneeRoleId).HasColumnName("assignee_role_id").HasColumnType("uuid");
             e.Property(x => x.DynamicRuleJson).HasColumnName("dynamic_rule_json").HasColumnType("jsonb");
             e.Property(x => x.AllowReturnForRevision).HasColumnName("allow_return_for_revision").HasColumnType("boolean");
+            e.Property(x => x.FallbackAction).HasColumnName("fallback_action").HasColumnType("smallint");
+            e.Property(x => x.FallbackUserId).HasColumnName("fallback_user_id").HasColumnType("uuid");
+            e.Property(x => x.IsParallel).HasColumnName("is_parallel").HasColumnType("boolean");
             e.HasIndex(x => new { x.WorkflowDefinitionId, x.StepNo }).IsUnique();
         });
 
@@ -223,6 +247,51 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.DetailJson).HasColumnName("detail_json").HasColumnType("jsonb");
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
             e.HasIndex(x => new { x.EntityType, x.EntityId, x.CreatedAt });
+        });
+
+        modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>(e =>
+        {
+            e.ToTable("qdms_personeller");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.Sirket).HasColumnName("sirket").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Isyeri_Kodu).HasColumnName("isyeri_kodu").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Isyeri_Tanimi).HasColumnName("isyeri_tanimi").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.Grup_Kodu).HasColumnName("grup_kodu").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Grup_Kodu_Aciklama).HasColumnName("grup_kodu_aciklama").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.Sicil_No).HasColumnName("sicil_no").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Adi).HasColumnName("adi").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.Soyadi).HasColumnName("soyadi").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.Email).HasColumnName("email").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.Pozisyon_Kodu).HasColumnName("pozisyon_kodu").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Pozisyon_Aciklamasi).HasColumnName("pozisyon_aciklamasi").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.Ust_Pozisyon_Kodu).HasColumnName("ust_pozisyon_kodu").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Departman_Kodu).HasColumnName("departman_kodu").HasColumnType("character varying(50)").HasMaxLength(50);
+            e.Property(x => x.Departman_Adi).HasColumnName("departman_adi").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.LinkedUserId).HasColumnName("linked_user_id").HasColumnType("uuid");
+            e.Property(x => x.IsActive).HasColumnName("is_active").HasColumnType("boolean");
+            e.Property(x => x.LastSyncDate).HasColumnName("last_sync_date").HasColumnType("timestamp with time zone");
+
+            e.HasIndex(x => x.Sicil_No).IsUnique();
+            e.HasIndex(x => x.Pozisyon_Kodu);
+            e.HasIndex(x => x.Ust_Pozisyon_Kodu);
+            e.HasIndex(x => x.LinkedUserId);
+        });
+
+        modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>(e =>
+        {
+            e.ToTable("qdms_personel_sync_logs");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.TriggeredByUserId).HasColumnName("triggered_by_user_id").HasColumnType("uuid");
+            e.Property(x => x.StartTime).HasColumnName("start_time").HasColumnType("timestamp with time zone");
+            e.Property(x => x.EndTime).HasColumnName("end_time").HasColumnType("timestamp with time zone");
+            e.Property(x => x.InsertedCount).HasColumnName("inserted_count").HasColumnType("integer");
+            e.Property(x => x.UpdatedCount).HasColumnName("updated_count").HasColumnType("integer");
+            e.Property(x => x.DeactivatedCount).HasColumnName("deactivated_count").HasColumnType("integer");
+            e.Property(x => x.ErrorsJson).HasColumnName("errors_json").HasColumnType("jsonb");
+            
+            e.HasIndex(x => x.StartTime);
         });
     }
 }

@@ -58,19 +58,36 @@ class DynamicFormService {
     return this.mapBackendToFrontend(data);
   }
 
-  async submitFormData(code: string, payload: any): Promise<void> {
-    await apiClient.post(`/dynamic-forms/requests/submit`, {
-       formTypeCode: code,
-       formDataJson: JSON.stringify(payload),
-       remark: "Submitted via V2 React Engine"
+  async saveDraftFormData(formTypeId: string, payload: any, draftId?: string): Promise<{ requestId: string; currentStepNo: number; status: number; concurrencyToken: string }> {
+    const values = Object.keys(payload).map(key => {
+      const val = payload[key];
+      if (val === undefined || val === null || val === '') return null;
+      
+      let mapped = { fieldKey: key, valueText: null as string | null, valueNumber: null as number | null, valueBool: null as boolean | null };
+      
+      if (typeof val === 'boolean') {
+        mapped.valueBool = val;
+      } else if (typeof val === 'number') {
+        mapped.valueNumber = val;
+      } else if (typeof val === 'object') {
+        mapped.valueText = JSON.stringify(val);
+      } else {
+        mapped.valueText = val;
+      }
+      return mapped;
+    }).filter(x => x !== null);
+
+    const { data } = await apiClient.post(`/dynamic-forms/requests/draft`, {
+       requestId: draftId || null,
+       formTypeId: formTypeId,
+       values: values
     });
+    return data;
   }
 
-  async saveDraftFormData(code: string, payload: any): Promise<void> {
-    await apiClient.post(`/dynamic-forms/requests/draft`, {
-       formTypeCode: code,
-       formDataJson: JSON.stringify(payload),
-       remark: "Draft saved via V2 React Engine"
+  async submitDraft(requestId: string): Promise<void> {
+    await apiClient.post(`/dynamic-forms/requests/submit`, {
+       requestId: requestId
     });
   }
 

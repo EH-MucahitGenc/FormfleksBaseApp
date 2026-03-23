@@ -1,4 +1,4 @@
-﻿using FormfleksBaseApp.Application.Auth.Dtos;
+using FormfleksBaseApp.Application.Auth.Dtos;
 using FormfleksBaseApp.Application.Features.Auth.Commands.AdLogin;
 using FormfleksBaseApp.Application.Features.Auth.Commands.Login;
 using FormfleksBaseApp.Application.Features.Auth.Commands.Logout;
@@ -39,7 +39,11 @@ public class AuthController : ControllerBase
         {
             Token = authResponse.AccessToken,
             RefreshToken = authResponse.RefreshToken,
-            Username = request.Username
+            Username = request.Username,
+            UserId = authResponse.UserId,
+            FirstName = authResponse.FirstName,
+            LastName = authResponse.LastName,
+            Roles = authResponse.Roles
         });
     }
 

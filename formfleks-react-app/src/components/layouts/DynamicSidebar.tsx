@@ -38,6 +38,11 @@ export const DynamicSidebar = ({
   const location = useLocation();
   const { authorizedForms, isLoading, fetchAuthorizedForms } = useNavigationStore();
   
+  const userRoles = user?.roles || [];
+  const isAdmin = userRoles.includes('Admin') || userRoles.includes('ADMIN') || userRoles.includes('admin');
+  const isHR = userRoles.includes('IK') || userRoles.includes('HR') || userRoles.includes('HumanResources');
+  const canSeeDesigners = isAdmin || isHR;
+
   // Open the forms section automatically if we are currently viewing a form
   const [isFormsExpanded, setIsFormsExpanded] = useState(() => location.pathname.includes('/forms/d/'));
 
@@ -128,15 +133,24 @@ export const DynamicSidebar = ({
           )}
         </div>
         
-        <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Yönetim</div>
-        <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />
-        <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />
-        <NavItem to="/admin/departments" icon={Building2} label="Departmanlar" isCollapsed={!isSidebarOpen} />
-        
-        <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Sistem & Araçlar</div>
-        <NavItem to="/admin/form-designer" icon={LayoutTemplate} label="Form Tasarımcısı" isCollapsed={!isSidebarOpen} />
-        <NavItem to="/admin/workflow-designer" icon={Route} label="Onay Rotaları" isCollapsed={!isSidebarOpen} />
-        <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />
+        {canSeeDesigners && (
+          <>
+            <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Sistem & Araçlar</div>
+            <NavItem to="/admin/form-designer" icon={LayoutTemplate} label="Form Tasarımcısı" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/workflow-designer" icon={Route} label="Onay Rotaları" isCollapsed={!isSidebarOpen} />
+          </>
+        )}
+
+        {isAdmin && (
+          <>
+            <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Yönetim</div>
+            <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/departments" icon={Building2} label="Departmanlar" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/personnel-sync" icon={Users} label="Personel Senkronizasyonu" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />
+          </>
+        )}
         
         <div className="mt-auto pt-4 border-t border-surface-muted">
           <NavItem to="/settings/profile" icon={User} label="Profilim" isCollapsed={!isSidebarOpen} />
@@ -153,10 +167,10 @@ export const DynamicSidebar = ({
           {isSidebarOpen && (
             <div className="flex flex-col flex-1 overflow-hidden">
               <span className="text-sm font-semibold text-brand-dark truncate">
-                {user ? `${user.firstName} ${user.lastName}` : 'Mücahit Genç'}
+                {user ? `${user.firstName} ${user.lastName}` : 'Kullanıcı'}
               </span>
               <span className="text-xs text-brand-gray truncate">
-                {user?.roles?.[0] || 'Admin'}
+                {user?.roles?.[0] || 'Kullanıcı'}
               </span>
             </div>
           )}

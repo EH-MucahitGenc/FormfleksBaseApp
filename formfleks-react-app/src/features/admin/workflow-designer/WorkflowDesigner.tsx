@@ -104,8 +104,14 @@ export const WorkflowDesigner: React.FC = () => {
     items[idx] = { ...items[idx], ...updates };
     
     // Clean up incompatible fields
-    if (updates.assigneeType === 1) items[idx].assigneeRoleId = undefined; // If User, clear Role
-    if (updates.assigneeType === 2) items[idx].assigneeUserId = undefined; // If Role, clear User
+    if (updates.assigneeType !== undefined) {
+        if (updates.assigneeType !== 1) items[idx].assigneeUserId = undefined; 
+        if (updates.assigneeType !== 2) items[idx].assigneeRoleId = undefined; 
+    }
+
+    if (updates.fallbackAction !== undefined) {
+        if (updates.fallbackAction !== 2 && updates.fallbackAction !== 3) items[idx].fallbackUserId = undefined;
+    }
 
     setSteps(items);
   };
@@ -269,35 +275,91 @@ export const WorkflowDesigner: React.FC = () => {
                                     <button onClick={() => handleMoveDown(sIdx)} disabled={sIdx === steps.length - 1} className={`p-1 rounded ${sIdx === steps.length - 1 ? 'text-surface-muted cursor-not-allowed' : 'text-brand-gray hover:bg-surface-hover hover:text-brand-primary'}`}><ChevronDown className="h-4 w-4" /></button>
                                 </div>
 
-                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
-                                    <div className="md:col-span-4">
-                                        <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Adım Adı</label>
-                                        <input type="text" value={step.name} onChange={e => handleUpdateStep(sIdx, { name: e.target.value })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm font-semibold text-brand-dark focus:ring-1 focus:ring-brand-primary" placeholder="Bölüm Onayı vs." />
+                                <div className="flex-1">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+                                        <div className="md:col-span-4">
+                                            <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Adım Adı</label>
+                                            <input type="text" value={step.name} onChange={e => handleUpdateStep(sIdx, { name: e.target.value })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm font-semibold text-brand-dark focus:ring-1 focus:ring-brand-primary" placeholder="Bölüm Onayı vs." />
+                                        </div>
+                                        
+                                        <div className="md:col-span-4">
+                                            <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Atama Tipi</label>
+                                            <select value={step.assigneeType} onChange={e => handleUpdateStep(sIdx, { assigneeType: Number(e.target.value) })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary font-medium">
+                                                <optgroup label="Kurumsal Roller (Dinamik)">
+                                                    <option value={10}>Direkt Yönetici (1 Kademe)</option>
+                                                    <option value={11}>Departman Yöneticisi</option>
+                                                    <option value={12}>Kısım/Bölüm Lideri</option>
+                                                    <option value={13}>Üst Yönetici (2 Kademe)</option>
+                                                </optgroup>
+                                                <optgroup label="Sabit Atamalar">
+                                                    <option value={1}>Spesifik Kullanıcı</option>
+                                                    <option value={2}>Rol Grubu Havuzu</option>
+                                                </optgroup>
+                                                <optgroup label="Geçmiş Uyumluluk">
+                                                    <option value={3}>JSON Kuralları</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+
+                                        <div className="md:col-span-4">
+                                            <label className="block text-xs font-bold text-brand-gray uppercase mb-1 opacity-100 transition-opacity">
+                                                {step.assigneeType === 1 || step.assigneeType === 2 ? 'Hedef Seçimi' : 'Hedef Bildirimi'}
+                                            </label>
+                                            
+                                            {step.assigneeType === 1 && (
+                                                <input type="text" value={step.assigneeUserId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeUserId: e.target.value })} className="w-full bg-surface-hover border border-brand-primary/20 rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary font-mono" placeholder="Kullanıcı GUID..." />
+                                            )}
+                                            {step.assigneeType === 2 && (
+                                                <select value={step.assigneeRoleId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeRoleId: e.target.value })} className="w-full bg-surface-hover border border-brand-primary/20 rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary">
+                                                    <option value="">Rol Seçiniz</option>
+                                                    {roles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
+                                                </select>
+                                            )}
+                                            {step.assigneeType >= 10 && (
+                                                <div className="px-3 py-2 text-sm text-brand-accent bg-brand-accent/5 border border-brand-accent/20 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis italic font-medium">Bu rol HR ağacından çalışma anında (runtime) bulunur.</div>
+                                            )}
+                                            {step.assigneeType === 3 && (
+                                                <div className="px-3 py-2 text-sm text-brand-gray bg-surface-hover border border-surface-muted rounded-lg italic text-center">Tavsiye Edilmez</div>
+                                            )}
+                                        </div>
                                     </div>
                                     
-                                    <div className="md:col-span-3">
-                                        <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Atama Tipi</label>
-                                        <select value={step.assigneeType} onChange={e => handleUpdateStep(sIdx, { assigneeType: Number(e.target.value) })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary">
-                                            <option value={1}>Spesifik Kullanıcı</option>
-                                            <option value={2}>Yetki Rolü</option>
-                                            <option value={3}>Dinamik Kural</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="md:col-span-5">
-                                        <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Hedef Seçimi</label>
-                                        {step.assigneeType === 1 && (
-                                            <input type="text" value={step.assigneeUserId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeUserId: e.target.value })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary font-mono" placeholder="Kullanıcı GUID..." />
-                                        )}
-                                        {step.assigneeType === 2 && (
-                                            <select value={step.assigneeRoleId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeRoleId: e.target.value })} className="w-full bg-surface-hover border-none rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary">
-                                                <option value="">Rol Seçiniz</option>
-                                                {roles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
+                                    {/* Fallback & Advanced Config Panel */}
+                                    <div className="bg-surface-base border border-surface-muted rounded-lg p-3 grid grid-cols-1 md:grid-cols-12 gap-4">
+                                        <div className="md:col-span-3">
+                                            <label className="text-[11px] font-bold text-brand-gray uppercase mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-status-warning"/> Hata Durumu (Fallback)</label>
+                                            <select value={step.fallbackAction ?? 0} onChange={e => handleUpdateStep(sIdx, { fallbackAction: Number(e.target.value) })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2.5 text-xs text-brand-dark">
+                                                <option value={0}>Adımı Otomatik Atla</option>
+                                                <option value={1}>Üst Yöneticisine Düşür</option>
+                                                <option value={2}>Sabit Kişiye Düşür</option>
+                                                <option value={3}>Sabit Role Düşür</option>
                                             </select>
+                                        </div>
+
+                                        {(step.fallbackAction === 2 || step.fallbackAction === 3) && (
+                                            <div className="md:col-span-3">
+                                                <label className="text-[11px] font-bold text-brand-gray uppercase mb-1.5 opacity-60">Fallback Hedefi</label>
+                                                {step.fallbackAction === 2 ? (
+                                                    <input type="text" placeholder="Guid..." value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2 text-xs font-mono"/>
+                                                ) : (
+                                                    <select value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2 text-xs">
+                                                        <option value="">Rol Seç...</option>
+                                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                                    </select>
+                                                )}
+                                            </div>
                                         )}
-                                        {step.assigneeType === 3 && (
-                                            <div className="px-3 py-2 text-sm text-brand-accent bg-brand-accent/10 rounded-lg italic font-medium">Form verisinden dinamik türetilir.</div>
-                                        )}
+                                        
+                                        <div className="md:col-span-3 flex items-center pt-5">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <div className="relative">
+                                                    <input type="checkbox" className="sr-only" checked={step.isParallel || false} onChange={e => handleUpdateStep(sIdx, { isParallel: e.target.checked })} />
+                                                    <div className={`block w-8 h-4.5 rounded-full transition-colors ${step.isParallel ? 'bg-brand-primary' : 'bg-surface-muted'}`}></div>
+                                                    <div className={`absolute left-0.5 top-0.5 bg-white w-3.5 h-3.5 rounded-full transition-transform transform ${step.isParallel ? 'translate-x-3.5' : ''}`}></div>
+                                                </div>
+                                                <span className="text-xs font-bold text-brand-dark group-hover:text-brand-primary">Paralel Onay</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 

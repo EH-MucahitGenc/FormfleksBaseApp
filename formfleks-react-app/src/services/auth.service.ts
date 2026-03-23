@@ -24,22 +24,22 @@ export const authService = {
        throw new Error('Geçersiz sunucu yanıtı: Token alınamadı.');
     }
 
-    const { token, refreshToken, username: responseUsername, roles } = result;
+    const { token, refreshToken, username: responseUsername, roles, userId, firstName, lastName } = result;
 
-    // Map AD user properties to React Store expected format
-    const mockUser: User = {
-      id: responseUsername || username, // Typically backend returns user GUID, fallback to AD username
-      email: `${username}@formfleks.com`, // Just a placeholder if they didn't provide email
-      firstName: username,
-      lastName: '',
+    // Use authentic backend Identity values
+    const authenticUser: User = {
+      id: userId || responseUsername || username,
+      email: `${username}@formfleks.com`,
+      firstName: firstName || username,
+      lastName: lastName || '',
       roles: roles || [],
-      avatarUrl: `https://ui-avatars.com/api/?name=${username.substring(0,2)}&background=f6894c&color=fff`
+      avatarUrl: `https://ui-avatars.com/api/?name=${(firstName || username).substring(0,2)}&background=f6894c&color=fff`
     };
     
     return {
       token,
       refreshToken,
-      user: mockUser
+      user: authenticUser
     };
   },
 

@@ -124,6 +124,50 @@ export const FfTimeBox: React.FC<FfFieldProps> = ({ name, label, required, place
     );
 };
 
+// ----------------------------------------------------------------------
+export const FfDateBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
+  const { control } = useFormContext();
+
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
+        // DateBox crashes randomly on strings if they aren't fully formatted or parsed securely
+        const dateValue = value && typeof value === 'string' 
+          ? (!isNaN(new Date(value).getTime()) ? new Date(value) : null) 
+          : (value instanceof Date && !isNaN(value.getTime()) ? value : null);
+
+        return (
+          <FieldWrapper label={label} required={required} error={error?.message} className={className}>
+            <DateBox
+              {...restField}
+              type="date"
+              value={dateValue || undefined}
+              onValueChanged={(e) => {
+                if (!e.value) {
+                  onChange(null);
+                } else if (e.value instanceof Date && !isNaN(e.value.getTime())) {
+                  onChange(e.value.toISOString());
+                } else if (typeof e.value === 'string') {
+                  onChange(e.value);
+                }
+              }}
+              placeholder={placeholder || "Tarih Seçin"}
+              disabled={disabled}
+              stylingMode="outlined"
+              displayFormat="dd.MM.yyyy"
+              useMaskBehavior={true}
+              adaptivityEnabled={false}
+              className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
+            />
+          </FieldWrapper>
+        );
+      }}
+    />
+  );
+};
+
 export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
   const { control } = useFormContext();
 
@@ -131,17 +175,26 @@ export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, p
     <Controller
       name={name}
       control={control}
-      render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
-        <FieldWrapper label={label} required={required} error={error?.message} className={className}>
-          <DateBox
-            {...restField}
-            type="datetime"
-            value={value || null}
-            onValueChanged={(e) => {
-              if (e.value !== value) {
-                onChange(e.value);
-              }
-            }}
+      render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
+        const dateValue = value && typeof value === 'string' 
+          ? (!isNaN(new Date(value).getTime()) ? new Date(value) : null) 
+          : (value instanceof Date && !isNaN(value.getTime()) ? value : null);
+          
+        return (
+          <FieldWrapper label={label} required={required} error={error?.message} className={className}>
+            <DateBox
+              {...restField}
+              type="datetime"
+              value={dateValue || undefined}
+              onValueChanged={(e) => {
+                if (!e.value) {
+                  onChange(null);
+                } else if (e.value instanceof Date && !isNaN(e.value.getTime())) {
+                  onChange(e.value.toISOString());
+                } else if (typeof e.value === 'string') {
+                  onChange(e.value);
+                }
+              }}
             placeholder={placeholder || "Tarih ve Saat Seçin"}
             disabled={disabled}
             stylingMode="outlined"
@@ -150,8 +203,9 @@ export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, p
             adaptivityEnabled={false}
             className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
           />
-        </FieldWrapper>
-      )}
+          </FieldWrapper>
+        );
+      }}
     />
   );
 };

@@ -1,8 +1,11 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
-import { Send, ArrowLeft } from 'lucide-react';
+import { Send, ArrowLeft, Save } from 'lucide-react';
+
+import { notify } from '@/lib/notifications';
+import { formService } from '@/services/form.service';
 
 import { PageHeader, FfButton } from '@/components/ui/index';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
@@ -11,18 +14,22 @@ import {
   FfTextField, 
   FfTimeBox,
   FfDateTimeBox,
+  FfDateBox,
   FormSection 
 } from '@/components/dev-extreme/FfFormLayout';
 import {
   FfSelectBox,
-  FfDateBox,
-  FfNumberBox
+  FfField
 } from '@/components/dev-extreme/index';
+import NumberBox from 'devextreme-react/number-box';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
 
 export const DynamicFormViewer: React.FC = () => {
   const { formCode } = useParams<{ formCode: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftIdParam = searchParams.get('draftId');
+  const [activeDraftId, setActiveDraftId] = React.useState<string | null>(draftIdParam);
 
   const { data: template, isLoading, isError } = useQuery({
     queryKey: ['dynamic-form-schema', formCode],
@@ -30,36 +37,114 @@ export const DynamicFormViewer: React.FC = () => {
     enabled: !!formCode,
   });
 
-  const methods = useForm({
-    defaultValues: {} // This can be dynamically populated if editing an existing record
+  const { data: draftData } = useQuery({
+    queryKey: ['draft-detail', activeDraftId],
+    queryFn: () => formService.getRequestDetailed(activeDraftId!),
+    enabled: !!activeDraftId,
   });
-  const { getValues, trigger } = methods;
+
+  const methods = useForm<any>({
+    defaultValues: {} // Populated via useEffect
+  });
+  const { getValues, trigger, control } = methods;
+
+  React.useEffect(() => {
+    if (draftData && draftData.values) {
+      const dv: any = {};
+      draftData.values.forEach((v: any) => {
+        let val = null;
+        if (v.valueText !== null && v.valueText !== undefined && v.valueText !== "") {
+          val = v.valueText;
+          // Clean excessive double quotes from JSON stringify
+          if (typeof val === 'string' && val.startsWith('"') && val.endsWith('"') && val.length > 2) {
+            val = val.slice(1, -1);
+          }
+        }
+        else if (v.valueNumber !== null && v.valueNumber !== undefined) {
+          val = v.valueNumber;
+        }
+        else if (v.valueBool !== null && v.valueBool !== undefined) {
+          val = v.valueBool;
+        }
+        else if (v.valueDateTime !== null && v.valueDateTime !== undefined) {
+          val = v.valueDateTime;
+        }
+
+        // Fix decimal strings coming back as "0,000000" or similar
+        if (typeof val === 'string' && /^\d+,\d+$/.test(val)) {
+          val = parseFloat(val.replace(',', '.'));
+        }
+
+        dv[v.fieldKey] = val;
+      });
+      console.log('✅[Draft Loading] Mapped RHF defaultValues:', dv);
+      methods.reset(dv);
+    }
+  }, [draftData, methods]);
 
   const submitMutation = useMutation({
-    mutationFn: (payload: any) => dynamicFormService.submitFormData(formCode!, payload),
+    mutationFn: async (targetDraftId: string) => {
+      if (!template?.id) throw new Error("Şablon ID bulunamadı");
+      // Formun son güncel değerlerini al ve payload olarak kullan
+      const payload = methods.getValues();
+      const res = await dynamicFormService.saveDraftFormData(template.id, payload, targetDraftId);
+      await dynamicFormService.submitDraft(res.requestId);
+    },
     onSuccess: () => {
-      alert("Form başarıyla gönderildi!");
+      notify.success("Talebiniz başarıyla onay döngüsüne gönderildi!");
       navigate('/forms');
     }
   });
 
   const draftMutation = useMutation({
-    mutationFn: (payload: any) => dynamicFormService.saveDraftFormData(formCode!, payload),
-    onSuccess: () => {
-      alert("Form başarıyla taslak olarak kaydedildi!");
-      navigate('/forms');
+    mutationFn: async (payload: any) => {
+      if (!template?.id) throw new Error("Şablon ID bulunamadı");
+      return await dynamicFormService.saveDraftFormData(template.id, payload, activeDraftId || undefined);
+    },
+    onSuccess: (res) => {
+      setActiveDraftId(res.requestId);
+      notify.success("Form başarıyla taslak olarak kaydedildi!");
     }
   });
 
-  const onSubmit = (data: any) => {
-    submitMutation.mutate(data);
+  const onSubmit = () => {
+    onSendRequest();
+  };
+
+  const onSendRequest = async () => {
+    let targetDraftId = activeDraftId;
+    if (!targetDraftId) {
+      const isValid = await methods.trigger();
+      if (!isValid) {
+        notify.error('Lütfen zorunlu alanları doldurunuz.');
+        return;
+      }
+      const values = methods.getValues();
+      try {
+        // Ensure template.id is available before calling saveDraftFormData
+        if (!template?.id) {
+          notify.error("Form şablonu bulunamadı.");
+          return;
+        }
+        const response = await dynamicFormService.saveDraftFormData(template.id, values, activeDraftId || undefined);
+        targetDraftId = response.requestId;
+        setActiveDraftId(targetDraftId);
+        notify.success('Formunuz taslak olarak başarıyla kaydedildi.');
+      } catch (err) {
+        notify.error('Taslak kaydedilirken bir hata oluştu.');
+        return;
+      }
+    }
+    if (targetDraftId) {
+      submitMutation.mutate(targetDraftId);
+    }
   };
 
   const onSaveDraft = async () => {
     // Eksik alanları kırmızı renkle ekranda belirtmek için trigger'ı çağırıyoruz.
     const isValid = await trigger();
     if (!isValid) {
-      alert("UYARI: Eksik bıraktığınız zorunlu alanlar var! Yine de taslak olarak kaydediliyor...");
+      notify.error("Taslak olarak kaydediliyor, ancak göndermeden önce zorunlu alanları doldurmalısınız.");
     }
     
     // Taslak kaydedilirken formun o anki verilerini al (validasyon bloğuna takılmadan)
@@ -72,15 +157,19 @@ export const DynamicFormViewer: React.FC = () => {
     switch (field.editorType) {
       case 'select':
         return (
-          <FfSelectBox
+          <FfField
             key={field.dataField}
+            control={control}
+            component={FfSelectBox}
             name={field.dataField}
             label={field.label}
-            required={field.isRequired}
+            componentProps={{
+              required: field.isRequired,
+              dataSource: field.lookupData || [],
+              displayExpr: "name",
+              valueExpr: "id"
+            }}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
-            dataSource={field.lookupData || []}
-            displayExpr="name"
-            valueExpr="id"
           />
         );
       case 'date':
@@ -115,21 +204,16 @@ export const DynamicFormViewer: React.FC = () => {
         );
       case 'number':
         return (
-          <FfNumberBox
+          <FfField
             key={field.dataField}
+            control={control}
+            component={NumberBox as any}
             name={field.dataField}
             label={field.label}
-            required={field.isRequired}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
-          />
-        );
-      case 'textarea':
-        return (
-          <FfTextField
-            key={field.dataField}
-            name={field.dataField}
-            label={field.label}
-            required={field.isRequired}
+            componentProps={{
+              required: field.isRequired,
+              stylingMode: "outlined"
+            }}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
@@ -191,10 +275,11 @@ export const DynamicFormViewer: React.FC = () => {
                );
             })}
 
-            <div className="pt-6 border-t border-surface-muted mt-4 flex justify-end gap-3">
+             <div className="pt-6 border-t border-surface-muted mt-4 flex justify-end gap-3">
                <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
                <FfButton 
                  variant="secondary" 
+                 leftIcon={<Save className="h-4 w-4" />}
                  onClick={onSaveDraft}
                  isLoading={draftMutation.isPending}
                  disabled={submitMutation.isPending}
@@ -210,7 +295,7 @@ export const DynamicFormViewer: React.FC = () => {
                >
                  Talebi Gönder
                </FfButton>
-            </div>
+             </div>
             
           </form>
         </FormProvider>

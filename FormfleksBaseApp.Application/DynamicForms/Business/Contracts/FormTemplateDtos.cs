@@ -44,6 +44,9 @@ public sealed class FormTemplateWorkflowStepUpsertDto
     public Guid? AssigneeRoleId { get; set; }
     public string? DynamicRuleJson { get; set; }
     public bool AllowReturnForRevision { get; set; } = true;
+    public short FallbackAction { get; set; }
+    public Guid? FallbackUserId { get; set; }
+    public bool IsParallel { get; set; }
 }
 
 public sealed class FormTemplateSummaryDto

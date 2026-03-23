@@ -31,6 +31,30 @@ export type ApprovalActionRequestDto = {
   comment?: string;
 };
 
+export type FormRequestValueDto = {
+  fieldKey: string;
+  label: string;
+  valueText?: string;
+};
+
+export type FormRequestWorkflowStepDto = {
+  step: string;
+  status: string;
+  actor: string;
+  date?: string;
+};
+
+export type FormRequestDetailedDto = {
+  requestId: string;
+  requestNo: string;
+  formTypeCode: string;
+  formTypeName: string;
+  status: RequestStatus;
+  concurrencyToken: number;
+  values: FormRequestValueDto[];
+  workflow: FormRequestWorkflowStepDto[];
+};
+
 // Mocks removed
 
 class FormService {
@@ -41,6 +65,11 @@ class FormService {
 
   async getPendingApprovals(): Promise<PendingApprovalListItemDto[]> {
     const { data } = await apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending');
+    return data;
+  }
+
+  async getRequestDetailed(id: string): Promise<FormRequestDetailedDto> {
+    const { data } = await apiClient.get<FormRequestDetailedDto>(`/dynamic-forms/requests/${id}`);
     return data;
   }
 

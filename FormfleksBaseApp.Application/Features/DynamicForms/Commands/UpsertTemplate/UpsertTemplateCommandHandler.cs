@@ -35,11 +35,13 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
             formType.Name = dto.Name;
             formType.Active = dto.Active;
 
-            // Eski section ve field'ları temizle
-            var oldSections = await _db.FormSections.Where(s => s.FormTypeId == formType.Id).ToListAsync(ct);
+            // Eski section ve field'ları geçici olarak silmek yerine güncelleyeceğiz.
+            // Bu sayede Foreign Key kilitlenmelerini (form_request_values -> form_fields) engelliyoruz.
             var oldFields = await _db.FormFields.Where(f => f.FormTypeId == formType.Id).ToListAsync(ct);
-            _db.FormFields.RemoveRange(oldFields);
-            _db.FormSections.RemoveRange(oldSections);
+            foreach(var field in oldFields)
+            {
+                field.Active = false; // Soft delete by default, will reactivate if matched
+            }
         }
         else
         {
@@ -56,27 +58,58 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
 
         await _db.SaveChangesAsync(ct); // ID oluşsun
 
+        var oldSectionsList = await _db.FormSections.Where(s => s.FormTypeId == formType.Id).ToListAsync(ct);
+        var oldFieldsList = await _db.FormFields.Where(f => f.FormTypeId == formType.Id).ToListAsync(ct);
+
         foreach (var secDto in dto.Sections)
         {
-            var sec = new FormSectionEntity
+            var sec = oldSectionsList.FirstOrDefault(s => s.Title == secDto.Title);
+            if (sec == null)
             {
-                FormTypeId = formType.Id,
-                Title = secDto.Title,
-                SortOrder = secDto.SortOrder
-            };
-            _db.FormSections.Add(sec);
-            await _db.SaveChangesAsync(ct); // SectionId oluşsun
+                sec = new FormSectionEntity
+                {
+                    FormTypeId = formType.Id,
+                    Title = secDto.Title ?? "Genel Bilgiler",
+                    SortOrder = secDto.SortOrder
+                };
+                _db.FormSections.Add(sec);
+                oldSectionsList.Add(sec);
+            }
+            else
+            {
+                sec.SortOrder = secDto.SortOrder;
+            }
+        }
+        await _db.SaveChangesAsync(ct); 
 
-            // Alanlar bu section'a bağlanacaksa
-            var sectionFields = dto.Fields
-                .Where(f => f.SectionTitle == secDto.Title);
+        var defaultSection = oldSectionsList.OrderBy(s => s.SortOrder).FirstOrDefault();
 
-            foreach (var fldDto in sectionFields)
+        foreach (var fldDto in dto.Fields)
+        {
+            var targetSec = oldSectionsList.FirstOrDefault(s => s.Title == fldDto.SectionTitle) ?? defaultSection;
+            
+            var existingField = oldFieldsList.FirstOrDefault(f => f.FieldKey == fldDto.FieldKey);
+            if (existingField != null)
+            {
+                existingField.SectionId = targetSec?.Id;
+                existingField.Label = fldDto.Label;
+                existingField.FieldType = (short)fldDto.FieldType;
+                existingField.IsRequired = fldDto.IsRequired;
+                existingField.SortOrder = fldDto.SortOrder;
+                existingField.Placeholder = fldDto.Placeholder;
+                existingField.HelpText = fldDto.HelpText;
+                existingField.DefaultValue = fldDto.DefaultValue;
+                existingField.VisibilityRuleJson = fldDto.VisibilityRuleJson;
+                existingField.ValidationRuleJson = fldDto.ValidationRuleJson;
+                existingField.OptionsJson = fldDto.OptionsJson;
+                existingField.Active = fldDto.Active;
+            }
+            else
             {
                 _db.FormFields.Add(new FormFieldEntity
                 {
                     FormTypeId = formType.Id,
-                    SectionId = sec.Id,
+                    SectionId = targetSec?.Id,
                     FieldKey = fldDto.FieldKey,
                     Label = fldDto.Label,
                     FieldType = (short)fldDto.FieldType,

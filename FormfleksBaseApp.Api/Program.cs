@@ -11,6 +11,8 @@ using FormfleksBaseApp.Application.Integrations.Oracle;
 using FormfleksBaseApp.Application.Integrations.Oracle.CompanyPersons;
 using FormfleksBaseApp.Infrastructure.Integrations.Oracle;
 using FormfleksBaseApp.Infrastructure.Integrations.Oracle.CompanyPersons;
+using FormfleksBaseApp.Application.Integrations.Oracle.QdmsPersonel;
+using FormfleksBaseApp.Infrastructure.Integrations.Oracle.QdmsPersonel;
 using FormfleksBaseApp.Infrastructure.Options;
 using FormfleksBaseApp.Infrastructure.Persistence;
 using FormfleksBaseApp.Infrastructure.Repositories.Auth;
@@ -75,15 +77,16 @@ builder.Services.AddCors(options =>
 // Options
 builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection("LDAP"));
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<FormfleksBaseApp.Application.Common.Models.EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // ? Oracle ConnectionString'i ConnectionStrings'ten okuyup DI'a sabit instance olarak bas
 var oracleConnStr = builder.Configuration.GetConnectionString("Oracle");
 if (string.IsNullOrWhiteSpace(oracleConnStr))
     throw new InvalidOperationException("ConnectionStrings:Oracle missing");
 
-builder.Services.AddSingleton(new OracleOptions
+builder.Services.Configure<OracleOptions>(opts =>
 {
-    ConnectionString = oracleConnStr
+    opts.ConnectionString = oracleConnStr;
 });
 
 // JWT Auth
@@ -143,9 +146,15 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
 
 builder.Services.AddScoped<IActiveDirectoryAuthenticator, LdapActiveDirectoryAuthenticator>();
 
+// Email & Background Queue
+builder.Services.AddSingleton<FormfleksBaseApp.Infrastructure.Services.IEmailBackgroundQueue, FormfleksBaseApp.Infrastructure.Services.EmailBackgroundQueue>();
+builder.Services.AddHostedService<FormfleksBaseApp.Infrastructure.Services.EmailSenderBackgroundWorker>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IEmailService, FormfleksBaseApp.Infrastructure.Services.EmailService>();
+
 // Oracle integration
 builder.Services.AddScoped<IOracleConnectionFactory, OracleConnectionFactory>();
 builder.Services.AddScoped<ITrautCompanyPersonRepository, TrautCompanyPersonRepository>();
+builder.Services.AddScoped<IQdmsPersonelAktarimRepository, QdmsPersonelAktarimRepository>();
 
 // Global Exception Handler + ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

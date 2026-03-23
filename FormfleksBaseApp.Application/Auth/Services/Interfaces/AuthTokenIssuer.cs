@@ -1,4 +1,4 @@
-﻿using FormfleksBaseApp.Application.Auth.Dtos;
+using FormfleksBaseApp.Application.Auth.Dtos;
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Domain.Entities;
 
@@ -35,10 +35,18 @@ public sealed class AuthTokenIssuer : IAuthTokenIssuer
         await _refreshTokens.AddAsync(refreshEntity, ct);
         await _refreshTokens.SaveChangesAsync(ct);
 
+        var nameParts = (user.DisplayName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var firstName = nameParts.Length > 0 ? nameParts[0] : (user.Email?.Split('@').FirstOrDefault() ?? "Unknown");
+        var lastName = nameParts.Length > 1 ? string.Join(" ", nameParts.Skip(1)) : string.Empty;
+
         return new AuthResponse
         {
             AccessToken = access,
-            RefreshToken = refreshPlain
+            RefreshToken = refreshPlain,
+            UserId = user.Id,
+            FirstName = firstName,
+            LastName = lastName,
+            Roles = roles.ToList()
         };
     }
 }

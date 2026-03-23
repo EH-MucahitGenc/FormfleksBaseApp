@@ -86,6 +86,11 @@ public sealed class WorkflowStepEntity
     public Guid? AssigneeRoleId { get; set; }
     public string? DynamicRuleJson { get; set; }
     public bool AllowReturnForRevision { get; set; }
+    
+    // Enterprise Workflow Additions
+    public short FallbackAction { get; set; } // 0=Skip, 1=FallToUpperManager, 2=FallToFixedUser
+    public Guid? FallbackUserId { get; set; }
+    public bool IsParallel { get; set; }
 }
 
 public sealed class FormRequestEntity

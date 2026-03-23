@@ -74,6 +74,7 @@ public sealed class PendingApprovalListItemDto
 public sealed class FormRequestValueDto
 {
     public string FieldKey { get; set; } = default!;
+    public string Label { get; set; } = default!;
     public string? ValueText { get; set; }
 }
 
@@ -82,9 +83,19 @@ public sealed class FormRequestDetailedDto
     public Guid RequestId { get; set; }
     public string RequestNo { get; set; } = default!;
     public string FormTypeCode { get; set; } = default!;
+    public string FormTypeName { get; set; } = default!;
     public FormRequestStatus Status { get; set; }
     public long ConcurrencyToken { get; set; }
     public IReadOnlyList<FormRequestValueDto> Values { get; set; } = [];
+    public IReadOnlyList<FormRequestWorkflowStepDto> Workflow { get; set; } = [];
+}
+
+public sealed class FormRequestWorkflowStepDto
+{
+    public string Step { get; set; } = default!;
+    public string Status { get; set; } = default!;
+    public string Actor { get; set; } = default!;
+    public DateTime? Date { get; set; }
 }
 
 public sealed record MyFormRequestDto

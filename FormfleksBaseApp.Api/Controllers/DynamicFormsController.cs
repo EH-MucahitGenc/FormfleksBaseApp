@@ -11,6 +11,9 @@ using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplateWorkflow;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetAuditLogs;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.CreateUserDelegation;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.TerminateUserDelegation;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetUserDelegations;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
 using MediatR;
@@ -102,10 +105,46 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new ExecuteApprovalActionCommand(request), ct));
     }
 
+    [HttpGet("users/me/delegations")]
+    public async Task<ActionResult<IReadOnlyList<UserDelegationDto>>> GetMyDelegations(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new GetUserDelegationsQuery(userId), ct));
+    }
+
+    [HttpPost("users/me/delegations")]
+    public async Task<ActionResult<Guid>> CreateDelegation([FromBody] CreateUserDelegationRequest request, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var command = new CreateUserDelegationCommand(userId, request.DelegateeUserId, request.StartDate, request.EndDate, request.Reason);
+        return Ok(await _mediator.Send(command, ct));
+    }
+
+    [HttpDelete("users/me/delegations/{delegationId:guid}")]
+    public async Task<ActionResult> TerminateDelegation(Guid delegationId, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        await _mediator.Send(new TerminateUserDelegationCommand(delegationId, userId), ct);
+        return NoContent();
+    }
+
     [HttpGet("admin/templates")]
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetTemplates(CancellationToken ct)
         => Ok(await _mediator.Send(new GetTemplatesQuery(), ct));
+
+    [HttpGet("templates")]
+    public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetActiveTemplates(CancellationToken ct)
+    {
+        var templates = await _mediator.Send(new GetTemplatesQuery(), ct);
+        return Ok(templates.Where(t => t.Active).ToList());
+    }
 
     [HttpGet("admin/roles")]
     [Authorize(Policy = "AdminOrHr")]
@@ -168,5 +207,13 @@ public sealed class DynamicFormsController : ControllerBase
     public sealed class TemplateStatusUpdateRequest
     {
         public bool Active { get; set; }
+    }
+
+    public sealed class CreateUserDelegationRequest
+    {
+        public Guid DelegateeUserId { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string? Reason { get; set; }
     }
 }

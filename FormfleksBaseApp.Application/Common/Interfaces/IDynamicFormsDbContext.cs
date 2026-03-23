@@ -20,5 +20,9 @@ public interface IDynamicFormsDbContext
     DbSet<AuthorizationMatrixEntity> AuthorizationMatrix { get; }
     DbSet<AuditLogEntity> AuditLogs { get; }
     
+    DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller { get; }
+    DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs { get; }
+    DbSet<UserDelegationEntity> UserDelegations { get; }
+    
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

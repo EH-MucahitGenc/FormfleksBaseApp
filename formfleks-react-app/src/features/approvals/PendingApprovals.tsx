@@ -4,9 +4,11 @@ import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { formService, type PendingApprovalListItemDto } from '@/services/form.service';
 import { Check, X, CornerUpLeft, Info } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const PendingApprovals: React.FC = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [modalState, setModalState] = useState<{ isOpen: boolean; item: PendingApprovalListItemDto | null; actionType: 1 | 2 | 3 }>({
     isOpen: false,
     item: null,
@@ -17,11 +19,10 @@ export const PendingApprovals: React.FC = () => {
 
   const approveMutation = useMutation({
     mutationFn: (payload: { actionType: 1 | 2 | 3; comment: string; item: PendingApprovalListItemDto }) => {
-      // Dummy user id
       return formService.executeApprovalAction({
         requestId: payload.item.requestId,
         approvalId: payload.item.approvalId,
-        actorUserId: 'mock-user-id',
+        actorUserId: user?.id || '',
         approvalConcurrencyToken: payload.item.approvalConcurrencyToken,
         actionType: payload.actionType,
         comment: payload.comment
@@ -60,7 +61,7 @@ export const PendingApprovals: React.FC = () => {
     return true;
   };
 
-  const actionRenderer = (data: PendingApprovalListItemDto) => (
+  const actionRenderer = ({ data }: any) => (
     <div className="flex gap-2">
       <button 
         onClick={() => openModal(data, 1)}
@@ -83,17 +84,17 @@ export const PendingApprovals: React.FC = () => {
     </div>
   );
 
-  const stepRenderer = (data: PendingApprovalListItemDto) => (
+  const stepRenderer = ({ data }: any) => (
     <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
       Adım {data.stepNo}
     </span>
   );
 
-  const requestNoRenderer = (data: PendingApprovalListItemDto) => (
+  const requestNoRenderer = ({ data }: any) => (
     <span className="font-medium text-brand-dark">{data.requestNo}</span>
   );
 
-  const dateRenderer = (data: PendingApprovalListItemDto) => {
+  const dateRenderer = ({ data }: any) => {
     const d = new Date(data.createdAt);
     return <span className="text-brand-gray">{d.toLocaleDateString('tr-TR')} {d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>;
   };

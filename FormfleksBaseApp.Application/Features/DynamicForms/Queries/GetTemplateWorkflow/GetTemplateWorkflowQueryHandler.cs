@@ -41,7 +41,10 @@ public sealed class GetTemplateWorkflowQueryHandler : IRequestHandler<GetTemplat
             AssigneeUserId = s.AssigneeUserId,
             AssigneeRoleId = s.AssigneeRoleId,
             DynamicRuleJson = s.DynamicRuleJson,
-            AllowReturnForRevision = s.AllowReturnForRevision
+            AllowReturnForRevision = s.AllowReturnForRevision,
+            FallbackAction = s.FallbackAction,
+            FallbackUserId = s.FallbackUserId,
+            IsParallel = s.IsParallel
         }).ToList();
     }
 }

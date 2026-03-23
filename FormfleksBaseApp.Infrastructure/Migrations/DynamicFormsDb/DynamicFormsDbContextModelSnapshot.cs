@@ -17,10 +17,175 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.24")
+                .HasAnnotation("ProductVersion", "8.0.25")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Adi")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("adi");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Departman_Adi")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("departman_adi");
+
+                    b.Property<string>("Departman_Kodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("departman_kodu");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Grup_Kodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("grup_kodu");
+
+                    b.Property<string>("Grup_Kodu_Aciklama")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("grup_kodu_aciklama");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Isyeri_Kodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("isyeri_kodu");
+
+                    b.Property<string>("Isyeri_Tanimi")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("isyeri_tanimi");
+
+                    b.Property<DateTime?>("LastSyncDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sync_date");
+
+                    b.Property<Guid?>("LinkedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_user_id");
+
+                    b.Property<string>("Pozisyon_Aciklamasi")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("pozisyon_aciklamasi");
+
+                    b.Property<string>("Pozisyon_Kodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("pozisyon_kodu");
+
+                    b.Property<string>("Sicil_No")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("sicil_no");
+
+                    b.Property<string>("Sirket")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("sirket");
+
+                    b.Property<string>("Soyadi")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("soyadi");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Ust_Pozisyon_Kodu")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("ust_pozisyon_kodu");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkedUserId");
+
+                    b.HasIndex("Pozisyon_Kodu");
+
+                    b.HasIndex("Sicil_No")
+                        .IsUnique();
+
+                    b.HasIndex("Ust_Pozisyon_Kodu");
+
+                    b.ToTable("qdms_personeller", (string)null);
+                });
+
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DeactivatedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("deactivated_count");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_time");
+
+                    b.Property<string>("ErrorsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("errors_json");
+
+                    b.Property<int>("InsertedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("inserted_count");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_time");
+
+                    b.Property<Guid>("TriggeredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("triggered_by_user_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("updated_count");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartTime");
+
+                    b.ToTable("qdms_personel_sync_logs", (string)null);
+                });
 
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity", b =>
                 {
@@ -478,6 +643,53 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.ToTable("roles", (string)null);
                 });
 
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.UserDelegationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DelegateeUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("delegatee_user_id");
+
+                    b.Property<Guid>("DelegatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("delegator_user_id");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DelegatorUserId");
+
+                    b.HasIndex("DelegatorUserId", "IsActive");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("user_delegations", (string)null);
+                });
+
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.UserDepartmentEntity", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -567,6 +779,18 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.Property<string>("DynamicRuleJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("dynamic_rule_json");
+
+                    b.Property<short>("FallbackAction")
+                        .HasColumnType("smallint")
+                        .HasColumnName("fallback_action");
+
+                    b.Property<Guid?>("FallbackUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fallback_user_id");
+
+                    b.Property<bool>("IsParallel")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_parallel");
 
                     b.Property<string>("Name")
                         .IsRequired()

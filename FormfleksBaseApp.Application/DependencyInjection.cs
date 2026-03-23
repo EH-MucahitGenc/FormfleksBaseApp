@@ -11,6 +11,7 @@ public static class DependencyInjection
         {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
         });
+        services.AddScoped<Common.Interfaces.IApprovalEngineService, DynamicForms.Business.Services.ApprovalEngineService>();
 
         return services;
     }

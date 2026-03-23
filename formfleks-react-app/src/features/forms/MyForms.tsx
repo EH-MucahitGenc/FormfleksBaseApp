@@ -10,18 +10,21 @@ export const MyForms: React.FC = () => {
   const [searchParams] = useSearchParams();
   const statusQuery = searchParams.get('status');
   
-  let defaultStatusFilter: number | undefined = undefined;
+  let defaultStatusFilter: number | null = null;
   if (statusQuery === 'draft') defaultStatusFilter = 1;
-  else if (statusQuery === 'pending') defaultStatusFilter = 2;
-  else if (statusQuery === 'approved') defaultStatusFilter = 3;
-  else if (statusQuery === 'rejected') defaultStatusFilter = 4;
+  else if (statusQuery === 'pending') defaultStatusFilter = 3;
+  else if (statusQuery === 'approved') defaultStatusFilter = 4;
+  else if (statusQuery === 'rejected') defaultStatusFilter = 5;
 
   const statusRenderer = (data: { data: MyFormRequestListItemDto }) => {
     switch (data.data.status) {
       case 1: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">Taslak</span>;
-      case 2: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Onay Bekliyor</span>;
-      case 3: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-success/10 text-status-success border border-status-success/20">Onaylandı</span>;
-      case 4: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-danger/10 text-status-danger border border-status-danger/20">Reddedildi</span>;
+      case 2: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Değerlendirmede</span>;
+      case 3: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20">Onay Bekliyor</span>;
+      case 4: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-success/10 text-status-success border border-status-success/20">Onaylandı</span>;
+      case 5: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-danger/10 text-status-danger border border-status-danger/20">Reddedildi</span>;
+      case 6: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">İptal Edildi</span>;
+      case 7: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-warning/10 text-status-warning border border-status-warning/20">Revizyon Bekliyor</span>;
       default: return <span>Bilinmiyor</span>;
     }
   };
@@ -62,7 +65,7 @@ export const MyForms: React.FC = () => {
   const columns = [
     { dataField: 'requestNo', caption: 'Talep No', minWidth: 150, cellRender: requestNoRenderer },
     { dataField: 'formTypeName', caption: 'Form Tipi', minWidth: 200 },
-    { dataField: 'status', caption: 'Durum', minWidth: 120, cellRender: statusRenderer, filterValue: defaultStatusFilter },
+    { dataField: 'status', caption: 'Durum', minWidth: 120, cellRender: statusRenderer, filterValue: defaultStatusFilter ?? undefined, dataType: 'number' as const },
     { dataField: 'currentStepNo', caption: 'Adım', minWidth: 100, cellRender: stepRenderer, allowFiltering: false },
     { dataField: 'createdAt', caption: 'Tarih', minWidth: 150, cellRender: dateRenderer, dataType: 'date' as const }
   ];
@@ -89,6 +92,7 @@ export const MyForms: React.FC = () => {
 
       <GlassCard noPadding className="overflow-hidden animate-delay-100 glass-glow hover:shadow-2xl transition-all duration-500">
         <FfDataGrid
+          key={`my-forms-grid-${statusQuery || 'all'}`}
           queryKey={['my-forms']}
           fetchFn={formService.getMyRequests}
           columns={columns}

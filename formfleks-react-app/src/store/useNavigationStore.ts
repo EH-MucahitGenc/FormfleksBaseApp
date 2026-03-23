@@ -27,10 +27,8 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   fetchAuthorizedForms: async () => {
     set({ isLoading: true, isError: false });
     try {
-      const { data } = await apiClient.get<FormTemplateDto[]>('/dynamic-forms/admin/templates');
-      // In reality, this endpoint might be different depending on user authorization (e.g. /my/templates),
-      // but the blueprint specifies /admin/templates as available now. Filter by active.
-      const activeForms = Array.isArray(data) ? data.filter(t => t.active) : [];
+      const { data } = await apiClient.get<FormTemplateDto[]>('/dynamic-forms/templates');
+      const activeForms = Array.isArray(data) ? data : [];
       set({ authorizedForms: activeForms, isLoading: false });
     } catch {
       set({ isLoading: false, isError: true, authorizedForms: [] });
