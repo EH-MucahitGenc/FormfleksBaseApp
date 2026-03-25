@@ -57,7 +57,10 @@ class DashboardService {
   async getRecentActivityLogs(): Promise<ActivityLogDto[]> {
     // Fetch from real audit logs instead of fake data
     try {
-      const { data } = await apiClient.get<any[]>('/dynamic-forms/admin/audit-logs');
+      // Catch errors silently to avoid throwing 403 Forbidden exceptions in the browser console for non-admins
+      const response = await apiClient.get<any[]>('/dynamic-forms/admin/audit-logs', { validateStatus: s => s < 500 });
+      if (response.status === 403) return [];
+      const data = response.data;
       return (data || []).slice(0, 10).map((log, index) => {
         let msg = 'Sistem kaydı güncellendi.';
         let type: 'info' | 'success' | 'warning' | 'error' = 'info';

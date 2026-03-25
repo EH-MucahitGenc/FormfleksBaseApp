@@ -77,7 +77,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 });
                 
                 // Email Bildirimi (Background Queue'ya atılır)
-                await NotifyNextAssigneeAsync(assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
+                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
             }
         }
 
@@ -102,7 +102,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         };
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name)>();
 
@@ -166,7 +166,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
                 _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, formType.Name, reqName, ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, ct);
             }
         }
     }

@@ -79,7 +79,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.Rejected;
                 
-            await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.FormTypeId, false, ct);
+            await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, false, ct);
         }
         else if (reqDto.ActionType == ApprovalActionType.ReturnForRevision)
         {
@@ -103,7 +103,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (nextStep is null)
             {
                 req.Approve((short)FormRequestStatus.Approved);
-                await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.FormTypeId, true, ct);
+                await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, ct);
             }
             else
             {
@@ -120,7 +120,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                await NotifyNextAssigneeAsync(assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
+                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
             }
         }
 
@@ -140,7 +140,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return new ApprovalActionResponseDto { Success = true };
     }
     
-    private async Task NotifyNextAssigneeAsync(Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name)>();
 
@@ -199,12 +199,12 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         {
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, formType.Name, reqName, ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, ct);
             }
         }
     }
 
-    private async Task NotifyRequesterFinalStatusAsync(Guid requestorUserId, string requestNo, Guid formTypeId, bool isApproved, CancellationToken ct)
+    private async Task NotifyRequesterFinalStatusAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, bool isApproved, CancellationToken ct)
     {
         var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
         var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
@@ -222,7 +222,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
-            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, formType.Name, isApproved, ct);
+            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, ct);
         }
     }
 }

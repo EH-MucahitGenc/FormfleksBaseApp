@@ -37,7 +37,7 @@ export const DynamicFormViewer: React.FC = () => {
     enabled: !!formCode,
   });
 
-  const { data: draftData } = useQuery({
+  const { data: draftData, isError: isDraftError } = useQuery({
     queryKey: ['draft-detail', activeDraftId],
     queryFn: () => formService.getRequestDetailed(activeDraftId!),
     enabled: !!activeDraftId,
@@ -246,8 +246,8 @@ export const DynamicFormViewer: React.FC = () => {
     );
   }
 
-  if (isError || !template) {
-    return <FfEmptyState title="Form Bulunamadı" description="Bu form şablonu silinmiş veya erişim yetkiniz bulunmuyor olabilir." />;
+  if (isError || !template || isDraftError) {
+    return <FfEmptyState title="Form Bulunamadı" description="Bu form silinmiş veya erişim yetkiniz bulunmuyor olabilir. URL'yi kontrol ediniz." />;
   }
 
   return (

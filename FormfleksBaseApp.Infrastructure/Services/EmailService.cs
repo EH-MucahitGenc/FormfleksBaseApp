@@ -98,14 +98,14 @@ public class EmailService : IEmailService
         _config = config;
     }
 
-    public async Task SendApprovalRequestEmailAsync(string toEmail, string assigneeName, string formRequestNo, string formTypeName, string requesterName, CancellationToken cancellationToken = default)
+    public async Task SendApprovalRequestEmailAsync(string toEmail, string assigneeName, string formRequestNo, Guid formRequestId, string formTypeName, string requesterName, CancellationToken cancellationToken = default)
     {
         var subject = $"[Onay Bekleniyor] {formRequestNo} - {formTypeName}";
         
         var messageBase = $"Yeni bir form değerlendirmeniz için tarafınıza atanmıştır. Form detaylarını inceleyip en kısa sürede onay veya red işlemini gerçekleştirmeniz gerekmektedir.";
         
         var baseUrl = _config["FrontendBaseUrl"] ?? "http://localhost:3000";
-        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestNo}";
+        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestId}";
         var actionSection = $"<div class=\"action-wrapper\"><a href=\"{actionUrl}\" class=\"btn\">Dosyayı Görüntüle ve İşlem Yap &rarr;</a></div>";
         var statusBadge = "<div class=\"badge-container\"><span class=\"badge badge-warning\">⏳ Onay Bekliyor</span></div>";
 
@@ -128,7 +128,7 @@ public class EmailService : IEmailService
         await QueueEmailAsync(msg, cancellationToken);
     }
 
-    public async Task SendApprovalCompletedEmailAsync(string toEmail, string requesterName, string formRequestNo, string formTypeName, bool isApproved, CancellationToken cancellationToken = default)
+    public async Task SendApprovalCompletedEmailAsync(string toEmail, string requesterName, string formRequestNo, Guid formRequestId, string formTypeName, bool isApproved, CancellationToken cancellationToken = default)
     {
         var durumMetni = isApproved ? "Onaylandı" : "Reddedildi";
         var subject = $"[Durum: {durumMetni}] {formRequestNo} - {formTypeName}";
@@ -138,7 +138,7 @@ public class EmailService : IEmailService
             : "Talebiniz bir yönetici tarafından incelenmiş ve <strong>Reddedilmiştir</strong>. Süreç sonlandırıldı.";
 
         var baseUrl = _config["FrontendBaseUrl"] ?? "http://localhost:3000";
-        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestNo}";
+        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestId}";
         var actionSection = $"<div class=\"action-wrapper\"><a href=\"{actionUrl}\" class=\"btn\">Sistem Üzerinde Görüntüle &rarr;</a></div>";
         
         var statusBadge = isApproved 

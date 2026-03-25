@@ -5,13 +5,14 @@ import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, C
 import { FfButton } from '@/components/ui/index';
 import { useFormDetail, usePendingApprovals, useApprovalAction } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
+import { FfEmptyState } from '@/components/shared/FfEmptyState';
 
 export const FormDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const { data, isLoading } = useFormDetail(id || '');
+  const { data, isLoading, isError } = useFormDetail(id || '');
   const { data: pendingApprovals } = usePendingApprovals();
   const approvalMutation = useApprovalAction();
 
@@ -22,6 +23,22 @@ export const FormDetail: React.FC = () => {
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] mt-10">
+          <FfEmptyState 
+            title="Erişim Reddedildi veya Form Bulunamadı" 
+            description="Bu formu görüntülemek için gerekli yetkilere sahip olmayabilirsiniz veya form sistemden tamamen kaldırılmış olabilir." 
+          />
+          <FfButton variant="outline" className="mt-6" leftIcon={<ArrowLeft className="w-4 h-4"/>} onClick={() => navigate('/forms')}>
+            Taleplerime Dön
+          </FfButton>
+        </div>
+      </PageContainer>
     );
   }
 
