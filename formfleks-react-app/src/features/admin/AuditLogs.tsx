@@ -25,6 +25,14 @@ export const AuditLogs: React.FC = () => {
     </span>
   ), []);
 
+  const actorRender = useCallback((cellData: any) => {
+    const actorName = cellData.data.actorName;
+    if (actorName) {
+      return <span className="font-semibold text-sm text-brand-dark">{actorName}</span>;
+    }
+    return <span className="font-mono text-xs text-brand-gray/80">{String(cellData.value).substring(0, 8)}...</span>;
+  }, []);
+
   const actionRender = useCallback((cellData: any) => {
     const action = cellData.value as string;
     let badgeClass = "bg-surface-muted text-brand-dark border-surface-muted";
@@ -66,11 +74,16 @@ export const AuditLogs: React.FC = () => {
 
   const targetRender = useCallback((cellData: any) => {
     const tType = cellData.data.entityType;
+    const tName = cellData.data.targetName;
     const tId = cellData.data.entityId;
     return (
       <div className="flex flex-col">
         <span className="font-semibold text-sm text-brand-dark">{tType}</span>
-        <span className="font-mono text-xs text-brand-gray" title={tId}>{String(tId).substring(0, 8)}...</span>
+        {tName && tName !== tId ? (
+           <span className="text-xs text-brand-primary font-medium mt-0.5">{tName}</span>
+        ) : (
+           <span className="font-mono text-xs text-brand-gray mt-0.5" title={tId}>{String(tId).substring(0, 8)}...</span>
+        )}
       </div>
     );
   }, []);
@@ -108,7 +121,7 @@ export const AuditLogs: React.FC = () => {
     { dataField: 'id', caption: 'Log ID', width: 100, cellRender: idRender, alignment: 'center' },
     { dataField: 'actionType', caption: 'İşlem Tipi', width: 160, cellRender: actionRender },
     { caption: 'Hedef (Entity)', width: 200, cellRender: targetRender },
-    { dataField: 'actorUserId', caption: 'Aktör (Kullanıcı)', width: 140, cellRender: idRender, alignment: 'center' },
+    { dataField: 'actorUserId', caption: 'Aktör (Kullanıcı)', width: 180, cellRender: actorRender },
     { caption: 'Log Detayı', minWidth: 200, cellRender: detailRender },
     { dataField: 'createdAt', caption: 'Tarih', width: 140, dataType: 'datetime', sortOrder: 'desc', cellRender: dateRender, alignment: 'right' }
   ];

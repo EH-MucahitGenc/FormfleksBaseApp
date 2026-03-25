@@ -119,3 +119,16 @@ public sealed record ApprovalActionResponseDto
 {
     public bool Success { get; init; }
 }
+
+public sealed class HistoryApprovalListItemDto
+{
+    public Guid ApprovalId { get; set; }
+    public Guid RequestId { get; set; }
+    public string RequestNo { get; set; } = default!;
+    public string FormTypeName { get; set; } = default!;
+    public int StepNo { get; set; }
+    public Guid RequestorUserId { get; set; }
+    public string RequestorName { get; set; } = default!;
+    public ApprovalStatus Status { get; set; }
+    public DateTime ProcessedAt { get; set; }
+}

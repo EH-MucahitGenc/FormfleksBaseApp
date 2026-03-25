@@ -7,6 +7,8 @@ export interface DashboardStatsDto {
   inProgressFormsCount: number;
   approvedFormsCount: number;
   rejectedFormsCount: number;
+  approvedByMeCount: number;
+  rejectedByMeCount: number;
 }
 
 export interface ChartDataPointDto {
@@ -24,9 +26,10 @@ export interface ActivityLogDto {
 class DashboardService {
   async getOverviewStats(): Promise<DashboardStatsDto> {
     // In absence of a dedicated /dashboard/stats endpoint, we aggregate from existing endpoints to avoid ANY fake data
-    const [{ data: pendingApprovals }, { data: myRequests }] = await Promise.all([
+    const [{ data: pendingApprovals }, { data: myRequests }, { data: myHistory }] = await Promise.all([
        apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending'),
-       apiClient.get<any[]>('/dynamic-forms/requests/my')
+       apiClient.get<any[]>('/dynamic-forms/requests/my'),
+       apiClient.get<any[]>('/dynamic-forms/approvals/history')
     ]);
 
     // Calculate real stats
@@ -36,6 +39,8 @@ class DashboardService {
       inProgressFormsCount: myRequests?.filter(r => r.status === 2 || r.status === 3)?.length || 0,
       approvedFormsCount: myRequests?.filter(r => r.status === 4)?.length || 0,
       rejectedFormsCount: myRequests?.filter(r => r.status === 5)?.length || 0,
+      approvedByMeCount: myHistory?.filter(h => h.status === 2)?.length || 0, // ApprovalStatus.Approved = 2
+      rejectedByMeCount: myHistory?.filter(h => h.status === 3)?.length || 0, // ApprovalStatus.Rejected = 3
     };
   }
 
@@ -53,12 +58,53 @@ class DashboardService {
     // Fetch from real audit logs instead of fake data
     try {
       const { data } = await apiClient.get<any[]>('/dynamic-forms/admin/audit-logs');
-      return (data || []).slice(0, 10).map((log, index) => ({
-        id: log.id || String(index),
-        message: `${log.actionType} islem: ${log.entityType} (${log.entityId})`,
-        createdAt: log.createdAt,
-        type: 'info'
-      }));
+      return (data || []).slice(0, 10).map((log, index) => {
+        let msg = 'Sistem kaydı güncellendi.';
+        let type: 'info' | 'success' | 'warning' | 'error' = 'info';
+
+        switch (log.actionType) {
+          case 'FormSubmitted':
+            msg = 'Yeni bir form talebi onaya gönderildi.';
+            type = 'info';
+            break;
+          case 'Approved':
+            msg = 'Bir talep onaylandı.';
+            type = 'success';
+            break;
+          case 'Rejected':
+            msg = 'Bir talep reddedildi.';
+            type = 'error';
+            break;
+          case 'ReturnedForRevision':
+            msg = 'Bir talep revizyona iade edildi.';
+            type = 'warning';
+            break;
+          case 'FormDraftSaved':
+            msg = 'Bir form taslak olarak kaydedildi.';
+            type = 'info';
+            break;
+          case 'TemplateUpserted':
+          case 'TemplateCreated':
+            msg = 'Bir form şablonu/tasarımı güncellendi.';
+            type = 'info';
+            break;
+          case 'WorkflowUpdated':
+            msg = 'Bir formun onay akış şeması güncellendi.';
+            type = 'warning';
+            break;
+          default:
+            if (log.entityType === 'FormRequestApproval') msg = 'Onay sürecinde bir işlem yapıldı.';
+            else if (log.entityType === 'FormRequest') msg = 'Form talebi üzerinde işlem yapıldı.';
+            break;
+        }
+
+        return {
+          id: log.id || String(index),
+          message: msg,
+          createdAt: log.createdAt,
+          type: type
+        };
+      });
     } catch {
       return [];
     }

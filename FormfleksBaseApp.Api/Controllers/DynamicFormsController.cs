@@ -95,6 +95,15 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new GetPendingApprovalsQuery(userId), ct));
     }
 
+    [HttpGet("approvals/history")]
+    public async Task<ActionResult<IReadOnlyList<HistoryApprovalListItemDto>>> GetApprovalHistory(CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new Application.Features.DynamicForms.Queries.GetApprovalHistory.GetApprovalHistoryQuery(userId), ct));
+    }
+
     [HttpPost("approvals/action")]
     public async Task<ActionResult<FormRequestResultDto>> ApprovalAction([FromBody] ApprovalActionRequestDto request, CancellationToken ct)
     {

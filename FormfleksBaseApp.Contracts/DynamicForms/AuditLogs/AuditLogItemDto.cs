@@ -7,6 +7,8 @@ public sealed class AuditLogItemDto
     public Guid EntityId { get; set; }
     public string ActionType { get; set; } = default!;
     public Guid? ActorUserId { get; set; }
+    public string? ActorName { get; set; }
+    public string? TargetName { get; set; }
     public string? DetailJson { get; set; }
     public DateTime CreatedAt { get; set; }
 }
