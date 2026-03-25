@@ -99,7 +99,7 @@ export const Login: React.FC = () => {
 
            <div className="flex items-center justify-between mt-2 px-1">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="w-4 h-4 rounded border border-surface-muted bg-white flex items-center justify-center group-hover:border-brand-primary transition-colors focus-within:ring-2 focus-within:ring-brand-primary/50 relative overflow-hidden">
+                <div className="w-4 h-4 rounded border border-surface-muted bg-surface-base flex items-center justify-center group-hover:border-brand-primary transition-colors focus-within:ring-2 focus-within:ring-brand-primary/50 relative overflow-hidden">
                    <input type="checkbox" className="opacity-0 w-full h-full absolute cursor-pointer peer" />
                    <div className="absolute inset-0 bg-brand-primary opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
                       <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">

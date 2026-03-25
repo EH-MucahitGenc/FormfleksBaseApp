@@ -63,14 +63,14 @@ export const FfModal: React.FC<FfModalProps> = ({
       ref={overlayRef}
       onClick={handleOverlayClick}
       className={cn(
-        'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-sm transition-all duration-300',
+        'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0f172a]/40 backdrop-blur-sm transition-all duration-300',
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       )}
       aria-hidden={!isOpen}
     >
       <div
         className={cn(
-          'w-full bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300',
+          'w-full bg-surface-base rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300',
           sizes[size],
           isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}

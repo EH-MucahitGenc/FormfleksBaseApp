@@ -239,7 +239,7 @@ export const DynamicFormViewer: React.FC = () => {
     return (
       <div className="flex flex-col h-[calc(100vh-8rem)]">
          <PageHeader title="Yükleniyor..." />
-         <div className="bg-white p-6 rounded-xl border border-surface-muted mt-4">
+         <div className="bg-surface-base p-6 rounded-xl border border-surface-muted mt-4">
             <FfSkeletonLoader type="form" />
          </div>
       </div>
@@ -262,7 +262,7 @@ export const DynamicFormViewer: React.FC = () => {
         />
       </div>
 
-      <div className="flex-1 min-h-0 bg-white rounded-xl shadow-soft border border-surface-muted p-6 md:p-8 overflow-y-auto">
+      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted p-6 md:p-8 overflow-y-auto">
         <FormProvider {...methods}>
           <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
             

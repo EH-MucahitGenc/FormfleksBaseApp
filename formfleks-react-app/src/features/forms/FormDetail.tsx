@@ -167,7 +167,7 @@ export const FormDetail: React.FC = () => {
               <div className="relative pl-6 border-l-2 border-surface-muted space-y-6">
                 {data.workflow?.map((w: any, idx: number) => {
                   let statusColor = 'border-surface-muted text-brand-gray';
-                  let bgIcon = 'bg-white';
+                  let bgIcon = 'bg-surface-base';
                   let Icon = Clock;
                   let statusText = 'İşlem Sırada';
                   
@@ -210,9 +210,9 @@ export const FormDetail: React.FC = () => {
                       <div className={`absolute -left-[31px] top-1 p-1 rounded-full ${bgIcon} border-2 ${statusColor} shadow-sm`}>
                         <Icon className="h-3 w-3" />
                       </div>
-                      <div className="bg-white p-3 rounded-md border border-surface-muted shadow-sm mb-4">
+                      <div className="bg-surface-base p-3 rounded-md border border-surface-muted shadow-sm mb-4">
                         <h4 className={`text-sm font-extrabold ${w.status === 'Future' ? 'text-brand-gray/80' : 'text-brand-dark'}`}>{stepName}</h4>
-                        <div className={`text-xs font-bold mb-2 inline-block px-2 py-0.5 mt-1 rounded-full border ${statusColor} bg-white`}>{statusText}</div>
+                        <div className={`text-xs font-bold mb-2 inline-block px-2 py-0.5 mt-1 rounded-full border ${statusColor} bg-surface-base`}>{statusText}</div>
                         <div className="text-xs text-brand-gray mt-1">
                           Sorumlu: <span className="font-semibold text-brand-dark">{w.actor}</span>
                         </div>
@@ -285,8 +285,8 @@ export const FormDetail: React.FC = () => {
       
       {/* Action Modal with React Portal */}
       {modalState.isOpen && typeof window !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-brand-dark/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-base rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             <div className={`px-6 py-4 border-b flex items-center gap-3 ${
               modalState.actionType === 1 ? 'bg-status-success/5 border-status-success/20' :
               modalState.actionType === 2 ? 'bg-status-danger/5 border-status-danger/20' :

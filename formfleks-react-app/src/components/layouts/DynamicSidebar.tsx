@@ -60,7 +60,7 @@ export const DynamicSidebar = ({
   return (
     <aside 
       className={cn(
-        "bg-white border-r border-surface-muted flex flex-col transition-all duration-300 ease-in-out relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+        "bg-surface-base border-r border-surface-muted flex flex-col transition-all duration-300 ease-in-out relative z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
         isSidebarOpen ? "w-64" : "w-20"
       )}
     >
@@ -198,7 +198,7 @@ export const DynamicSidebar = ({
       {/* Sidebar Toggle Button */}
       <button 
         onClick={() => setSidebarOpen(!isSidebarOpen)}
-        className="absolute -right-3 top-20 bg-white border border-surface-muted shadow-sm rounded-full p-1 text-brand-gray hover:text-brand-primary transition-colors flex items-center justify-center z-30"
+        className="absolute -right-3 top-20 bg-surface-base border border-surface-muted shadow-sm rounded-full p-1 text-brand-gray hover:text-brand-primary transition-colors flex items-center justify-center z-30"
       >
         <ChevronLeft className={cn("h-4 w-4 transition-transform", !isSidebarOpen && "rotate-180")} />
       </button>

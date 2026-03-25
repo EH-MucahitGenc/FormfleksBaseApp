@@ -213,7 +213,7 @@ export const Roles: React.FC = () => {
                 componentProps={{ placeholder: "Örn: Sistem Yöneticisi" }}
               />
 
-              <div className="flex items-center mt-3 bg-white p-4 rounded-lg border border-surface-muted shadow-sm transition-all hover:border-brand-primary/30">
+              <div className="flex items-center mt-3 bg-surface-base p-4 rounded-lg border border-surface-muted shadow-sm transition-all hover:border-brand-primary/30">
                  <input 
                    type="checkbox" 
                    id="role-active" 

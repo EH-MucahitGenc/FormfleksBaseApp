@@ -17,7 +17,7 @@ export const FfButton = React.forwardRef<HTMLButtonElement, FfButtonProps>(
     
     const variants = {
       primary: "bg-brand-primary text-white hover:bg-[#e0753a] shadow-sm hover:shadow-md",
-      secondary: "bg-brand-dark text-white hover:bg-brand-gray shadow-sm",
+      secondary: "bg-[#0f172a] text-white hover:bg-brand-gray shadow-sm",
       outline: "border-2 border-surface-muted bg-transparent hover:bg-surface-ground text-brand-dark",
       ghost: "bg-transparent hover:bg-surface-muted text-brand-dark",
       danger: "bg-status-danger text-white hover:bg-status-danger/90 shadow-sm",

@@ -151,8 +151,8 @@ export const PendingApprovals: React.FC = () => {
 
       {/* Action Modal with React Portal */}
       {modalState.isOpen && modalState.item && typeof window !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-brand-dark/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-base rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             <div className={`px-6 py-4 border-b flex items-center gap-3 ${
               modalState.actionType === 1 ? 'bg-status-success/5 border-status-success/20' :
               modalState.actionType === 2 ? 'bg-status-danger/5 border-status-danger/20' :

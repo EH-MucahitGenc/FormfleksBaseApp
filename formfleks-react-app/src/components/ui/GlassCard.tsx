@@ -17,7 +17,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       <div
         ref={ref}
         className={cn(
-          "bg-white/90 backdrop-blur-lg border border-white/20 shadow-premium rounded-xl lg:rounded-2xl transition-all duration-300 animate-fade-in-up hover-lift",
+          "bg-surface-base/90 backdrop-blur-lg border border-white/20 shadow-premium rounded-xl lg:rounded-2xl transition-all duration-300 animate-fade-in-up hover-lift",
           !noPadding && "p-6 lg:p-8",
           className
         )}

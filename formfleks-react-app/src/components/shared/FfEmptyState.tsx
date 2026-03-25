@@ -20,7 +20,7 @@ export const FfEmptyState: React.FC<FfEmptyStateProps> = ({
   className
 }) => {
   return (
-    <div className={cn("w-full h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center bg-white border border-surface-muted border-dashed rounded-xl", className)}>
+    <div className={cn("w-full h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center bg-surface-base border border-surface-muted border-dashed rounded-xl", className)}>
       <div className="h-16 w-16 mb-4 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
         {icon || <FolderOpen className="h-8 w-8 opacity-80" strokeWidth={1.5} />}
       </div>

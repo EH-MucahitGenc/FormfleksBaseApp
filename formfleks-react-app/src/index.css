@@ -1,23 +1,60 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+:root {
+  --app-brand-primary: #f6894c;
+  --app-brand-dark: #231f20;
+  --app-brand-gray: #414042;
+  --app-brand-copper: #c27234;
+  --app-brand-copper-dark: #8a4e1f;
+  
+  --app-surface-base: #ffffff;
+  --app-surface-ground: #f8fafc;
+  --app-surface-muted: #f1f5f9;
+  --app-surface-hover: #f8f9fa;
+  
+  --app-status-success: #10b981;
+  --app-status-warning: #f59e0b;
+  --app-status-danger: #ef4444;
+  --app-status-info: #3b82f6;
+  --app-status-draft: #64748b;
+  
+  --app-mesh-start: #f8fafc;
+  --app-mesh-mid: #f1f5f9;
+  --app-mesh-end: #ffffff;
+}
+
+.dark {
+  --app-brand-dark: #f8fafc;
+  --app-brand-gray: #94a3b8;
+  
+  --app-surface-base: #1e293b;
+  --app-surface-ground: #0f172a;
+  --app-surface-muted: #334155;
+  --app-surface-hover: #1e293b;
+
+  --app-mesh-start: #0f172a;
+  --app-mesh-mid: #334155;
+  --app-mesh-end: #1e293b;
+}
+
 @theme {
-  --color-brand-primary: #f6894c;
-  --color-brand-dark: #231f20;
-  --color-brand-gray: #414042;
-  --color-brand-copper: #c27234;
-  --color-brand-copper-dark: #8a4e1f;
+  --color-brand-primary: var(--app-brand-primary);
+  --color-brand-dark: var(--app-brand-dark);
+  --color-brand-gray: var(--app-brand-gray);
+  --color-brand-copper: var(--app-brand-copper);
+  --color-brand-copper-dark: var(--app-brand-copper-dark);
   
-  --color-surface-base: #ffffff;
-  --color-surface-ground: #f8fafc;
-  --color-surface-muted: #f1f5f9;
-  --color-surface-hover: #f8f9fa;
+  --color-surface-base: var(--app-surface-base);
+  --color-surface-ground: var(--app-surface-ground);
+  --color-surface-muted: var(--app-surface-muted);
+  --color-surface-hover: var(--app-surface-hover);
   
-  --color-status-success: #10b981;
-  --color-status-warning: #f59e0b;
-  --color-status-danger: #ef4444;
-  --color-status-info: #3b82f6;
-  --color-status-draft: #64748b;
+  --color-status-success: var(--app-status-success);
+  --color-status-warning: var(--app-status-warning);
+  --color-status-danger: var(--app-status-danger);
+  --color-status-info: var(--app-status-info);
+  --color-status-draft: var(--app-status-draft);
   
   --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   
@@ -49,7 +86,7 @@
 }
 
 .bg-premium-mesh {
-  background: linear-gradient(-45deg, #f8fafc, #f1f5f9, #ffffff, #f8fafc);
+  background: linear-gradient(-45deg, var(--app-mesh-start), var(--app-mesh-mid), var(--app-mesh-end), var(--app-mesh-start));
   background-size: 400% 400%;
   animation: premiumMesh 20s ease infinite;
 }
@@ -83,9 +120,9 @@
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    #f1f5f9 25%,
-    #e8ecf1 37%,
-    #f1f5f9 63%
+    var(--app-surface-muted) 25%,
+    var(--app-surface-hover) 37%,
+    var(--app-surface-muted) 63%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;

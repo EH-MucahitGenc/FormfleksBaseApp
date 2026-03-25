@@ -60,7 +60,7 @@ export default function PersonnelSyncDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LOGS TABLE */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
+        <div className="bg-surface-base rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Son Senkronizasyon İşlemleri</h2>
           {isLogsLoading ? (
             <div className="space-y-4">
@@ -118,7 +118,7 @@ export default function PersonnelSyncDashboard() {
         </div>
 
         {/* DEPARTMENT CHART / DISTRIBUTION */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-surface-base rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Departman Dağılımı</h2>
           {isStatsLoading ? (
             <div className="h-64 bg-gray-50 animate-pulse rounded-lg flex items-center justify-center">
@@ -153,7 +153,7 @@ export default function PersonnelSyncDashboard() {
 
 function StatCard({ title, value, icon, loading, valueClassName = "text-2xl" }: { title: string, value?: string, icon: React.ReactNode, loading: boolean, valueClassName?: string }) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4 transition-all hover:shadow-md">
+    <div className="bg-surface-base p-6 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4 transition-all hover:shadow-md">
       <div className="p-3 bg-gray-50 rounded-lg">
         {icon}
       </div>

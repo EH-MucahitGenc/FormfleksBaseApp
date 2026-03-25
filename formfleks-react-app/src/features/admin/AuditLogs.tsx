@@ -95,7 +95,7 @@ export const AuditLogs: React.FC = () => {
     return (
       <button 
         onClick={() => handleShowDetails(json)}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-brand-gray bg-surface-muted border border-surface-muted rounded-md hover:bg-white hover:text-brand-primary hover:border-brand-primary/30 transition-all"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-brand-gray bg-surface-muted border border-surface-muted rounded-md hover:bg-surface-base hover:text-brand-primary hover:border-brand-primary/30 transition-all"
       >
         <Code className="h-3 w-3" />
         JSON Bak
@@ -163,8 +163,8 @@ export const AuditLogs: React.FC = () => {
 
       {/* JSON Viewer Modal Overlay */}
       {modalContent && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-dark/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-xl border border-surface-muted w-full max-w-2xl overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0f172a]/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-base rounded-xl shadow-xl border border-surface-muted w-full max-w-2xl overflow-hidden flex flex-col">
             <div className="px-5 py-4 border-b border-surface-muted flex items-center justify-between bg-surface-hover">
               <h3 className="font-bold text-brand-dark flex items-center gap-2">
                 <Code className="h-5 w-5 text-brand-primary" />

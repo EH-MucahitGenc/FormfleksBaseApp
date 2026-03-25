@@ -18,7 +18,7 @@ export const PremiumInput = React.forwardRef<HTMLInputElement | HTMLTextAreaElem
         <Component
           ref={ref as any}
           className={cn(
-            "w-full px-4 py-2 bg-white border rounded-lg text-sm text-brand-dark transition-all outline-none",
+            "w-full px-4 py-2 bg-surface-base border rounded-lg text-sm text-brand-dark transition-all outline-none",
             error 
               ? "border-status-danger focus:ring-2 focus:ring-status-danger/20" 
               : "border-surface-muted focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20",
@@ -51,7 +51,7 @@ export const PremiumSelect = React.forwardRef<HTMLSelectElement, PremiumSelectPr
         <select
           ref={ref}
           className={cn(
-            "w-full px-4 py-2 bg-white border rounded-lg text-sm text-brand-dark transition-all outline-none appearance-none",
+            "w-full px-4 py-2 bg-surface-base border rounded-lg text-sm text-brand-dark transition-all outline-none appearance-none",
             error 
               ? "border-status-danger focus:ring-2 focus:ring-status-danger/20" 
               : "border-surface-muted focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20",

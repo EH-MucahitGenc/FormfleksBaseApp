@@ -43,12 +43,12 @@ export const UserProfile: React.FC = () => {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Avatar Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted p-6 flex flex-col items-center text-center">
+          <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted p-6 flex flex-col items-center text-center">
             <div className="relative group mb-4">
               <div className="h-24 w-24 rounded-full bg-brand-primary/10 text-brand-primary font-bold text-3xl flex items-center justify-center border-4 border-white shadow-md">
                 {data.firstName.charAt(0)}{data.lastName.charAt(0)}
               </div>
-              <button className="absolute bottom-0 right-0 bg-white p-1.5 rounded-full shadow border text-brand-gray hover:text-brand-primary transition-colors">
+              <button className="absolute bottom-0 right-0 bg-surface-base p-1.5 rounded-full shadow border text-brand-gray hover:text-brand-primary transition-colors">
                 <Camera className="h-4 w-4" />
               </button>
             </div>
@@ -59,7 +59,7 @@ export const UserProfile: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden flex flex-col">
+          <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted overflow-hidden flex flex-col">
             <button
               onClick={() => setActiveTab('info')}
               className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${

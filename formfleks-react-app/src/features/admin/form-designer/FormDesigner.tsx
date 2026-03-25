@@ -246,7 +246,7 @@ export const FormDesigner: React.FC = () => {
                </div>
                <FfButton variant="primary" leftIcon={<Plus className="h-4 w-4"/>} onClick={() => setActiveTab('designer')}>Yeni Tasarım</FfButton>
             </div>
-            <div className="bg-white rounded-xl border border-surface-muted overflow-hidden">
+            <div className="bg-surface-base rounded-xl border border-surface-muted overflow-hidden">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-surface-hover text-xs font-bold uppercase text-brand-gray border-b border-surface-muted">
                         <tr>
@@ -283,7 +283,7 @@ export const FormDesigner: React.FC = () => {
                                            onChange={(e) => statusMutation.mutate({ formTypeId: t.formTypeId, active: e.target.checked })} 
                                            className="sr-only peer" 
                                         />
-                                        <div className="w-9 h-5 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-status-success"></div>
+                                        <div className="w-9 h-5 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-status-success"></div>
                                     </label>
                                 </td>
                             </tr>
@@ -302,16 +302,16 @@ export const FormDesigner: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
                     <div className="md:col-span-4">
                         <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Form Kodu (Unique)</label>
-                        <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase().replace(/\s/g, '_'))} className="w-full px-4 py-2.5 bg-white border border-surface-muted rounded-lg text-brand-dark font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm" placeholder="Örn: LEAVE_REQ" />
+                        <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase().replace(/\s/g, '_'))} className="w-full px-4 py-2.5 bg-surface-base border border-surface-muted rounded-lg text-brand-dark font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm" placeholder="Örn: LEAVE_REQ" />
                     </div>
                     <div className="md:col-span-5">
                         <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Form Görünen Adı</label>
-                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-surface-muted rounded-lg text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm" placeholder="Örn: Yıllık İzin Formu" />
+                        <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2.5 bg-surface-base border border-surface-muted rounded-lg text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm" placeholder="Örn: Yıllık İzin Formu" />
                     </div>
                     <div className="md:col-span-3 pb-2 pt-4 md:pt-0">
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-status-success"></div>
+                            <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-status-success"></div>
                             <span className="ml-3 text-sm font-bold text-brand-dark">Kullanıma Açık Mı?</span>
                         </label>
                     </div>
@@ -335,7 +335,7 @@ export const FormDesigner: React.FC = () => {
             ) : (
                 <div className="space-y-6">
                     {sections.map((section, sIdx) => (
-                        <div key={section.id} className="bg-white rounded-xl border border-surface-muted shadow-sm overflow-hidden flex flex-col transition-all hover:border-brand-primary/40 group">
+                        <div key={section.id} className="bg-surface-base rounded-xl border border-surface-muted shadow-sm overflow-hidden flex flex-col transition-all hover:border-brand-primary/40 group">
                             
                             {/* Section Header */}
                             <div className="bg-surface-hover px-4 py-3 border-b border-surface-muted flex items-center justify-between gap-4">
@@ -346,11 +346,11 @@ export const FormDesigner: React.FC = () => {
                                           type="text" 
                                           value={section.title} 
                                           onChange={e => updateSectionTitle(section.id, e.target.value)}
-                                          className="w-full bg-white px-3 py-1.5 border border-surface-muted rounded text-brand-dark font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                                          className="w-full bg-surface-base px-3 py-1.5 border border-surface-muted rounded text-brand-dark font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                                           placeholder="Bölüm Başlığı"
                                         />
                                     </div>
-                                    <span className="text-xs font-semibold text-brand-gray/50 bg-white px-2 py-1 rounded border border-surface-muted">Bölüm {sIdx + 1}</span>
+                                    <span className="text-xs font-semibold text-brand-gray/50 bg-surface-base px-2 py-1 rounded border border-surface-muted">Bölüm {sIdx + 1}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => removeSection(section.id)} className="p-1.5 text-brand-gray hover:text-status-danger hover:bg-status-danger/10 rounded-md transition-colors" title="Bölümü Sil">
@@ -435,7 +435,7 @@ export const FormDesigner: React.FC = () => {
         {/* Canlı Önizleme Alanı */}
         {activeTab === 'preview' && (
           <div className="flex-1 overflow-y-auto bg-surface-muted p-4 md:p-8 flex justify-center scrollbar-thin">
-            <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-3xl bg-surface-base rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="bg-brand-primary/5 border-b border-brand-primary/10 px-6 py-4">
                     <h2 className="text-xl font-bold text-brand-dark">{name || 'İsimsiz Form'}</h2>
                     <p className="text-sm font-medium text-brand-gray mt-1">Bu alan form doldurucunun göreceği görsel karşılıktır.</p>

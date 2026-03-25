@@ -10,13 +10,13 @@ export const AuthLayout: React.FC = () => {
       <div className="absolute bottom-1/4 -right-32 w-[600px] h-[600px] bg-brand-accent rounded-full mix-blend-multiply filter blur-[130px] opacity-15 animate-pulse delay-1000" style={{ animationDuration: '10s' }}></div>
       
       {/* Central Premium Card */}
-      <div className="relative z-10 w-full max-w-[480px] bg-white/80 backdrop-blur-xl shadow-[0_32px_80px_-12px_rgba(0,0,0,0.15)] border border-white/60 rounded-3xl overflow-hidden flex flex-col transform transition-all duration-700 mt-[-5%] sm:mt-0">
+      <div className="relative z-10 w-full max-w-[480px] bg-surface-base/80 backdrop-blur-xl shadow-[0_32px_80px_-12px_rgba(0,0,0,0.15)] border border-white/60 rounded-3xl overflow-hidden flex flex-col transform transition-all duration-700 mt-[-5%] sm:mt-0">
         
         {/* Logo Header */}
         <div className="bg-gradient-to-b from-white to-surface-hover/30 px-8 pt-12 pb-8 flex flex-col items-center justify-center border-b border-surface-muted/40 relative">
            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-primary via-brand-accent to-brand-primary"></div>
            
-           <div className="mb-5 bg-white p-3.5 rounded-2xl shadow-soft border border-surface-muted/50 transition-transform hover:scale-105 duration-300">
+           <div className="mb-5 bg-surface-base p-3.5 rounded-2xl shadow-soft border border-surface-muted/50 transition-transform hover:scale-105 duration-300">
              <img src="/logo.svg" alt="Formfleks Logo" className="w-auto h-12 object-contain" />
            </div>
            
@@ -25,7 +25,7 @@ export const AuthLayout: React.FC = () => {
         </div>
 
         {/* Form Content Area */}
-        <div className="px-8 py-8 md:px-10 bg-white">
+        <div className="px-8 py-8 md:px-10 bg-surface-base">
           <Outlet />
         </div>
       </div>

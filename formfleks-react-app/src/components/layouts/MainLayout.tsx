@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import { Search, Bell } from 'lucide-react';
-import { useState } from 'react';
+import { Search, Bell, Moon, Sun } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { DynamicSidebar } from './DynamicSidebar';
 
 // ----------------------------------------------------------------------
@@ -8,6 +8,28 @@ import { DynamicSidebar } from './DynamicSidebar';
 // ----------------------------------------------------------------------
 export const MainLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check initial state from LocalStorage
+    const isDark = localStorage.getItem('theme') === 'dark';
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      setIsDarkMode(true);
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      setIsDarkMode(true);
+    }
+  };
 
   return (
     <div className="flex h-screen w-full bg-premium-mesh overflow-hidden">
@@ -22,7 +44,7 @@ export const MainLayout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0 bg-transparent">
         
         {/* Topbar */}
-        <header className="h-16 bg-white/70 backdrop-blur-md border-b border-surface-muted flex items-center justify-between px-6 shrink-0 relative z-10 glass-glow">
+        <header className="h-16 bg-surface-base/70 backdrop-blur-md border-b border-surface-muted flex items-center justify-between px-6 shrink-0 relative z-10 glass-glow">
           {/* Left: Mobile Toggle & Global Search */}
           <div className="flex items-center gap-4 flex-1">
             <div className="relative max-w-md w-full hidden md:block group">
@@ -30,13 +52,20 @@ export const MainLayout: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="Platformda ara (Ekranlar, Formlar, Kullanıcılar)..." 
-                className="w-full pl-9 pr-4 py-2 bg-surface-muted border-transparent rounded-lg text-sm focus:bg-white focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 transition-all outline-none text-brand-dark"
+                className="w-full pl-9 pr-4 py-2 bg-surface-muted border-transparent rounded-lg text-sm focus:bg-surface-base focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 transition-all outline-none text-brand-dark"
               />
             </div>
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3 shrink-0">
+            <button 
+              onClick={toggleDarkMode}
+              className="relative p-2 text-brand-gray hover:bg-surface-muted rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              title={isDarkMode ? "Aydınlık Moda Geç" : "Karanlık Moda Geç"}
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
             <button className="relative p-2 text-brand-gray hover:bg-surface-muted rounded-full transition-colors">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-status-danger rounded-full ring-2 ring-white"></span>

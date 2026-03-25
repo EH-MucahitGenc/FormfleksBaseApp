@@ -75,7 +75,7 @@ export const ApplicationSettings: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Nav */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden flex flex-col">
+          <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted overflow-hidden flex flex-col">
             <button
               onClick={() => setActiveTab('app')}
               className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${

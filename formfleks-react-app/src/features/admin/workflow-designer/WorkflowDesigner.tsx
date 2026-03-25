@@ -189,7 +189,7 @@ export const WorkflowDesigner: React.FC = () => {
                     <select 
                         value={selectedFormId} 
                         onChange={e => setSelectedFormId(e.target.value)}
-                        className="w-full bg-white border border-surface-muted rounded-lg px-3 py-2.5 text-sm text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary appearance-none"
+                        className="w-full bg-surface-base border border-surface-muted rounded-lg px-3 py-2.5 text-sm text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary appearance-none"
                     >
                         <option value="">-- Şablon Seçiniz --</option>
                         {templatesLoading ? (
@@ -267,7 +267,7 @@ export const WorkflowDesigner: React.FC = () => {
                 ) : (
                     <div className="space-y-3">
                         {steps.map((step, sIdx) => (
-                            <div key={`step_${sIdx}`} className="bg-white border border-surface-muted rounded-xl p-4 shadow-sm flex items-center gap-4 transition-all hover:border-brand-primary/30">
+                            <div key={`step_${sIdx}`} className="bg-surface-base border border-surface-muted rounded-xl p-4 shadow-sm flex items-center gap-4 transition-all hover:border-brand-primary/30">
                                 
                                 <div className="flex flex-col gap-1 flex-shrink-0">
                                     <button onClick={() => handleMoveUp(sIdx)} disabled={sIdx === 0} className={`p-1 rounded ${sIdx === 0 ? 'text-surface-muted cursor-not-allowed' : 'text-brand-gray hover:bg-surface-hover hover:text-brand-primary'}`}><ChevronUp className="h-4 w-4" /></button>
@@ -328,7 +328,7 @@ export const WorkflowDesigner: React.FC = () => {
                                     <div className="bg-surface-base border border-surface-muted rounded-lg p-3 grid grid-cols-1 md:grid-cols-12 gap-4">
                                         <div className="md:col-span-3">
                                             <label className="text-[11px] font-bold text-brand-gray uppercase mb-1.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-status-warning"/> Hata Durumu (Fallback)</label>
-                                            <select value={step.fallbackAction ?? 0} onChange={e => handleUpdateStep(sIdx, { fallbackAction: Number(e.target.value) })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2.5 text-xs text-brand-dark">
+                                            <select value={step.fallbackAction ?? 0} onChange={e => handleUpdateStep(sIdx, { fallbackAction: Number(e.target.value) })} className="w-full bg-surface-base border border-surface-muted rounded py-1.5 px-2.5 text-xs text-brand-dark">
                                                 <option value={0}>Adımı Otomatik Atla</option>
                                                 <option value={1}>Üst Yöneticisine Düşür</option>
                                                 <option value={2}>Sabit Kişiye Düşür</option>
@@ -340,9 +340,9 @@ export const WorkflowDesigner: React.FC = () => {
                                             <div className="md:col-span-3">
                                                 <label className="text-[11px] font-bold text-brand-gray uppercase mb-1.5 opacity-60">Fallback Hedefi</label>
                                                 {step.fallbackAction === 2 ? (
-                                                    <input type="text" placeholder="Guid..." value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2 text-xs font-mono"/>
+                                                    <input type="text" placeholder="Guid..." value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-surface-base border border-surface-muted rounded py-1.5 px-2 text-xs font-mono"/>
                                                 ) : (
-                                                    <select value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-white border border-surface-muted rounded py-1.5 px-2 text-xs">
+                                                    <select value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-surface-base border border-surface-muted rounded py-1.5 px-2 text-xs">
                                                         <option value="">Rol Seç...</option>
                                                         {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                                     </select>
@@ -355,7 +355,7 @@ export const WorkflowDesigner: React.FC = () => {
                                                 <div className="relative">
                                                     <input type="checkbox" className="sr-only" checked={step.isParallel || false} onChange={e => handleUpdateStep(sIdx, { isParallel: e.target.checked })} />
                                                     <div className={`block w-8 h-4.5 rounded-full transition-colors ${step.isParallel ? 'bg-brand-primary' : 'bg-surface-muted'}`}></div>
-                                                    <div className={`absolute left-0.5 top-0.5 bg-white w-3.5 h-3.5 rounded-full transition-transform transform ${step.isParallel ? 'translate-x-3.5' : ''}`}></div>
+                                                    <div className={`absolute left-0.5 top-0.5 bg-surface-base w-3.5 h-3.5 rounded-full transition-transform transform ${step.isParallel ? 'translate-x-3.5' : ''}`}></div>
                                                 </div>
                                                 <span className="text-xs font-bold text-brand-dark group-hover:text-brand-primary">Paralel Onay</span>
                                             </label>
