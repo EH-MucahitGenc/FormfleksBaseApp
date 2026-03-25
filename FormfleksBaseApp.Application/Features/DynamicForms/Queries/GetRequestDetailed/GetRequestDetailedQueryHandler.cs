@@ -111,7 +111,7 @@ public sealed class GetRequestDetailedQueryHandler
 
                     if (fieldDef != null)
                     {
-                        if ((fieldDef.FieldType == 4 || fieldDef.FieldType == 7 || fieldDef.FieldType == 8) && !string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue))
+                        if (!string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue))
                         {
                             try 
                             {
@@ -120,7 +120,9 @@ public sealed class GetRequestDetailedQueryHandler
                                 {
                                     string searchVal = computedValue;
                                     int? searchIdx = null;
-                                    if (decimal.TryParse(computedValue, out var decVal))
+                                    
+                                    // Robust culture-independent parsing for 0,000000 and 0.000000
+                                    if (decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
                                     {
                                         if (decVal % 1 == 0) 
                                         {
@@ -132,28 +134,71 @@ public sealed class GetRequestDetailedQueryHandler
                                     int idx = 0;
                                     foreach (var item in doc.RootElement.EnumerateArray())
                                     {
-                                        string? optId = item.TryGetProperty("id", out var idProp) ? idProp.ToString() : 
-                                                        (item.TryGetProperty("Value", out var valProp) ? valProp.ToString() : null);
-                                        
-                                        string? optName = item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : 
-                                                          (item.TryGetProperty("Text", out var textProp) ? textProp.GetString() : null);
-
-                                        if (optId == searchVal || optId == computedValue || (searchIdx.HasValue && searchIdx.Value == idx && string.IsNullOrEmpty(optId)))
+                                        if (item.ValueKind == System.Text.Json.JsonValueKind.String)
                                         {
-                                            computedValue = optName ?? computedValue;
-                                            break;
+                                            string? strVal = item.GetString();
+                                            if (searchVal == strVal || (searchIdx.HasValue && searchIdx.Value == idx))
+                                            {
+                                                computedValue = strVal;
+                                                break;
+                                            }
+                                        }
+                                        else if (item.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                        {
+                                            string? optId = item.TryGetProperty("id", out var idProp) ? idProp.ToString() : 
+                                                            item.TryGetProperty("Id", out var idProp2) ? idProp2.ToString() : null;
+                                            
+                                            string? optName = item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : 
+                                                              item.TryGetProperty("Name", out var nameProp2) ? nameProp2.GetString() : 
+                                                              item.TryGetProperty("text", out var textProp) ? textProp.GetString() : 
+                                                              item.TryGetProperty("Text", out var textProp2) ? textProp2.GetString() : 
+                                                              item.TryGetProperty("value", out var valProp) ? valProp.GetString() : 
+                                                              item.TryGetProperty("Value", out var valProp2) ? valProp2.GetString() : null;
+
+                                            if (optId == searchVal || optId == computedValue || (searchIdx.HasValue && searchIdx.Value == idx && string.IsNullOrEmpty(optId)))
+                                            {
+                                                computedValue = optName ?? computedValue;
+                                                break;
+                                            }
                                         }
                                         idx++;
                                     }
                                 }
                             }
-                            catch { }
+                            catch (Exception)
+                            {
+                                // Fallback to comma-separated parsing if it's not valid JSON
+                                try 
+                                {
+                                    var fallbackParts = fieldDef.OptionsJson.Split(',').Select(s => s.Trim()).ToList();
+                                    string searchVal = computedValue;
+                                    int? searchIdx = null;
+                                    if (decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
+                                    {
+                                        if (decVal % 1 == 0) 
+                                        {
+                                            searchVal = ((int)decVal).ToString();
+                                            searchIdx = (int)decVal;
+                                        }
+                                    }
+
+                                    for(int i = 0; i < fallbackParts.Count; i++)
+                                    {
+                                        if (searchVal == fallbackParts[i] || (searchIdx.HasValue && searchIdx.Value == i))
+                                        {
+                                            computedValue = fallbackParts[i];
+                                            break;
+                                        }
+                                    }
+                                } 
+                                catch { }
+                            }
                         }
                         
-                        if ((fieldDef.FieldType == 5 || fieldDef.FieldType == 6 || fieldDef.FieldType == 7) && !string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, out var dt))
+                        if (!string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
                         {
-                            // FieldType in DB: 5=Date, 6=Time, 7=DateTime. If form says 7 for DateTime:
-                            if (fieldDef.FieldType == 5)
+                            // Output format depends on the type, defaulting to full DateTime if unknown
+                            if (fieldDef.FieldType == 4 || fieldDef.FieldType == 5)
                                 computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy");
                             else if (fieldDef.FieldType == 6)
                                 computedValue = dt.ToLocalTime().ToString("HH:mm");
