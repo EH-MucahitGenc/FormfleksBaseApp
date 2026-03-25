@@ -46,16 +46,34 @@ public sealed class GetRequestDetailedQueryHandler
             .OrderBy(x => x.StepNo)
             .ToListAsync(ct);
 
-        var approvalStepIds = approvals.Select(a => a.WorkflowStepId).ToList();
-        var workflowSteps = await _db.WorkflowSteps
+        var wfDef = await _db.WorkflowDefinitions
             .AsNoTracking()
-            .Where(s => approvalStepIds.Contains(s.Id))
-            .ToListAsync(ct);
+            .OrderByDescending(w => w.VersionNo)
+            .FirstOrDefaultAsync(w => w.FormTypeId == request.FormTypeId, ct);
+
+        var allWorkflowSteps = new List<FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity>();
+        if (wfDef != null)
+        {
+            allWorkflowSteps = await _db.WorkflowSteps
+                .AsNoTracking()
+                .Where(s => s.WorkflowDefinitionId == wfDef.Id)
+                .OrderBy(s => s.StepNo)
+                .ToListAsync(ct);
+        }
+        else 
+        {
+            var approvalStepIds = approvals.Select(a => a.WorkflowStepId).ToList();
+            allWorkflowSteps = await _db.WorkflowSteps
+                .AsNoTracking()
+                .Where(s => approvalStepIds.Contains(s.Id))
+                .OrderBy(s => s.StepNo)
+                .ToListAsync(ct);
+        }
 
         var actorUserIds = approvals.Select(a => a.ActionByUserId ?? a.AssigneeUserId).Where(x => x.HasValue).Select(x => x!.Value).ToList();
         var actors = await _db.QdmsPersoneller
             .AsNoTracking()
-            .Where(p => p.LinkedUserId.HasValue && actorUserIds.Contains(p.LinkedUserId.Value))
+            .Where(p => p.LinkedUserId.HasValue && (actorUserIds.Contains(p.LinkedUserId.Value) || p.LinkedUserId.Value == request.RequestorUserId))
             .ToListAsync(ct);
 
         var actorRoleIds = approvals.Select(a => a.AssigneeRoleId).Where(x => x.HasValue).Select(x => x!.Value).ToList();
@@ -81,29 +99,74 @@ public sealed class GetRequestDetailedQueryHandler
                     ?? v.ValueDateTime?.ToString("O")
                     ?? v.ValueBool?.ToString().ToLowerInvariant()
             }).ToList(),
-            Workflow = approvals.Select(a => {
+            Workflow = new List<FormRequestWorkflowStepDto> {
+                new FormRequestWorkflowStepDto {
+                    Step = "Formun Gönderilmesi",
+                    Status = "Submitted",
+                    Actor = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId) != null 
+                        ? $"{actors.First(p => p.LinkedUserId == request.RequestorUserId).Adi} {actors.First(p => p.LinkedUserId == request.RequestorUserId).Soyadi}" 
+                        : "Bilinmeyen Kullanıcı",
+                    Date = request.CreatedAt
+                }
+            }.Concat(allWorkflowSteps.Select(ws => {
+                var matchingApproval = approvals.FirstOrDefault(a => a.WorkflowStepId == ws.Id);
+                if (matchingApproval != null)
+                {
+                    string actorName = "Bilinmiyor";
+
+                    if (matchingApproval.ActionByUserId.HasValue || matchingApproval.AssigneeUserId.HasValue)
+                    {
+                        var targetUserId = matchingApproval.ActionByUserId ?? matchingApproval.AssigneeUserId;
+                        var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
+                        actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
+                    }
+                    else if (matchingApproval.AssigneeRoleId.HasValue)
+                    {
+                        var roleObj = roles.FirstOrDefault(r => r.Id == matchingApproval.AssigneeRoleId.Value);
+                        actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {matchingApproval.AssigneeRoleId.Value}";
+                    }
+
+                    return new FormRequestWorkflowStepDto
+                    {
+                        Step = ws.Name ?? $"Adım {matchingApproval.StepNo}",
+                        Status = ((ApprovalStatus)matchingApproval.Status).ToString(),
+                        Actor = actorName,
+                        Date = matchingApproval.ActionAt
+                    };
+                }
+                else
+                {
+                    return new FormRequestWorkflowStepDto
+                    {
+                        Step = ws.Name ?? $"Adım {ws.StepNo}",
+                        Status = "Future",
+                        Actor = "Bekleniyor",
+                        Date = null
+                    };
+                }
+            })).Concat(approvals.Where(a => !allWorkflowSteps.Any(ws => ws.Id == a.WorkflowStepId)).Select(matchingApproval => {
                 string actorName = "Bilinmiyor";
 
-                if (a.ActionByUserId.HasValue || a.AssigneeUserId.HasValue)
+                if (matchingApproval.ActionByUserId.HasValue || matchingApproval.AssigneeUserId.HasValue)
                 {
-                    var targetUserId = a.ActionByUserId ?? a.AssigneeUserId;
+                    var targetUserId = matchingApproval.ActionByUserId ?? matchingApproval.AssigneeUserId;
                     var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
                     actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
                 }
-                else if (a.AssigneeRoleId.HasValue)
+                else if (matchingApproval.AssigneeRoleId.HasValue)
                 {
-                    var roleObj = roles.FirstOrDefault(r => r.Id == a.AssigneeRoleId.Value);
-                    actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {a.AssigneeRoleId.Value}";
+                    var roleObj = roles.FirstOrDefault(r => r.Id == matchingApproval.AssigneeRoleId.Value);
+                    actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {matchingApproval.AssigneeRoleId.Value}";
                 }
 
                 return new FormRequestWorkflowStepDto
                 {
-                    Step = workflowSteps.FirstOrDefault(s => s.Id == a.WorkflowStepId)?.Name ?? $"Adım {a.StepNo}",
-                    Status = ((FormRequestStatus)a.Status).ToString(),
+                    Step = $"Eski Adım {matchingApproval.StepNo}",
+                    Status = ((ApprovalStatus)matchingApproval.Status).ToString(),
                     Actor = actorName,
-                    Date = a.ActionAt
+                    Date = matchingApproval.ActionAt
                 };
-            }).ToList()
+            })).ToList()
         };
     }
 }

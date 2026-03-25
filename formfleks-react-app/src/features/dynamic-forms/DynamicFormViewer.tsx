@@ -251,7 +251,7 @@ export const DynamicFormViewer: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] max-w-5xl mx-auto w-full">
+    <div className="flex flex-col h-[calc(100vh-8rem)] w-full">
       <div className="mb-4">
         <FfButton variant="ghost" className="mb-2 -ml-3" leftIcon={<ArrowLeft className="h-4 w-4"/>} onClick={() => navigate(-1)}>
           Geri

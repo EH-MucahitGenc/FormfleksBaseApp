@@ -19,6 +19,7 @@ export type PendingApprovalListItemDto = {
   approvalId: string;
   approvalConcurrencyToken: string;
   stepNo: number;
+  requestorName: string;
   createdAt: string;
 };
 

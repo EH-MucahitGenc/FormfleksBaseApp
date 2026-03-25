@@ -66,6 +66,7 @@ public sealed class PendingApprovalListItemDto
     public Guid? AssigneeUserId { get; set; }
     public Guid? AssigneeRoleId { get; set; }
     public Guid RequestorUserId { get; set; }
+    public string RequestorName { get; set; } = default!;
     public string FormTypeName { get; set; } = default!;
     public long ApprovalConcurrencyToken { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -119,7 +119,17 @@ export const FormDetail: React.FC = () => {
                     statusColor = 'border-status-success text-status-success';
                     Icon = CheckCircle;
                     statusText = 'Onaylandı';
-                  } else if (w.status === 'InApproval') {
+                  } else if (w.status === 'Submitted') {
+                    statusColor = 'border-brand-gray text-brand-dark';
+                    bgIcon = 'bg-surface-muted';
+                    Icon = FileText;
+                    statusText = 'Form Gönderildi';
+                  } else if (w.status === 'Future') {
+                    statusColor = 'border-surface-muted text-brand-gray/50';
+                    bgIcon = 'bg-surface-muted/50';
+                    Icon = Clock;
+                    statusText = 'Bekliyor (Gelecek Adım)';
+                  } else if (w.status === 'Pending') {
                     statusColor = 'border-brand-primary text-brand-primary';
                     bgIcon = 'bg-brand-primary/10';
                     statusText = 'Onay Bekliyor';
@@ -127,7 +137,7 @@ export const FormDetail: React.FC = () => {
                     statusColor = 'border-status-danger text-status-danger';
                     Icon = XCircle;
                     statusText = 'Reddedildi';
-                  } else if (w.status === 'Returned') {
+                  } else if (w.status === 'ReturnedForRevision') {
                     statusColor = 'border-status-warning text-status-warning';
                     Icon = CornerUpLeft;
                     statusText = 'İade Edildi';

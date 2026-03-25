@@ -47,6 +47,8 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
         var result = await (from app in _db.FormRequestApprovals.AsNoTracking()
                       join r in _db.FormRequests.AsNoTracking() on app.RequestId equals r.Id
                       join t in _db.FormTypes.AsNoTracking() on r.FormTypeId equals t.Id
+                      join p in _db.QdmsPersoneller.AsNoTracking() on r.RequestorUserId equals p.LinkedUserId into personeller
+                      from person in personeller.DefaultIfEmpty()
                       where app.Status == (short)ApprovalStatus.Pending
                       && (app.AssigneeUserId == request.ActorUserId || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value)))
                       orderby app.StepNo ascending, r.CreatedAt ascending
@@ -59,6 +61,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                           AssigneeUserId = app.AssigneeUserId,
                           AssigneeRoleId = app.AssigneeRoleId,
                           RequestorUserId = r.RequestorUserId,
+                          RequestorName = person != null ? person.Adi + " " + person.Soyadi : "Bilinmiyor",
                           FormTypeName = t.Name,
                           ApprovalConcurrencyToken = app.ConcurrencyToken,
                           CreatedAt = r.CreatedAt

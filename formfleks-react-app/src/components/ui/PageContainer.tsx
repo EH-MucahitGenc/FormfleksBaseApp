@@ -32,7 +32,7 @@ export const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps
         )}
         {...props}
       >
-        <div className="flex flex-col gap-6 w-full h-full max-w-7xl mx-auto">
+        <div className="flex flex-col gap-6 w-full h-full">
            {children}
         </div>
       </main>
