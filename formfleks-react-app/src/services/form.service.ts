@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/axios';
-export type RequestStatus = 1 | 2 | 3 | 4; // 1: Draft, 2: Pending, 3: Approved, 4: Rejected
+export type RequestStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7; // 1: Draft, 2: Submitted, 3: InApproval, 4: Approved, 5: Rejected, 6: Cancelled, 7: ReturnedForRevision
 
 export type MyFormRequestListItemDto = {
   requestId: string;
@@ -23,6 +23,18 @@ export type PendingApprovalListItemDto = {
   createdAt: string;
 };
 
+export type HistoryApprovalListItemDto = {
+  approvalId: string;
+  requestId: string;
+  requestNo: string;
+  formTypeName: string;
+  stepNo: number;
+  requestorUserId: string;
+  requestorName: string;
+  status: number;
+  processedAt: string;
+};
+
 export type ApprovalActionRequestDto = {
   requestId: string;
   approvalId: string;
@@ -43,6 +55,7 @@ export type FormRequestWorkflowStepDto = {
   status: string;
   actor: string;
   date?: string;
+  comment?: string;
 };
 
 export type FormRequestDetailedDto = {
@@ -66,6 +79,11 @@ class FormService {
 
   async getPendingApprovals(): Promise<PendingApprovalListItemDto[]> {
     const { data } = await apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending');
+    return data;
+  }
+
+  async getApprovalHistory(): Promise<HistoryApprovalListItemDto[]> {
+    const { data } = await apiClient.get<HistoryApprovalListItemDto[]>('/dynamic-forms/approvals/history');
     return data;
   }
 

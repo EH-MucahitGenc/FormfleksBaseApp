@@ -15,6 +15,7 @@ const MyForms = lazy(() => import('@/features/forms/MyForms').then(m => ({ defau
 const NewFormRequest = lazy(() => import('@/features/forms/NewFormRequest').then(m => ({ default: m.NewFormRequest })));
 const FormDetail = lazy(() => import('@/features/forms/FormDetail').then(m => ({ default: m.FormDetail })));
 const PendingApprovals = lazy(() => import('@/features/approvals/PendingApprovals').then(m => ({ default: m.PendingApprovals })));
+const ApprovalHistory = lazy(() => import('@/features/approvals/ApprovalHistory').then(m => ({ default: m.ApprovalHistory })));
 const VisitorManagement = lazy(() => import('@/features/visitors/VisitorManagement').then(m => ({ default: m.VisitorManagement })));
 const DynamicFormViewer = lazy(() => import('@/features/dynamic-forms/DynamicFormViewer').then(m => ({ default: m.DynamicFormViewer })));
 const Users = lazy(() => import('@/features/admin/Users').then(m => ({ default: m.Users })));
@@ -74,7 +75,13 @@ export const router = createBrowserRouter([
               { path: ':id', element: <Suspense fallback={<PageFallback />}><FormDetail /></Suspense> }
             ]
           },
-          { path: 'approvals', element: <Suspense fallback={<PageFallback />}><PendingApprovals /></Suspense> },
+          {
+            path: 'approvals',
+            children: [
+              { path: '', element: <Suspense fallback={<PageFallback />}><PendingApprovals /></Suspense> },
+              { path: 'history', element: <Suspense fallback={<PageFallback />}><ApprovalHistory /></Suspense> }
+            ]
+          },
           { path: 'visitors', element: <Suspense fallback={<PageFallback />}><VisitorManagement /></Suspense> },
           {
             element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin']} />,

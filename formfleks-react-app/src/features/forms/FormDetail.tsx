@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
-import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info } from 'lucide-react';
 import { FfButton } from '@/components/ui/index';
 import { useFormDetail, usePendingApprovals, useApprovalAction } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -10,11 +12,19 @@ import { FfEmptyState } from '@/components/shared/FfEmptyState';
 export const FormDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
   const { data, isLoading, isError } = useFormDetail(id || '');
   const { data: pendingApprovals } = usePendingApprovals();
   const approvalMutation = useApprovalAction();
+  
+  const [modalState, setModalState] = useState<{ isOpen: boolean; actionType: 1 | 2 | 3 }>({
+    isOpen: false,
+    actionType: 1
+  });
+  const [comment, setComment] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
 
   const activeApproval = pendingApprovals?.find(p => p.requestId === id);
 
@@ -44,21 +54,48 @@ export const FormDetail: React.FC = () => {
 
   if (!data) return null;
 
-  const handleAction = async (actionType: 1 | 2 | 3) => {
-    if (!activeApproval) return;
-    
-    // In a real scenario, you'd open a modal for Reject/Return comments
-    const comment = actionType !== 1 ? prompt('Lütfen bir açıklama giriniz:') : undefined;
-    if (actionType !== 1 && !comment) return;
+  const openModal = (actionType: 1 | 2 | 3) => {
+    setModalState({ isOpen: true, actionType });
+    setComment('');
+    setMessage(null);
+  };
 
-    approvalMutation.mutate({
-      requestId: activeApproval.requestId,
-      approvalId: activeApproval.approvalId,
-      actorUserId: user?.id || '',
-      approvalConcurrencyToken: activeApproval.approvalConcurrencyToken,
-      actionType,
-      comment: comment || undefined
-    });
+  const closeModal = () => {
+    setModalState({ isOpen: false, actionType: 1 });
+    setComment('');
+  };
+
+  const handleAction = async () => {
+    if (!activeApproval) return;
+
+    approvalMutation.mutate(
+      {
+        requestId: activeApproval.requestId,
+        approvalId: activeApproval.approvalId,
+        actorUserId: user?.id || '',
+        approvalConcurrencyToken: activeApproval.approvalConcurrencyToken,
+        actionType: modalState.actionType,
+        comment: comment || undefined
+      },
+      {
+        onSuccess: () => {
+          setMessage(
+            modalState.actionType === 1 ? 'Talep başarıyla onaylandı.' :
+            modalState.actionType === 2 ? 'Talep reddedildi.' : 'Talep revizyona iade edildi.'
+          );
+          queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
+          queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
+          closeModal();
+        }
+      }
+    );
+  };
+
+  const isCommentValid = () => {
+    if (modalState.actionType === 2 || modalState.actionType === 3) {
+      return comment.trim().length > 0;
+    }
+    return true;
   };
 
   return (
@@ -81,7 +118,7 @@ export const FormDetail: React.FC = () => {
             ]}
           />
         </div>
-        {data.status === 1 && data.formTypeCode && (
+        {(data.status === 1 || data.status === 7) && data.formTypeCode && (
           <FfButton 
             variant="primary" 
             leftIcon={<Edit className="h-4 w-4" />}
@@ -184,6 +221,11 @@ export const FormDetail: React.FC = () => {
                             Tarih: <span className="font-medium">{new Date(w.date).toLocaleString('tr-TR')}</span>
                           </div>
                         )}
+                        {w.comment && (
+                          <div className="mt-2 text-xs text-brand-dark bg-brand-gray/5 p-2 rounded-md border border-brand-gray/10 italic">
+                            <span className="font-semibold not-italic text-brand-gray">Not:</span> {w.comment}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -197,14 +239,20 @@ export const FormDetail: React.FC = () => {
             {/* Aksiyon Butonları (Eğer aktif onayı varsa) */}
             {activeApproval && (
               <div className="mt-8 pt-6 border-t border-surface-muted space-y-3">
+                {message && (
+                  <div className="p-3 mb-2 rounded-lg bg-status-info/10 border border-status-info/20 text-status-info flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <span className="font-medium text-xs">{message}</span>
+                  </div>
+                )}
                 <h4 className="text-sm font-bold text-brand-dark">Size Atanmış İşlem</h4>
                 <div className="flex flex-col gap-2">
                   <FfButton 
                     variant="primary" 
                     className="w-full justify-center"
                     leftIcon={<Check className="h-4 w-4" />}
-                    onClick={() => handleAction(1)}
-                    isLoading={approvalMutation.isPending}
+                    onClick={() => openModal(1)}
+                    disabled={approvalMutation.isPending}
                   >
                     Onayla
                   </FfButton>
@@ -213,7 +261,7 @@ export const FormDetail: React.FC = () => {
                       variant="danger" 
                       className="flex-1 justify-center"
                       leftIcon={<X className="h-4 w-4" />}
-                      onClick={() => handleAction(2)}
+                      onClick={() => openModal(2)}
                       disabled={approvalMutation.isPending}
                     >
                       Reddet
@@ -222,7 +270,7 @@ export const FormDetail: React.FC = () => {
                       variant="outline" 
                       className="flex-1 justify-center"
                       leftIcon={<CornerUpLeft className="h-4 w-4" />}
-                      onClick={() => handleAction(3)}
+                      onClick={() => openModal(3)}
                       disabled={approvalMutation.isPending}
                     >
                       İade Et
@@ -234,6 +282,73 @@ export const FormDetail: React.FC = () => {
           </GlassCard>
         </div>
       </div>
+      
+      {/* Action Modal with React Portal */}
+      {modalState.isOpen && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-brand-dark/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            <div className={`px-6 py-4 border-b flex items-center gap-3 ${
+              modalState.actionType === 1 ? 'bg-status-success/5 border-status-success/20' :
+              modalState.actionType === 2 ? 'bg-status-danger/5 border-status-danger/20' :
+              'bg-status-warning/5 border-status-warning/20'
+            }`}>
+              <div className={`p-2 rounded-full ${
+                modalState.actionType === 1 ? 'bg-status-success/20 text-status-success' :
+                modalState.actionType === 2 ? 'bg-status-danger/20 text-status-danger' :
+                'bg-status-warning/20 text-status-warning'
+              }`}>
+                {modalState.actionType === 1 && <Check className="h-5 w-5" />}
+                {modalState.actionType === 2 && <X className="h-5 w-5" />}
+                {modalState.actionType === 3 && <CornerUpLeft className="h-5 w-5" />}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-brand-dark">
+                  {modalState.actionType === 1 ? 'Onayla' : modalState.actionType === 2 ? 'Reddet' : 'İade Et'}
+                </h3>
+                <p className="text-xs text-brand-gray">{data.requestNo} numaralı talep</p>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-brand-dark flex items-center gap-1.5">
+                  Yorum / Açıklama
+                  {modalState.actionType === 1 ? (
+                    <span className="text-xs font-normal text-brand-gray/60">(Opsiyonel)</span>
+                  ) : (
+                    <span className="text-xs font-medium text-status-danger">* Zorunlu</span>
+                  )}
+                </label>
+                <textarea
+                  className="w-full h-24 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all resize-none"
+                  placeholder="İşlem nedenini buraya yazabilirsiniz..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-surface-muted/50 border-t flex justify-end gap-3">
+              <FfButton 
+                variant="outline" 
+                onClick={closeModal}
+                disabled={approvalMutation.isPending}
+              >
+                Vazgeç
+              </FfButton>
+              <FfButton 
+                variant={modalState.actionType === 1 ? 'primary' : modalState.actionType === 2 ? 'danger' : 'secondary'}
+                onClick={handleAction}
+                disabled={!isCommentValid() || approvalMutation.isPending}
+                isLoading={approvalMutation.isPending}
+              >
+                {approvalMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+              </FfButton>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </PageContainer>
   );
 };

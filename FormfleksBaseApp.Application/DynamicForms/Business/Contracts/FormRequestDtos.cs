@@ -97,6 +97,7 @@ public sealed class FormRequestWorkflowStepDto
     public string Status { get; set; } = default!;
     public string Actor { get; set; } = default!;
     public DateTime? Date { get; set; }
+    public string? Comment { get; set; }
 }
 
 public sealed record MyFormRequestDto

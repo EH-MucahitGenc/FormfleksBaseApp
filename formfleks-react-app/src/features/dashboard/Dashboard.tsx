@@ -107,8 +107,8 @@ export const Dashboard: React.FC = () => {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard title="Bekleyen Onaylarım" value={stats?.pendingApprovalsCount || 0} icon={Clock} colorClass="text-status-warning bg-status-warning/10" urgent={(stats?.pendingApprovalsCount || 0) > 0} onClick={() => navigate('/approvals')} />
-          <StatCard title="Onay Verdiklerim" value={stats?.approvedByMeCount || 0} icon={CheckCircle} colorClass="text-status-success bg-status-success/10" />
-          <StatCard title="Reddettiklerim" value={stats?.rejectedByMeCount || 0} icon={XCircle} colorClass="text-status-danger bg-status-danger/10" />
+          <StatCard title="Onay Verdiklerim" value={stats?.approvedByMeCount || 0} icon={CheckCircle} colorClass="text-status-success bg-status-success/10" onClick={() => navigate('/approvals/history?status=approved')} />
+          <StatCard title="Reddettiklerim" value={stats?.rejectedByMeCount || 0} icon={XCircle} colorClass="text-status-danger bg-status-danger/10" onClick={() => navigate('/approvals/history?status=rejected')} />
         </div>
       </div>
 
@@ -117,11 +117,12 @@ export const Dashboard: React.FC = () => {
         <h2 className="text-sm font-bold text-brand-dark mb-3 flex items-center gap-2">
           <FileText className="w-4 h-4 text-brand-primary" /> Kendi Taleplerim
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard title="Toplam Talebim" value={stats?.totalFormsSubmitted || 0} icon={FileText} colorClass="text-brand-gray bg-surface-muted" onClick={() => navigate('/forms')} />
           <StatCard title="Onay Sürecindekiler" value={stats?.inProgressFormsCount || 0} icon={TrendingUp} colorClass="text-brand-primary bg-brand-primary/10" onClick={() => navigate('/forms?status=pending')} />
           <StatCard title="Onaylananlar" value={stats?.approvedFormsCount || 0} icon={CheckCircle} colorClass="text-status-success bg-status-success/10" onClick={() => navigate('/forms?status=approved')} />
           <StatCard title="Reddedilenler" value={stats?.rejectedFormsCount || 0} icon={XCircle} colorClass="text-status-danger bg-status-danger/10" onClick={() => navigate('/forms?status=rejected')} />
+          <StatCard title="İade Edilenler" value={stats?.returnedFormsCount || 0} icon={TrendingUp} colorClass="text-status-warning bg-status-warning/10" onClick={() => navigate('/forms?status=returned')} />
         </div>
       </div>
 

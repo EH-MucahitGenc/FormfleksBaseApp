@@ -15,6 +15,7 @@ export const MyForms: React.FC = () => {
   else if (statusQuery === 'pending') defaultStatusFilter = 3;
   else if (statusQuery === 'approved') defaultStatusFilter = 4;
   else if (statusQuery === 'rejected') defaultStatusFilter = 5;
+  else if (statusQuery === 'returned') defaultStatusFilter = 7;
 
   const statusRenderer = (data: { data: MyFormRequestListItemDto }) => {
     switch (data.data.status) {

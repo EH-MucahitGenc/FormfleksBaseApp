@@ -115,6 +115,63 @@ public sealed class GetRequestDetailedQueryHandler
             .Where(r => actorRoleIds.Contains(r.Id))
             .ToListAsync(ct);
 
+        var timeline = new List<FormRequestWorkflowStepDto> {
+            new FormRequestWorkflowStepDto {
+                Step = "Formun Gönderilmesi",
+                Status = "Submitted",
+                Actor = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId) != null 
+                    ? $"{actors.First(p => p.LinkedUserId == request.RequestorUserId).Adi} {actors.First(p => p.LinkedUserId == request.RequestorUserId).Soyadi}" 
+                    : "Bilinmeyen Kullanıcı",
+                Date = request.CreatedAt
+            }
+        };
+
+        foreach (var app in approvals.OrderBy(a => a.Id))
+        {
+            var ws = allWorkflowSteps.FirstOrDefault(s => s.Id == app.WorkflowStepId);
+            string actorName = "Bilinmiyor";
+
+            if (app.ActionByUserId.HasValue || app.AssigneeUserId.HasValue)
+            {
+                var targetUserId = app.ActionByUserId ?? app.AssigneeUserId;
+                var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
+                actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
+            }
+            else if (app.AssigneeRoleId.HasValue)
+            {
+                var roleObj = roles.FirstOrDefault(r => r.Id == app.AssigneeRoleId.Value);
+                actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {app.AssigneeRoleId.Value}";
+            }
+
+            timeline.Add(new FormRequestWorkflowStepDto
+            {
+                Step = ws?.Name ?? $"Adım {app.StepNo}",
+                Status = ((ApprovalStatus)app.Status).ToString(),
+                Actor = actorName,
+                Date = app.ActionAt,
+                Comment = app.ActionComment
+            });
+        }
+
+        // Add Future Steps
+        var lastApp = approvals.OrderByDescending(a => a.Id).FirstOrDefault();
+        // If the workflow is completely done (approved/rejected/returned), no future steps are pending in this active cycle
+        if (request.Status == (short)FormRequestStatus.InApproval || request.Status == (short)FormRequestStatus.Draft)
+        {
+            int currentStepNo = lastApp?.StepNo ?? 0;
+            var futureSteps = allWorkflowSteps.Where(s => s.StepNo > currentStepNo).OrderBy(s => s.StepNo);
+            foreach (var fs in futureSteps)
+            {
+                timeline.Add(new FormRequestWorkflowStepDto
+                {
+                    Step = fs.Name ?? $"Adım {fs.StepNo}",
+                    Status = "Future",
+                    Actor = "Bekleniyor",
+                    Date = null
+                });
+            }
+        }
+
         return new FormRequestDetailedDto
         {
             RequestId = request.Id,
@@ -144,7 +201,6 @@ public sealed class GetRequestDetailedQueryHandler
                                     string searchVal = computedValue;
                                     int? searchIdx = null;
                                     
-                                    // Robust culture-independent parsing for 0,000000 and 0.000000
                                     if (decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
                                     {
                                         if (decVal % 1 == 0) 
@@ -190,7 +246,6 @@ public sealed class GetRequestDetailedQueryHandler
                             }
                             catch (Exception)
                             {
-                                // Fallback to comma-separated parsing if it's not valid JSON
                                 try 
                                 {
                                     var fallbackParts = fieldDef.OptionsJson.Split(',').Select(s => s.Trim()).ToList();
@@ -220,7 +275,6 @@ public sealed class GetRequestDetailedQueryHandler
                         
                         if (!string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
                         {
-                            // Output format depends on the type, defaulting to full DateTime if unknown
                             if (fieldDef.FieldType == 4 || fieldDef.FieldType == 5)
                                 computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy");
                             else if (fieldDef.FieldType == 6)
@@ -237,74 +291,7 @@ public sealed class GetRequestDetailedQueryHandler
                         ValueText = computedValue
                     };
                 }).ToList(),
-            Workflow = new List<FormRequestWorkflowStepDto> {
-                new FormRequestWorkflowStepDto {
-                    Step = "Formun Gönderilmesi",
-                    Status = "Submitted",
-                    Actor = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId) != null 
-                        ? $"{actors.First(p => p.LinkedUserId == request.RequestorUserId).Adi} {actors.First(p => p.LinkedUserId == request.RequestorUserId).Soyadi}" 
-                        : "Bilinmeyen Kullanıcı",
-                    Date = request.CreatedAt
-                }
-            }.Concat(allWorkflowSteps.Select(ws => {
-                var matchingApproval = approvals.FirstOrDefault(a => a.WorkflowStepId == ws.Id);
-                if (matchingApproval != null)
-                {
-                    string actorName = "Bilinmiyor";
-
-                    if (matchingApproval.ActionByUserId.HasValue || matchingApproval.AssigneeUserId.HasValue)
-                    {
-                        var targetUserId = matchingApproval.ActionByUserId ?? matchingApproval.AssigneeUserId;
-                        var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
-                        actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
-                    }
-                    else if (matchingApproval.AssigneeRoleId.HasValue)
-                    {
-                        var roleObj = roles.FirstOrDefault(r => r.Id == matchingApproval.AssigneeRoleId.Value);
-                        actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {matchingApproval.AssigneeRoleId.Value}";
-                    }
-
-                    return new FormRequestWorkflowStepDto
-                    {
-                        Step = ws.Name ?? $"Adım {matchingApproval.StepNo}",
-                        Status = ((ApprovalStatus)matchingApproval.Status).ToString(),
-                        Actor = actorName,
-                        Date = matchingApproval.ActionAt
-                    };
-                }
-                else
-                {
-                    return new FormRequestWorkflowStepDto
-                    {
-                        Step = ws.Name ?? $"Adım {ws.StepNo}",
-                        Status = "Future",
-                        Actor = "Bekleniyor",
-                        Date = null
-                    };
-                }
-            })).Concat(approvals.Where(a => !allWorkflowSteps.Any(ws => ws.Id == a.WorkflowStepId)).Select(matchingApproval => {
-                string actorName = "Bilinmiyor";
-
-                if (matchingApproval.ActionByUserId.HasValue || matchingApproval.AssigneeUserId.HasValue)
-                {
-                    var targetUserId = matchingApproval.ActionByUserId ?? matchingApproval.AssigneeUserId;
-                    var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
-                    actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
-                }
-                else if (matchingApproval.AssigneeRoleId.HasValue)
-                {
-                    var roleObj = roles.FirstOrDefault(r => r.Id == matchingApproval.AssigneeRoleId.Value);
-                    actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {matchingApproval.AssigneeRoleId.Value}";
-                }
-
-                return new FormRequestWorkflowStepDto
-                {
-                    Step = $"Eski Adım {matchingApproval.StepNo}",
-                    Status = ((ApprovalStatus)matchingApproval.Status).ToString(),
-                    Actor = actorName,
-                    Date = matchingApproval.ActionAt
-                };
-            })).ToList()
+            Workflow = timeline
         };
     }
 }

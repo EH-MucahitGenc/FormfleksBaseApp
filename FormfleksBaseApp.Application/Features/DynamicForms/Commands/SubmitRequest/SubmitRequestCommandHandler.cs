@@ -40,8 +40,8 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             .FirstOrDefaultAsync(r => r.Id == dto.RequestId, ct)
             ?? throw new BusinessException("Kayıt bulunamadı.");
 
-        if (req.Status != (short)FormRequestStatus.Draft)
-            throw new BusinessException("Sadece taslak (Draft) durumundaki formlar onaya gönderilebilir.");
+        if (req.Status != (short)FormRequestStatus.Draft && req.Status != (short)FormRequestStatus.ReturnedForRevision)
+            throw new BusinessException("Sadece taslak (Draft) veya iade edilmiş (ReturnedForRevision) durumundaki formlar onaya gönderilebilir.");
 
         // Aktif workflow bul
         var wfDef = await _db.WorkflowDefinitions

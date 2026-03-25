@@ -32,8 +32,8 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
                 .FirstOrDefaultAsync(r => r.Id == dto.RequestId.Value, ct)
                 ?? throw new BusinessException("Kayıt bulunamadı.");
 
-            if (req.Status != (short)FormRequestStatus.Draft)
-                throw new BusinessException("Sadece taslak (Draft) durumundaki talepler güncellenebilir.");
+            if (req.Status != (short)FormRequestStatus.Draft && req.Status != (short)FormRequestStatus.ReturnedForRevision)
+                throw new BusinessException("Sadece taslak (Draft) veya iade edilmiş durumundaki talepler güncellenebilir.");
             if (req.RequestorUserId != dto.RequestorUserId)
                 throw new BusinessException("Bu talebi güncelleme yetkiniz yok.");
 
