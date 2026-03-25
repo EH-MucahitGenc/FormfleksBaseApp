@@ -47,10 +47,11 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
   const gridRef = useRef<any>(null);
 
   // TanStack Query for seamless server state management
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey,
     queryFn: fetchFn,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    // By default staleTime is 0, which means instant background refetching on mount.
+    // This solves grid caching problems like invisible new approvals.
   });
 
   const handleRowClick = useCallback((e: any) => {

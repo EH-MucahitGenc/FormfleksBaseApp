@@ -78,22 +78,24 @@ export const FormDetail: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <GlassCard noPadding className="p-6">
-            <h3 className="text-lg font-bold text-brand-dark mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-brand-dark mb-4 pb-3 border-b border-surface-muted flex items-center gap-2">
               <FileText className="h-5 w-5 text-brand-primary" />
               Form İçeriği
             </h3>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-2">
               {data.values && data.values.length > 0 ? (
                 data.values.map((f: any, i: number) => (
-                  <div key={i} className="pb-4 border-b border-surface-muted last:border-0 last:pb-0">
-                    <span className="block text-xs font-semibold text-brand-gray uppercase tracking-wider mb-1">
+                  <div key={i} className="group">
+                    <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
                       {f.label || f.fieldKey}
                     </span>
-                    <span className="text-sm font-medium text-brand-dark">{f.valueText || 'Belirtilmedi'}</span>
+                    <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10">
+                      {f.valueText || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="py-6 text-center text-sm font-medium text-brand-gray">
+                <div className="col-span-full py-8 text-center text-sm font-medium text-brand-gray bg-surface-muted/20 rounded-lg border border-dashed border-brand-gray/30">
                   Bu forma ait girilmiş bir veri bulunmuyor.
                 </div>
               )}
@@ -113,28 +115,34 @@ export const FormDetail: React.FC = () => {
                   let statusColor = 'border-surface-muted text-brand-gray';
                   let bgIcon = 'bg-white';
                   let Icon = Clock;
-                  let statusText = 'Bekliyor';
+                  let statusText = 'İşlem Sırada';
+                  
+                  let stepName = w.step;
+                  if (stepName.startsWith('Eski Adım')) {
+                     stepName = stepName.replace('Eski Adım', 'Önceki İşlem');
+                     statusColor = 'border-surface-muted text-brand-gray/50';
+                  }
 
                   if (w.status === 'Approved') {
                     statusColor = 'border-status-success text-status-success';
                     Icon = CheckCircle;
-                    statusText = 'Onaylandı';
+                    statusText = 'Onaylandı / Tamamlandı';
                   } else if (w.status === 'Submitted') {
                     statusColor = 'border-brand-gray text-brand-dark';
                     bgIcon = 'bg-surface-muted';
                     Icon = FileText;
                     statusText = 'Form Gönderildi';
                   } else if (w.status === 'Future') {
-                    statusColor = 'border-surface-muted text-brand-gray/50';
-                    bgIcon = 'bg-surface-muted/50';
+                    statusColor = 'border-surface-muted text-brand-gray/40';
+                    bgIcon = 'bg-surface-muted/30';
                     Icon = Clock;
-                    statusText = 'Bekliyor (Gelecek Adım)';
+                    statusText = 'Sırada Bekliyor';
                   } else if (w.status === 'Pending') {
                     statusColor = 'border-brand-primary text-brand-primary';
                     bgIcon = 'bg-brand-primary/10';
                     statusText = 'Onay Bekliyor';
                   } else if (w.status === 'Rejected') {
-                    statusColor = 'border-status-danger text-status-danger';
+                    statusColor = 'border-status-danger text-status-danger text-bold';
                     Icon = XCircle;
                     statusText = 'Reddedildi';
                   } else if (w.status === 'ReturnedForRevision') {
@@ -144,19 +152,19 @@ export const FormDetail: React.FC = () => {
                   }
 
                   return (
-                    <div key={idx} className="relative">
-                      <div className={`absolute -left-[31px] top-1 p-1 rounded-full ${bgIcon} border-2 ${statusColor}`}>
+                    <div key={idx} className={`relative ${w.status === 'Future' ? 'opacity-70' : ''}`}>
+                      <div className={`absolute -left-[31px] top-1 p-1 rounded-full ${bgIcon} border-2 ${statusColor} shadow-sm`}>
                         <Icon className="h-3 w-3" />
                       </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-brand-dark">{w.step}</h4>
-                        <div className="text-xs font-semibold text-brand-gray mb-1">{statusText}</div>
+                      <div className="bg-white p-3 rounded-md border border-surface-muted shadow-sm mb-4">
+                        <h4 className={`text-sm font-extrabold ${w.status === 'Future' ? 'text-brand-gray/80' : 'text-brand-dark'}`}>{stepName}</h4>
+                        <div className={`text-xs font-bold mb-2 inline-block px-2 py-0.5 mt-1 rounded-full border ${statusColor} bg-white`}>{statusText}</div>
                         <div className="text-xs text-brand-gray mt-1">
-                          Sorumlu: <span className="font-medium text-brand-dark">{w.actor}</span>
+                          Sorumlu: <span className="font-semibold text-brand-dark">{w.actor}</span>
                         </div>
                         {w.date && (
                           <div className="text-xs text-brand-gray mt-0.5">
-                            Tarih: {new Date(w.date).toLocaleString('tr-TR')}
+                            Tarih: <span className="font-medium">{new Date(w.date).toLocaleString('tr-TR')}</span>
                           </div>
                         )}
                       </div>

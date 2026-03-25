@@ -3,6 +3,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@/index.css';
+import 'devextreme/dist/css/dx.light.css';
+import '@/components/dev-extreme/dx-overrides.css';
 import '@/lib/zod-tr'; // Initialize global Zod localization
 
 // DevExtreme Localization

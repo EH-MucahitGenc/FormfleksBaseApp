@@ -46,10 +46,20 @@ public sealed class GetRequestDetailedQueryHandler
             .OrderBy(x => x.StepNo)
             .ToListAsync(ct);
 
-        var wfDef = await _db.WorkflowDefinitions
-            .AsNoTracking()
-            .OrderByDescending(w => w.VersionNo)
-            .FirstOrDefaultAsync(w => w.FormTypeId == request.FormTypeId, ct);
+        Guid? resolvedWfDefId = null;
+        var firstApproval = approvals.FirstOrDefault();
+        if (firstApproval != null)
+        {
+            var step = await _db.WorkflowSteps.AsNoTracking().FirstOrDefaultAsync(s => s.Id == firstApproval.WorkflowStepId, ct);
+            if (step != null)
+            {
+                resolvedWfDefId = step.WorkflowDefinitionId;
+            }
+        }
+
+        var wfDef = resolvedWfDefId.HasValue 
+            ? await _db.WorkflowDefinitions.AsNoTracking().FirstOrDefaultAsync(w => w.Id == resolvedWfDefId.Value, ct)
+            : await _db.WorkflowDefinitions.AsNoTracking().OrderByDescending(w => w.VersionNo).FirstOrDefaultAsync(w => w.FormTypeId == request.FormTypeId, ct);
 
         var allWorkflowSteps = new List<FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity>();
         if (wfDef != null)
@@ -90,15 +100,75 @@ public sealed class GetRequestDetailedQueryHandler
             FormTypeName = formType?.Name ?? "",
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
-            Values = values.Select(v => new FormRequestValueDto
-            {
-                FieldKey = v.FieldKey,
-                Label = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey)?.Label ?? v.FieldKey,
-                ValueText = v.ValueText
-                    ?? v.ValueNumber?.ToString()
-                    ?? v.ValueDateTime?.ToString("O")
-                    ?? v.ValueBool?.ToString().ToLowerInvariant()
-            }).ToList(),
+            Values = values
+                .OrderBy(v => formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey)?.SortOrder ?? 9999)
+                .Select(v => {
+                    var fieldDef = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey);
+                    string? computedValue = v.ValueText
+                        ?? v.ValueNumber?.ToString()
+                        ?? v.ValueDateTime?.ToString("O")
+                        ?? v.ValueBool?.ToString().ToLowerInvariant();
+
+                    if (fieldDef != null)
+                    {
+                        if ((fieldDef.FieldType == 4 || fieldDef.FieldType == 7 || fieldDef.FieldType == 8) && !string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue))
+                        {
+                            try 
+                            {
+                                using var doc = System.Text.Json.JsonDocument.Parse(fieldDef.OptionsJson);
+                                if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    string searchVal = computedValue;
+                                    int? searchIdx = null;
+                                    if (decimal.TryParse(computedValue, out var decVal))
+                                    {
+                                        if (decVal % 1 == 0) 
+                                        {
+                                            searchVal = ((int)decVal).ToString();
+                                            searchIdx = (int)decVal;
+                                        }
+                                    }
+
+                                    int idx = 0;
+                                    foreach (var item in doc.RootElement.EnumerateArray())
+                                    {
+                                        string? optId = item.TryGetProperty("id", out var idProp) ? idProp.ToString() : 
+                                                        (item.TryGetProperty("Value", out var valProp) ? valProp.ToString() : null);
+                                        
+                                        string? optName = item.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : 
+                                                          (item.TryGetProperty("Text", out var textProp) ? textProp.GetString() : null);
+
+                                        if (optId == searchVal || optId == computedValue || (searchIdx.HasValue && searchIdx.Value == idx && string.IsNullOrEmpty(optId)))
+                                        {
+                                            computedValue = optName ?? computedValue;
+                                            break;
+                                        }
+                                        idx++;
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                        
+                        if ((fieldDef.FieldType == 5 || fieldDef.FieldType == 6 || fieldDef.FieldType == 7) && !string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, out var dt))
+                        {
+                            // FieldType in DB: 5=Date, 6=Time, 7=DateTime. If form says 7 for DateTime:
+                            if (fieldDef.FieldType == 5)
+                                computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy");
+                            else if (fieldDef.FieldType == 6)
+                                computedValue = dt.ToLocalTime().ToString("HH:mm");
+                            else 
+                                computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+                        }
+                    }
+
+                    return new FormRequestValueDto
+                    {
+                        FieldKey = v.FieldKey,
+                        Label = fieldDef?.Label ?? v.FieldKey,
+                        ValueText = computedValue
+                    };
+                }).ToList(),
             Workflow = new List<FormRequestWorkflowStepDto> {
                 new FormRequestWorkflowStepDto {
                     Step = "Formun Gönderilmesi",
