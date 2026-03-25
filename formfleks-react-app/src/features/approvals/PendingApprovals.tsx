@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { formService, type PendingApprovalListItemDto } from '@/services/form.service';
-import { Check, X, CornerUpLeft, Info } from 'lucide-react';
+import { Check, X, CornerUpLeft, Info, Eye } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const PendingApprovals: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [modalState, setModalState] = useState<{ isOpen: boolean; item: PendingApprovalListItemDto | null; actionType: 1 | 2 | 3 }>({
     isOpen: false,
@@ -63,7 +65,13 @@ export const PendingApprovals: React.FC = () => {
   };
 
   const actionRenderer = ({ data }: any) => (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
+      <button 
+        onClick={() => navigate(`/forms/${data.requestId}`)}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
+      >
+        <Eye className="h-3.5 w-3.5" /> İncele
+      </button>
       <button 
         onClick={() => openModal(data, 1)}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-status-success/10 text-status-success hover:bg-status-success/20 transition-colors border border-status-success/20"
@@ -92,7 +100,12 @@ export const PendingApprovals: React.FC = () => {
   );
 
   const requestNoRenderer = ({ data }: any) => (
-    <span className="font-medium text-brand-dark">{data.requestNo}</span>
+    <button 
+      onClick={() => navigate(`/forms/${data.requestId}`)}
+      className="font-bold text-brand-primary hover:text-brand-accent hover:underline transition-colors"
+    >
+      {data.requestNo}
+    </button>
   );
 
   const dateRenderer = ({ data }: any) => {

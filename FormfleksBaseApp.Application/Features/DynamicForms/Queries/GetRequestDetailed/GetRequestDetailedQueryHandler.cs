@@ -23,8 +23,20 @@ public sealed class GetRequestDetailedQueryHandler
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == query.RequestId, ct);
 
-        if (request is null || request.RequestorUserId != query.RequestorUserId)
+        if (request is null)
             return null;
+
+        bool isAuthorized = request.RequestorUserId == query.RequestorUserId;
+
+        // If not the creator, check if they are an assigned approver
+        if (!isAuthorized)
+        {
+            bool isApprover = await _db.FormRequestApprovals
+                .AnyAsync(a => a.RequestId == query.RequestId && a.AssigneeUserId == query.RequestorUserId, ct);
+            
+            if (!isApprover)
+                return null; // 404 Not Found (Unauthorized)
+        }
 
         var formType = await _db.FormTypes
             .AsNoTracking()
