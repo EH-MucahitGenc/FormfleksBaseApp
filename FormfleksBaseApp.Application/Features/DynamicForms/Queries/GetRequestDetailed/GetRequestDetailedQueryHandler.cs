@@ -31,8 +31,19 @@ public sealed class GetRequestDetailedQueryHandler
         // If not the creator, check if they are an assigned approver
         if (!isAuthorized)
         {
+            var userRoleIds = await _db.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.UserId == query.RequestorUserId)
+                .Select(ur => ur.RoleId)
+                .ToListAsync(ct);
+
             bool isApprover = await _db.FormRequestApprovals
-                .AnyAsync(a => a.RequestId == query.RequestId && a.AssigneeUserId == query.RequestorUserId, ct);
+                .AnyAsync(a => a.RequestId == query.RequestId && 
+                    (
+                        a.AssigneeUserId == query.RequestorUserId || 
+                        a.ActionByUserId == query.RequestorUserId ||
+                        (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value))
+                    ), ct);
             
             if (!isApprover)
                 return null; // 404 Not Found (Unauthorized)

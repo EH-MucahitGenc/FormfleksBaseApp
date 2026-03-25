@@ -120,7 +120,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                await NotifyNextAssigneeAsync(assignedUser, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
+                await NotifyNextAssigneeAsync(assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
             }
         }
 
@@ -140,24 +140,50 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return new ApprovalActionResponseDto { Success = true };
     }
     
-    private async Task NotifyNextAssigneeAsync(Guid? assignedUserId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
     {
-        if (!assignedUserId.HasValue) return;
+        var targetList = new List<(string Email, string Name)>();
+
+        if (assignedUserId.HasValue)
+        {
+            var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
+            string? targetEmail = assgnPers?.Email;
+            string assgnName = assgnPers != null ? $"{assgnPers.Adi} {assgnPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+
+            if (string.IsNullOrWhiteSpace(targetEmail))
+            {
+                var baseUser = await _userRepository.GetByIdAsync(assignedUserId.Value, ct, false);
+                targetEmail = baseUser?.Email;
+                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
+                    assgnName = baseUser.DisplayName;
+            }
+            if (!string.IsNullOrWhiteSpace(targetEmail)) targetList.Add((targetEmail, assgnName));
+        }
+        else if (assignedRoleId.HasValue)
+        {
+            var roleUserIds = await _db.UserRoles.AsNoTracking().Where(r => r.RoleId == assignedRoleId.Value).Select(r => r.UserId).ToListAsync(ct);
+            var qdmsUsers = await _db.QdmsPersoneller.AsNoTracking().Where(p => p.LinkedUserId.HasValue && roleUserIds.Contains(p.LinkedUserId.Value) && p.IsActive).ToListAsync(ct);
+            
+            foreach (var p in qdmsUsers)
+            {
+                if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}"));
+            }
+            
+            var missingEmailsUserIds = roleUserIds.Except(qdmsUsers.Where(p => !string.IsNullOrWhiteSpace(p.Email)).Select(p => p.LinkedUserId!.Value)).ToList();
+            foreach (var muid in missingEmailsUserIds)
+            {
+                var baseUser = await _userRepository.GetByIdAsync(muid, ct, false);
+                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
+                {
+                    targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? "Bilinmeyen Sistem Kullanıcısı" : baseUser.DisplayName));
+                }
+            }
+        }
+
+        if (!targetList.Any()) return;
 
         var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
         var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
-        var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
-
-        string? targetEmail = assgnPers?.Email;
-        string assgnName = assgnPers != null ? $"{assgnPers.Adi} {assgnPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
-
-        if (string.IsNullOrWhiteSpace(targetEmail))
-        {
-            var baseUser = await _userRepository.GetByIdAsync(assignedUserId.Value, ct, false);
-            targetEmail = baseUser?.Email;
-            if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
-                assgnName = baseUser.DisplayName;
-        }
 
         string? reqEmail = reqPers?.Email;
         string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
@@ -169,9 +195,12 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 reqName = baseReqUser.DisplayName;
         }
 
-        if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
+        if (formType != null)
         {
-            await _emailService.SendApprovalRequestEmailAsync(targetEmail, assgnName, requestNo, formType.Name, reqName, ct);
+            foreach (var target in targetList.DistinctBy(x => x.Email))
+            {
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, formType.Name, reqName, ct);
+            }
         }
     }
 

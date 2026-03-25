@@ -1,11 +1,14 @@
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Application.Common.Models;
 
+using Microsoft.Extensions.Configuration;
+
 namespace FormfleksBaseApp.Infrastructure.Services;
 
 public class EmailService : IEmailService
 {
     private readonly IEmailBackgroundQueue _emailQueue;
+    private readonly IConfiguration _config;
     private const string BaseHtmlTemplate = """
     <!DOCTYPE html>
     <html lang="tr">
@@ -89,9 +92,10 @@ public class EmailService : IEmailService
     </html>
     """;
 
-    public EmailService(IEmailBackgroundQueue emailQueue)
+    public EmailService(IEmailBackgroundQueue emailQueue, IConfiguration config)
     {
         _emailQueue = emailQueue;
+        _config = config;
     }
 
     public async Task SendApprovalRequestEmailAsync(string toEmail, string assigneeName, string formRequestNo, string formTypeName, string requesterName, CancellationToken cancellationToken = default)
@@ -100,8 +104,8 @@ public class EmailService : IEmailService
         
         var messageBase = $"Yeni bir form değerlendirmeniz için tarafınıza atanmıştır. Form detaylarını inceleyip en kısa sürede onay veya red işlemini gerçekleştirmeniz gerekmektedir.";
         
-        // Bu adresi ortam bazlı konfigürasyondan alabilirsiniz (şimdilik localhost port veya dns)
-        var actionUrl = $"http://localhost:5173/forms/{formRequestNo}";
+        var baseUrl = _config["FrontendBaseUrl"] ?? "http://localhost:3000";
+        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestNo}";
         var actionSection = $"<div class=\"action-wrapper\"><a href=\"{actionUrl}\" class=\"btn\">Dosyayı Görüntüle ve İşlem Yap &rarr;</a></div>";
         var statusBadge = "<div class=\"badge-container\"><span class=\"badge badge-warning\">⏳ Onay Bekliyor</span></div>";
 
@@ -133,7 +137,8 @@ public class EmailService : IEmailService
             ? "Talebiniz tüm onay yöneticileri tarafından incelenmiş ve <strong>Onaylanmıştır</strong>. Süreç başarıyla tamamlanmıştır." 
             : "Talebiniz bir yönetici tarafından incelenmiş ve <strong>Reddedilmiştir</strong>. Süreç sonlandırıldı.";
 
-        var actionUrl = $"http://localhost:5173/forms/{formRequestNo}";
+        var baseUrl = _config["FrontendBaseUrl"] ?? "http://localhost:3000";
+        var actionUrl = $"{baseUrl.TrimEnd('/')}/forms/{formRequestNo}";
         var actionSection = $"<div class=\"action-wrapper\"><a href=\"{actionUrl}\" class=\"btn\">Sistem Üzerinde Görüntüle &rarr;</a></div>";
         
         var statusBadge = isApproved 
