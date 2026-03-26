@@ -126,7 +126,7 @@ public sealed class GetRequestDetailedQueryHandler
             }
         };
 
-        foreach (var app in approvals.OrderBy(a => a.Id))
+        foreach (var app in approvals.OrderBy(a => a.ActionAt.HasValue ? 0 : 1).ThenBy(a => a.ActionAt).ThenBy(a => a.StepNo))
         {
             var ws = allWorkflowSteps.FirstOrDefault(s => s.Id == app.WorkflowStepId);
             string actorName = "Bilinmiyor";
@@ -154,11 +154,13 @@ public sealed class GetRequestDetailedQueryHandler
         }
 
         // Add Future Steps
-        var lastApp = approvals.OrderByDescending(a => a.Id).FirstOrDefault();
-        // If the workflow is completely done (approved/rejected/returned), no future steps are pending in this active cycle
+        // Find the currently active or last active step
+        var currentActiveApp = approvals.OrderByDescending(a => a.StepNo).FirstOrDefault(a => !a.ActionAt.HasValue);
+        var lastCompletedApp = approvals.OrderByDescending(a => a.ActionAt).FirstOrDefault(a => a.ActionAt.HasValue);
+        
         if (request.Status == (short)FormRequestStatus.InApproval || request.Status == (short)FormRequestStatus.Draft)
         {
-            int currentStepNo = lastApp?.StepNo ?? 0;
+            int currentStepNo = currentActiveApp?.StepNo ?? lastCompletedApp?.StepNo ?? 0;
             var futureSteps = allWorkflowSteps.Where(s => s.StepNo > currentStepNo).OrderBy(s => s.StepNo);
             foreach (var fs in futureSteps)
             {

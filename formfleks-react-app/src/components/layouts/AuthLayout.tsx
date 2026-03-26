@@ -20,8 +20,8 @@ export const AuthLayout: React.FC = () => {
              <img src="/logo.svg" alt="Formfleks Logo" className="w-auto h-12 object-contain" />
            </div>
            
-           <h2 className="text-2xl font-black tracking-tight text-brand-dark">Enterprise Hub</h2>
-           <p className="text-sm text-brand-gray/80 mt-1.5 font-semibold tracking-wide uppercase">Süreç ve Form Yönetimi</p>
+           <h2 className="text-xl text-center font-black tracking-tight text-brand-dark">Kurumsal Form ve Onay Platformu</h2>
+           <p className="text-sm text-brand-gray/80 mt-1.5 font-semibold tracking-wide uppercase">Süreç Yönetimi</p>
         </div>
 
         {/* Form Content Area */}
@@ -32,7 +32,7 @@ export const AuthLayout: React.FC = () => {
       
       {/* Global Footer */}
       <div className="absolute bottom-8 left-0 right-0 text-center text-brand-gray/50 text-[11px] z-10 font-bold tracking-widest uppercase">
-        &copy; {new Date().getFullYear()} Formfleks Bilişim Teknolojileri.
+        &copy; {new Date().getFullYear()} Formfleks Yazılım Geliştirme.
       </div>
     </div>
   );

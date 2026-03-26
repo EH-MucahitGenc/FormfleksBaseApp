@@ -56,7 +56,7 @@ export const Login: React.FC = () => {
       <div className="text-center">
         <h3 className="text-xl font-bold tracking-tight text-brand-dark">Kimlik Doğrulama</h3>
         <p className="text-sm text-brand-gray mt-1.5">
-          Devam etmek için kurumsal bilgilerinizi giriniz.
+          Devam etmek için Active Directory kullanıcı adı ve şifrenizle giriş yapın.
         </p>
       </div>
 
@@ -97,22 +97,7 @@ export const Login: React.FC = () => {
              </button>
            </div>
 
-           <div className="flex items-center justify-between mt-2 px-1">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className="w-4 h-4 rounded border border-surface-muted bg-surface-base flex items-center justify-center group-hover:border-brand-primary transition-colors focus-within:ring-2 focus-within:ring-brand-primary/50 relative overflow-hidden">
-                   <input type="checkbox" className="opacity-0 w-full h-full absolute cursor-pointer peer" />
-                   <div className="absolute inset-0 bg-brand-primary opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                   </div>
-                </div>
-                <span className="text-sm font-medium text-brand-gray group-hover:text-brand-dark transition-colors">Beni hatırla</span>
-              </label>
-              <a href="#" className="text-sm font-bold text-brand-primary hover:text-brand-primary/80 transition-colors">
-                Şifremi Unuttum
-              </a>
-           </div>
+
 
            <FfButton 
              type="submit" 

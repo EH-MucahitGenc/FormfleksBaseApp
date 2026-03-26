@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
-import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer } from 'lucide-react';
 import { FfButton } from '@/components/ui/index';
+import { PrintableFormDetail } from './components/PrintableFormDetail';
 import { useFormDetail, usePendingApprovals, useApprovalAction } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
@@ -18,6 +21,12 @@ export const FormDetail: React.FC = () => {
   const { data, isLoading, isError } = useFormDetail(id || '');
   const { data: pendingApprovals } = usePendingApprovals();
   const approvalMutation = useApprovalAction();
+  
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: data?.requestNo || 'Form_Print'
+  });
   
   const [modalState, setModalState] = useState<{ isOpen: boolean; actionType: 1 | 2 | 3 }>({
     isOpen: false,
@@ -118,15 +127,27 @@ export const FormDetail: React.FC = () => {
             ]}
           />
         </div>
-        {(data.status === 1 || data.status === 7) && data.formTypeCode && (
-          <FfButton 
-            variant="primary" 
-            leftIcon={<Edit className="h-4 w-4" />}
-            onClick={() => navigate(`/forms/d/${data.formTypeCode}?draftId=${data.requestId}`)}
-          >
-            Düzenlemeye Devam Et
-          </FfButton>
-        )}
+        <div className="flex gap-2">
+          {data && data.status >= 2 && (
+            <FfButton 
+              variant="outline" 
+              leftIcon={<Printer className="h-4 w-4" />}
+              onClick={() => handlePrint()}
+              className="bg-white hover:bg-surface-muted"
+            >
+              PDF İndir / Yazdır
+            </FfButton>
+          )}
+          {(data.status === 1 || data.status === 7) && data.formTypeCode && (
+            <FfButton 
+              variant="primary" 
+              leftIcon={<Edit className="h-4 w-4" />}
+              onClick={() => navigate(`/forms/d/${data.formTypeCode}?draftId=${data.requestId}`)}
+            >
+              Düzenlemeye Devam Et
+            </FfButton>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -349,6 +370,12 @@ export const FormDetail: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Hidden Print Container */}
+      <div className="hidden">
+        <PrintableFormDetail ref={printRef} data={data} />
+      </div>
+
     </PageContainer>
   );
 };

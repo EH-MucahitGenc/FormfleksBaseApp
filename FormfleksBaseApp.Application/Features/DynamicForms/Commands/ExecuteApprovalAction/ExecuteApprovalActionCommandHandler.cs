@@ -131,7 +131,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             ActionType = reqDto.ActionType == ApprovalActionType.Approve ? "Approved" :
                          reqDto.ActionType == ApprovalActionType.Reject ? "Rejected" : "ReturnedForRevision",
             ActorUserId = reqDto.ActorUserId,
-            DetailJson = $"{{\"Comment\": \"{reqDto.Comment}\", \"StepNo\": {req.CurrentStepNo}}}",
+            DetailJson = System.Text.Json.JsonSerializer.Serialize(new { Comment = reqDto.Comment, StepNo = req.CurrentStepNo }),
             CreatedAt = DateTime.UtcNow
         });
 
