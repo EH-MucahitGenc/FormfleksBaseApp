@@ -4,5 +4,4 @@
   <Project Path="FormfleksBaseApp.Contracts/FormfleksBaseApp.Contracts.csproj" />
   <Project Path="FormfleksBaseApp.Domain/FormfleksBaseApp.Domain.csproj" />
   <Project Path="FormfleksBaseApp.Infrastructure/FormfleksBaseApp.Infrastructure.csproj" />
-  <Project Path="FormfleksBaseApp.Web/FormfleksBaseApp.Web.csproj" />
 </Solution>
