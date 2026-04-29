@@ -7,26 +7,30 @@ interface LoginResponse {
   user: User;
 }
 
+/**
+ * @service authService
+ * @description Kullanıcı girişi (Login), çıkışı (Logout) ve mevcut kullanıcı bilgilerini getirme işlemlerini (Authentication) yöneten API servis nesnesi.
+ */
 export const authService = {
   login: async (username: string, password: string): Promise<LoginResponse> => {
-    // The C# endpoint uses ApiCallResult wrapper
+    // C# endpoint'i ApiCallResult sarmalayıcısını (wrapper) kullanır
     const response = await apiClient.post('/auth/ad-login', { 
       username, 
       password 
     });
     
-    // The API returns the raw JSON directly, not wrapped in { success, data }
+    // API, veriyi { success, data } içinde değil, doğrudan JSON olarak döner.
     const result = response.data;
     
-    // If the API failed it would return 4xx/5xx and Axios would throw an error automatically. 
-    // If we reach here, it's successful.
+    // Eğer API başarısız olursa 4xx/5xx döner ve Axios otomatik olarak hata fırlatır.
+    // Eğer buraya ulaştıysak, işlem başarılı demektir.
     if (!result || !result.token) {
        throw new Error('Geçersiz sunucu yanıtı: Token alınamadı.');
     }
 
     const { token, refreshToken, username: responseUsername, roles, userId, firstName, lastName } = result;
 
-    // Use authentic backend Identity values
+    // Arka yüzden (Backend) gelen gerçek kimlik bilgilerini kullan
     const authenticUser: User = {
       id: userId || responseUsername || username,
       email: `${username}@formfleks.com`,
@@ -45,7 +49,7 @@ export const authService = {
 
   logout: async () => {
     try {
-      // Future: await apiClient.post('/auth/logout');
+      // Gelecek geliştirme: await apiClient.post('/auth/logout');
     } finally {
       useAuthStore.getState().logout();
     }

@@ -7,6 +7,10 @@ export interface FfStatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement
   dotMode?: boolean;
 }
 
+/**
+ * @component FfStatusBadge
+ * @description İşlem, talep veya kayıtların durumlarını (Taslak, Başarılı, Bekliyor, Hata) renk kodlarıyla ve opsiyonel nokta (dot) işaretiyle gösteren etiket bileşeni.
+ */
 export const FfStatusBadge = React.forwardRef<HTMLSpanElement, FfStatusBadgeProps>(
   ({ className, status = 0, label, dotMode = false, ...props }, ref) => {
     

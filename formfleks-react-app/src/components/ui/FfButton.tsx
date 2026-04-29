@@ -10,6 +10,10 @@ export interface FfButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   rightIcon?: React.ReactNode;
 }
 
+/**
+ * @component FfButton
+ * @description Uygulama genelinde standartlaşmış buton bileşeni. Yükleniyor (loading) durumu, ikon desteği ve farklı varyasyonları (primary, danger vb.) barındırır.
+ */
 export const FfButton = React.forwardRef<HTMLButtonElement, FfButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading = false, leftIcon, rightIcon, children, disabled, ...props }, ref) => {
     

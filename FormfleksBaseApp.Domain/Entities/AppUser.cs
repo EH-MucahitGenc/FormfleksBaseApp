@@ -1,5 +1,8 @@
-﻿namespace FormfleksBaseApp.Domain.Entities;
+namespace FormfleksBaseApp.Domain.Entities;
 
+/// <summary>
+/// Sistemdeki kullanıcıları temsil eden temel varlık (Entity).
+/// </summary>
 public class AppUser : BaseEntity
 {
     public string Email { get; set; } = default!;

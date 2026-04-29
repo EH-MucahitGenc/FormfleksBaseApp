@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace FormfleksBaseApp.Contracts.Common;
 
+/// <summary>
+/// Metodların dönüş tiplerini sarmalayarak Exception (Hata) fırlatmak yerine Başarı/Hata durumunu kontrollü şekilde yönetmeyi sağlayan Result Pattern implementasyonu.
+/// </summary>
 public class Result
 {
     protected internal Result(bool isSuccess, Error error)

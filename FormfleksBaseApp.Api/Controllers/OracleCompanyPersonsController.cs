@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormfleksBaseApp.Api.Controllers;
 
+/// <summary>
+/// Oracle veritabanından şirket personellerini çekmek ve sorgulamak için kullanılan API.
+/// </summary>
 [ApiController]
 [Route("api/oracle/company-persons")]
 [Authorize(Policy = "HasAppRole")]
@@ -17,6 +20,9 @@ public class OracleCompanyPersonsController : ControllerBase
     public OracleCompanyPersonsController(IMediator mediator)
         => _mediator = mediator;
 
+    /// <summary>
+    /// Oracle sisteminden sayfalayarak (pagination) ve arama yaparak personel listesi getirir.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<TrautCompanyPersonDto>>> GetAll(
         [FromQuery] string? search,

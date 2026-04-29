@@ -19,6 +19,10 @@ export interface ApprovalActionRequestDto {
   comment: string;
 }
 
+/**
+ * @service approvalService
+ * @description Kullanıcının bekleyen onaylarını listeleme ve onaylama/reddetme/revizyon (Approval Actions) gibi iş akışı eylemlerini yöneten API servisi.
+ */
 export const approvalService = {
   getPendingApprovals: async (): Promise<PendingApprovalListItemDto[]> => {
     const { data } = await apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending');

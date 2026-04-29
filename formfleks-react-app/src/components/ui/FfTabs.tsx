@@ -15,9 +15,8 @@ export interface FfTabsProps {
 }
 
 /**
- * Enterprise V4 Tabs
- * Horizontal tab bar with animated active indicator, icon support,
- * and premium hover/focus states.
+ * @component FfTabs
+ * @description Sayfa veya bileşen içi sekme navigasyonu sağlayan yatay sekme (tab) çubuğu. Animasyonlu aktif durum göstergesine sahiptir.
  */
 export const FfTabs: React.FC<FfTabsProps> = ({ items, activeKey, onChange, className }) => {
   return (
@@ -38,7 +37,7 @@ export const FfTabs: React.FC<FfTabsProps> = ({ items, activeKey, onChange, clas
             {item.icon && <span className="shrink-0">{item.icon}</span>}
             {item.label}
 
-            {/* Active indicator */}
+            {/* Aktif durum göstergesi */}
             {isActive && (
               <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-brand-primary rounded-full" />
             )}

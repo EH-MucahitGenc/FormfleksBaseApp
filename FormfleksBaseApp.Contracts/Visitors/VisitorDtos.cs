@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.Contracts.Visitors;
 
+/// <summary>
+/// Ziyaretçi bilgilerini listeleme ve okuma işlemlerinde kullanılan dışa açık veri transfer objesi (DTO).
+/// </summary>
 public sealed class VisitorDto
 {
     public Guid Id { get; set; }
@@ -11,6 +14,9 @@ public sealed class VisitorDto
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>
+/// Yeni bir ziyaretçi kaydı oluşturmak için istemciden beklenen veri modeli.
+/// </summary>
 public sealed class CreateVisitorRequestDto
 {
     public string FirstName { get; set; } = string.Empty;

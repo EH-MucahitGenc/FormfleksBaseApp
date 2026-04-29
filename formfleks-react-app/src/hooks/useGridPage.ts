@@ -1,20 +1,12 @@
 import { useState, useCallback } from 'react';
 
 /**
- * Formfleks V4 — useGridPage Hook
- * 
- * Encapsulates the common CRUD page state pattern shared by
- * Users, Roles, Departments, and similar admin grid pages.
- * 
- * Handles:
- * - Drawer open/close state
- * - Selected item tracking (for edit mode)
- * - Confirm dialog state (for delete)
- * - Create vs Edit mode detection
+ * @hook useGridPage
+ * @description Ortak CRUD (Listeleme, Ekleme, Düzenleme, Silme) sayfalarındaki state yönetimini tekilleştiren hook.
+ * Çekmece (Drawer) durumu, seçili kayıt, silme onayı gibi state'leri yöneterek Users, Roles, Departments gibi sayfalardaki kod tekrarını engeller.
  */
-
 export interface UseGridPageOptions {
-  /** Called when reset is needed (e.g., after drawer close) */
+  /** Formun sıfırlanması gerektiğinde çağrılır (Örn: çekmece kapandıktan sonra) */
   onResetForm?: () => void;
 }
 
@@ -26,45 +18,45 @@ export function useGridPage<T extends { id: string }>(options?: UseGridPageOptio
 
   const isEditMode = selectedItem !== null;
 
-  /** Open drawer in Create mode */
+  /** Çekmeceyi Ekleme (Create) modunda aç */
   const openCreate = useCallback(() => {
     setSelectedItem(null);
     options?.onResetForm?.();
     setIsDrawerOpen(true);
   }, [options]);
 
-  /** Open drawer in Edit mode */
+  /** Çekmeceyi Düzenleme (Edit) modunda aç */
   const openEdit = useCallback((item: T) => {
     setSelectedItem(item);
     setIsDrawerOpen(true);
   }, []);
 
-  /** Close drawer and reset selection */
+  /** Çekmeceyi kapat ve seçimi sıfırla */
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
     setSelectedItem(null);
     options?.onResetForm?.();
   }, [options]);
 
-  /** Open confirm dialog for deletion */
+  /** Silme işlemi için onay penceresini aç */
   const confirmDelete = useCallback((item: T) => {
     setItemToDelete(item);
     setIsConfirmOpen(true);
   }, []);
 
-  /** Close confirm dialog */
+  /** Onay penceresini kapat */
   const cancelDelete = useCallback(() => {
     setIsConfirmOpen(false);
     setItemToDelete(null);
   }, []);
 
-  /** Called after successful delete mutation */
+  /** Başarılı bir silme işleminden sonra çağrılır */
   const onDeleteSuccess = useCallback(() => {
     setIsConfirmOpen(false);
     setItemToDelete(null);
   }, []);
 
-  /** Called after successful create/update mutation */
+  /** Başarılı bir ekleme/güncelleme işleminden sonra çağrılır */
   const onSaveSuccess = useCallback(() => {
     setIsDrawerOpen(false);
     setSelectedItem(null);
@@ -72,7 +64,7 @@ export function useGridPage<T extends { id: string }>(options?: UseGridPageOptio
   }, [options]);
 
   return {
-    // Drawer state
+    // Çekmece (Drawer) durumu
     isDrawerOpen,
     selectedItem,
     isEditMode,
@@ -81,7 +73,7 @@ export function useGridPage<T extends { id: string }>(options?: UseGridPageOptio
     closeDrawer,
     onSaveSuccess,
 
-    // Confirm dialog state
+    // Onay penceresi (Confirm dialog) durumu
     isConfirmOpen,
     itemToDelete,
     confirmDelete,

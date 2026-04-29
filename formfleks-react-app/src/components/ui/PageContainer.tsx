@@ -7,13 +7,13 @@ export interface PageContainerProps extends React.HTMLAttributes<HTMLDivElement>
 }
 
 /**
- * Enterprise V3 Page Container
- * Ensures every page has consistent padding, responsiveness, and max-width.
+ * @component PageContainer
+ * @description Tüm sayfaların (Route) tutarlı padding, genişlik ve giriş animasyonlarına sahip olmasını sağlayan temel sarmalayıcı (wrapper) bileşen.
  */
 export const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps>(
   ({ className, children, maxWidth = 'full', ...props }, ref) => {
     
-    // Map max widths cleanly
+    // Genişlik sınıflarını eşleştir
     const maxWidthClasses = {
       'md': 'max-w-screen-md',
       'lg': 'max-w-screen-lg',

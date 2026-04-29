@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormfleksBaseApp.Api.Controllers;
 
+/// <summary>
+/// Sistem yöneticileri için kullanıcı yönetimi ve yetkilendirme işlemlerini sağlayan API.
+/// </summary>
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Policy = "AdminOnly")]

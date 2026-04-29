@@ -22,6 +22,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormfleksBaseApp.DynamicForms.Web.Controllers;
 
+/// <summary>
+/// Dinamik formlar, form talepleri (request), onay süreçleri, şablon yönetimi ve vekaletnameleri yöneten ana API.
+/// </summary>
 [ApiController]
 [Route("api/dynamic-forms")]
 [Authorize(Policy = "HasAppRole")]
@@ -34,6 +37,9 @@ public sealed class DynamicFormsController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// Belirtilen form koduna göre form şablonunun tanımlarını (alanlar, kurallar vb.) getirir.
+    /// </summary>
     [HttpGet("{formCode}")]
     public async Task<ActionResult<FormDefinitionDto>> GetDefinition(string formCode, CancellationToken ct)
     {
@@ -44,6 +50,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Kullanıcının doldurduğu formu taslak olarak kaydeder (Henüz onaya sunulmaz).
+    /// </summary>
     [HttpPost("requests/draft")]
     public async Task<ActionResult<FormRequestResultDto>> SaveDraft([FromBody] SaveDraftRequestDto request, CancellationToken ct)
     {
@@ -54,6 +63,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new SaveDraftCommand(request), ct));
     }
 
+    /// <summary>
+    /// Doldurulan formu onaya sunar (İş akışını başlatır).
+    /// </summary>
     [HttpPost("requests/submit")]
     public async Task<ActionResult<FormRequestResultDto>> Submit([FromBody] SubmitRequestDto request, CancellationToken ct)
     {
@@ -64,6 +76,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new SubmitRequestCommand(request), ct));
     }
 
+    /// <summary>
+    /// Belirtilen form talebinin tüm detaylarını (girilen veriler, onay geçmişi vb.) getirir.
+    /// </summary>
     [HttpGet("requests/{requestId:guid}")]
     public async Task<ActionResult<FormRequestDetailedDto>> GetRequestDetailed(Guid requestId, CancellationToken ct)
     {
@@ -77,6 +92,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Sisteme giriş yapmış kullanıcının kendi oluşturduğu form taleplerini listeler.
+    /// </summary>
     [HttpGet("requests/my")]
     public async Task<ActionResult<IReadOnlyList<MyFormRequestListItemDto>>> GetMyRequests(CancellationToken ct)
     {
@@ -86,6 +104,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new GetMyRequestsQuery(userId), ct));
     }
 
+    /// <summary>
+    /// Sisteme giriş yapmış kullanıcının onayını bekleyen form taleplerini listeler.
+    /// </summary>
     [HttpGet("approvals/pending")]
     public async Task<ActionResult<IReadOnlyList<PendingApprovalListItemDto>>> GetPendingApprovals(CancellationToken ct)
     {
@@ -95,6 +116,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new GetPendingApprovalsQuery(userId), ct));
     }
 
+    /// <summary>
+    /// Kullanıcının geçmişte onayladığı veya reddettiği form taleplerini listeler.
+    /// </summary>
     [HttpGet("approvals/history")]
     public async Task<ActionResult<IReadOnlyList<HistoryApprovalListItemDto>>> GetApprovalHistory(CancellationToken ct)
     {
@@ -104,6 +128,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new Application.Features.DynamicForms.Queries.GetApprovalHistory.GetApprovalHistoryQuery(userId), ct));
     }
 
+    /// <summary>
+    /// Onay bekleyen bir form talebi üzerinde aksiyon alır (Onayla, Reddet, Revizyon İste).
+    /// </summary>
     [HttpPost("approvals/action")]
     public async Task<ActionResult<FormRequestResultDto>> ApprovalAction([FromBody] ApprovalActionRequestDto request, CancellationToken ct)
     {
@@ -114,6 +141,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new ExecuteApprovalActionCommand(request), ct));
     }
 
+    /// <summary>
+    /// Kullanıcının kendi adına verdiği vekaletleri listeler.
+    /// </summary>
     [HttpGet("users/me/delegations")]
     public async Task<ActionResult<IReadOnlyList<UserDelegationDto>>> GetMyDelegations(CancellationToken ct)
     {
@@ -123,6 +153,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(new GetUserDelegationsQuery(userId), ct));
     }
 
+    /// <summary>
+    /// Kullanıcının belirli bir tarih aralığında yetkilerini başka bir kullanıcıya devretmesi (Vekalet) için kayıt oluşturur.
+    /// </summary>
     [HttpPost("users/me/delegations")]
     public async Task<ActionResult<Guid>> CreateDelegation([FromBody] CreateUserDelegationRequest request, CancellationToken ct)
     {
@@ -133,6 +166,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(await _mediator.Send(command, ct));
     }
 
+    /// <summary>
+    /// Verilmiş olan bir vekaleti sonlandırır/iptal eder.
+    /// </summary>
     [HttpDelete("users/me/delegations/{delegationId:guid}")]
     public async Task<ActionResult> TerminateDelegation(Guid delegationId, CancellationToken ct)
     {
@@ -143,11 +179,17 @@ public sealed class DynamicFormsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Sistemdeki tüm form şablonlarını yönetici yetkisiyle listeler.
+    /// </summary>
     [HttpGet("admin/templates")]
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetTemplates(CancellationToken ct)
         => Ok(await _mediator.Send(new GetTemplatesQuery(), ct));
 
+    /// <summary>
+    /// Kullanıcıların form oluşturabilmesi için sadece aktif olan şablonları listeler.
+    /// </summary>
     [HttpGet("templates")]
     public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetActiveTemplates(CancellationToken ct)
     {
@@ -165,6 +207,9 @@ public sealed class DynamicFormsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>>> GetAuditLogs(CancellationToken ct)
         => Ok(await _mediator.Send(new GetAuditLogsQuery(), ct));
 
+    /// <summary>
+    /// Yeni bir form şablonu oluşturur veya var olan şablonu günceller.
+    /// </summary>
     [HttpPost("admin/templates")]
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<FormTemplateSummaryDto>> UpsertTemplate([FromBody] FormTemplateUpsertDto request, CancellationToken ct)
@@ -180,6 +225,9 @@ public sealed class DynamicFormsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FormTemplateWorkflowStepUpsertDto>>> GetTemplateWorkflow(Guid formTypeId, CancellationToken ct)
         => Ok(await _mediator.Send(new GetTemplateWorkflowQuery(formTypeId), ct));
 
+    /// <summary>
+    /// Bir form şablonunun onay iş akışını (adımları, onaylayıcıları vb.) oluşturur veya günceller.
+    /// </summary>
     [HttpPost("admin/templates/{formTypeId:guid}/workflow")]
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<object>> UpsertTemplateWorkflow(
@@ -194,6 +242,9 @@ public sealed class DynamicFormsController : ControllerBase
         return Ok(new { stepCount = count });
     }
 
+    /// <summary>
+    /// Form şablonunun aktiflik/pasiflik durumunu günceller.
+    /// </summary>
     [HttpPatch("admin/templates/{formTypeId:guid}/status")]
     [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<FormTemplateSummaryDto>> SetTemplateStatus(

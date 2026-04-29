@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Enterprise V4 CountUp Hook
- * Animates a number from 0 to the target value using ease-out cubic.
+ * @hook useCountUp
+ * @description 0'dan verilen hedef sayıya (end) belirlenen süre (duration) içerisinde ease-out animasyonu ile sayan hook. Dashboard göstergelerinde (istatistik) kullanılır.
+ * @param end Hedef ulaşılacak sayı
+ * @param duration Animasyonun milisaniye cinsinden süresi (Varsayılan: 2000ms)
  */
 export const useCountUp = (end: number, duration: number = 2000) => {
   const [count, setCount] = useState(0);

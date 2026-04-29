@@ -16,9 +16,9 @@ export interface FfConfirmDialogProps {
 }
 
 /**
- * Enterprise V4 Confirm Dialog
- * Standard confirmation popup for destructive actions (delete, deactivate).
- * Built on top of FfModal for consistent behavior.
+ * @component FfConfirmDialog
+ * @description Kritik veya geri alınamayan işlemlerden (Silme, İptal vb.) önce kullanıcıdan onay almak için kullanılan standart iletişim kutusu.
+ * FfModal üzerine inşa edilmiştir.
  */
 export const FfConfirmDialog: React.FC<FfConfirmDialogProps> = ({
   isOpen,

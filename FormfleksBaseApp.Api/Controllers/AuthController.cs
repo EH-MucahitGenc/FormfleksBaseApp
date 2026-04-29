@@ -7,6 +7,9 @@ using FormfleksBaseApp.Application.Features.Auth.Commands.Register;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
+/// <summary>
+/// Kullanıcı kimlik doğrulama, giriş, çıkış ve token yenileme işlemlerini yöneten API.
+/// </summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -18,6 +21,9 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// Yeni bir kullanıcı hesabı oluşturur (Kayıt).
+    /// </summary>
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
     {
@@ -25,10 +31,16 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Yerel kullanıcı veritabanı ile sisteme giriş yapar.
+    /// </summary>
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request, CancellationToken ct)
         => Ok(await _mediator.Send(new LoginCommand(request), ct));
 
+    /// <summary>
+    /// Active Directory (LDAP) üzerinden sisteme giriş yapar.
+    /// </summary>
     [HttpPost("ad-login")]
     public async Task<ActionResult<FormfleksBaseApp.Contracts.Auth.LoginResponse>> AdLogin(FormfleksBaseApp.Contracts.Auth.LoginRequest request, CancellationToken ct)
     {
@@ -47,10 +59,16 @@ public class AuthController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Süresi dolmak üzere olan Access Token'ı, Refresh Token kullanarak yeniler.
+    /// </summary>
     [HttpPost("refresh")]
     public async Task<ActionResult<AuthResponse>> Refresh(RefreshRequest request, CancellationToken ct)
         => Ok(await _mediator.Send(new RefreshCommand(request), ct));
 
+    /// <summary>
+    /// Kullanıcının sistemden güvenli bir şekilde çıkış yapmasını sağlar (Token geçersiz kılınır).
+    /// </summary>
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(RefreshRequest request, CancellationToken ct)
     {

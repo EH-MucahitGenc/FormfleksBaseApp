@@ -14,6 +14,10 @@ export interface FfDrawerProps {
   closeOnOutsideClick?: boolean;
 }
 
+/**
+ * @component FfDrawer
+ * @description Ekranın sağ tarafından kayarak açılan (Drawer) panel bileşeni. Genellikle form detaylarını veya yan ekran işlemlerini göstermek için kullanılır.
+ */
 export const FfDrawer: React.FC<FfDrawerProps> = ({
   isOpen,
   onClose,
@@ -26,7 +30,7 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
   
-  // Close on Escape key press
+  // ESC tuşuna basıldığında kapat
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -37,7 +41,7 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when drawer is open
+  // Çekmece açıkken sayfanın kaydırılmasını (scroll) kilitle
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -50,7 +54,7 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
   }, [isOpen]);
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only close if the actual overlay background was clicked, not the drawer content
+    // Sadece arka plan örtüsüne (overlay) tıklandığında kapat, çekmece içeriğine değil
     if (closeOnOutsideClick && e.target === overlayRef.current) {
       onClose();
     }
@@ -84,7 +88,7 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
         aria-modal="true"
         aria-labelledby="drawer-title"
       >
-        {/* Drawer Header */}
+        {/* Çekmece Başlığı */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-surface-muted bg-surface-ground">
           <div className="flex flex-col gap-1 pr-6">
             <h2 id="drawer-title" className="text-xl font-bold text-brand-dark tracking-tight leading-tight">
@@ -103,12 +107,12 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
           </button>
         </div>
 
-        {/* Drawer Body (Scrollable) */}
+        {/* Çekmece İçeriği (Kaydırılabilir) */}
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           {children}
         </div>
 
-        {/* Drawer Footer (Fixed at bottom) */}
+        {/* Çekmece Alt Kısmı (Aşağıda sabit) */}
         {footer && (
           <div className="border-t border-surface-muted p-6 bg-surface-ground flex items-center justify-end gap-3 shrink-0">
             {footer}
@@ -116,6 +120,6 @@ export const FfDrawer: React.FC<FfDrawerProps> = ({
         )}
       </div>
     </div>,
-    document.body // Portalled to the end of the body to guarantee Z-Index layer priority over DevExtreme widgets
+    document.body // DevExtreme bileşenlerinin üzerine çıkabilmesi için Z-Index önceliğini garantilemek adına body sonuna portallandı
   );
 };

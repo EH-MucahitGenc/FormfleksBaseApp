@@ -3,6 +3,9 @@ using System;
 
 namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 
+/// <summary>
+/// Kullanıcıların yetkilerini geçici süreyle başka kullanıcılara devretmesini (Vekalet) sağlayan varlık.
+/// </summary>
 public class UserDelegationEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();

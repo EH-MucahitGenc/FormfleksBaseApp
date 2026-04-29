@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.DynamicForms.Domain.Enums;
 
+/// <summary>
+/// Dinamik formlardaki giriş alanlarının (input) tiplerini belirtir.
+/// </summary>
 public enum DynamicFieldType
 {
     Text = 1,

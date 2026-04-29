@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.DynamicForms.Domain.Enums;
 
+/// <summary>
+/// İş akışı adımlarındaki onaylayıcı atama stratejisini belirtir (Örn: Doğrudan Yönetici, Belirli Rol vb.).
+/// </summary>
 public enum WorkflowAssigneeType : short
 {
     User = 1,
@@ -13,6 +16,9 @@ public enum WorkflowAssigneeType : short
     UpperManager = 13
 }
 
+/// <summary>
+/// Onaylayıcı bulunamadığında (Örn: Yöneticisi yoksa) sistemin alacağı yedek aksiyonu belirtir.
+/// </summary>
 public enum WorkflowFallbackAction : short
 {
     Skip = 0,

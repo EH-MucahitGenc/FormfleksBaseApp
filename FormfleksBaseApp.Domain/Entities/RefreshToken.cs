@@ -1,5 +1,8 @@
-﻿namespace FormfleksBaseApp.Domain.Entities;
+namespace FormfleksBaseApp.Domain.Entities;
 
+/// <summary>
+/// Kullanıcı oturumlarını (Access Token) yenilemek için kullanılan uzun ömürlü token'ları tutan varlık.
+/// </summary>
 public class RefreshToken : BaseEntity
 {
     public Guid UserId { get; set; }

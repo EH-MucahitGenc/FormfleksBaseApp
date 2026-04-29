@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.Contracts.Auth;
 
+/// <summary>
+/// Başarılı bir giriş işlemi sonrasında istemciye dönülen yetkilendirme yanıt modeli (Token, Kullanıcı Bilgisi vb.).
+/// </summary>
 public class LoginResponse
 {
     public string Token { get; set; } = string.Empty;

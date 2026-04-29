@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormfleksBaseApp.Api.Controllers;
 
+/// <summary>
+/// Ziyaretçi yönetimi ve kayıt işlemlerini sağlayan API.
+/// </summary>
 [ApiController]
 [Route("api/visitors")]
 [Authorize(Policy = "HasAppRole")]
@@ -20,6 +23,9 @@ public sealed class VisitorsController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// Sistemdeki kayıtlı tüm ziyaretçileri listeler.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VisitorDto>>>> GetAll(CancellationToken ct)
     {
@@ -28,6 +34,9 @@ public sealed class VisitorsController : ControllerBase
                                 : BadRequest(ApiResponse<IReadOnlyList<VisitorDto>>.Fail(result.Error!.Message, result.Error));
     }
 
+    /// <summary>
+    /// Sisteme yeni bir ziyaretçi kaydı ekler.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<ApiResponse<Guid>>> Create([FromBody] CreateVisitorRequestDto request, CancellationToken ct)
     {

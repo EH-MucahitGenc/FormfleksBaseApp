@@ -11,6 +11,10 @@ interface FfEmptyStateProps {
   className?: string;
 }
 
+/**
+ * @component FfEmptyState
+ * @description Tablo veya listelerde gösterilecek veri bulunmadığında kullanıcıya dostane bir mesaj (ve opsiyonel olarak aksiyon butonu) sunan bileşen.
+ */
 export const FfEmptyState: React.FC<FfEmptyStateProps> = ({
   title = "Kayıt Bulunamadı",
   description = "Arama kriterlerinize uyan veya bu alanda henüz eklenmiş herhangi bir veri bulunmuyor.",

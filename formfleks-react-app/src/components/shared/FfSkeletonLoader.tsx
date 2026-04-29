@@ -7,6 +7,10 @@ interface FfSkeletonLoaderProps {
   className?: string;
 }
 
+/**
+ * @component FfSkeletonLoader
+ * @description Sayfa veya bileşen yüklenirken boş ekran göstermek yerine, içeriğin yapısına uygun (Card, Grid, Form, Text vb.) animasyonlu iskelet görünümleri (skeleton) sunan yükleyici.
+ */
 export const FfSkeletonLoader: React.FC<FfSkeletonLoaderProps> = ({ 
   type = 'text', 
   count = 1, 
@@ -35,13 +39,13 @@ export const FfSkeletonLoader: React.FC<FfSkeletonLoaderProps> = ({
       case 'grid':
         return (
           <div className={cn("bg-surface-base rounded-xl border border-surface-muted flex flex-col w-full shadow-sm overflow-hidden", className)}>
-             {/* Header */}
+             {/* Başlık */}
              <div className="h-14 border-b border-surface-muted bg-surface-ground/50 flex items-center px-4 gap-4">
                 <div className="h-4 skeleton-shimmer w-1/4"></div>
                 <div className="h-4 skeleton-shimmer w-1/4"></div>
                 <div className="h-4 skeleton-shimmer w-1/4"></div>
              </div>
-             {/* Rows */}
+             {/* Satırlar */}
              {[1, 2, 3, 4, 5].map(i => (
                 <div key={i} className="h-12 border-b border-surface-muted/30 flex items-center px-4 gap-4">
                     <div className="h-3 skeleton-shimmer w-1/4"></div>

@@ -24,16 +24,20 @@ export interface ActivityLogDto {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+/**
+ * @service DashboardService
+ * @description Anasayfa (Dashboard) ekranındaki özet istatistikler, grafikler ve son aktiviteleri getirmekle sorumlu veri erişim servisi.
+ */
 class DashboardService {
   async getOverviewStats(): Promise<DashboardStatsDto> {
-    // In absence of a dedicated /dashboard/stats endpoint, we aggregate from existing endpoints to avoid ANY fake data
+    // Henüz sadece özet istatistik dönen bir API olmadığı için, gerçek verilerle hesaplama yapmak adına mevcut endpoint'leri kullanıyoruz.
     const [{ data: pendingApprovals }, { data: myRequests }, { data: myHistory }] = await Promise.all([
        apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending'),
        apiClient.get<any[]>('/dynamic-forms/requests/my'),
        apiClient.get<any[]>('/dynamic-forms/approvals/history')
     ]);
 
-    // Calculate real stats
+    // Gerçek istatistikleri hesapla
     return {
       totalFormsSubmitted: myRequests?.length || 0,
       pendingApprovalsCount: pendingApprovals?.length || 0,
@@ -47,8 +51,8 @@ class DashboardService {
   }
 
   async getFormsByDepartmentChart(): Promise<ChartDataPointDto[]> {
-    // There is no real backend endpoint for this currently. 
-    // Do not return fake data. Return empty or throw, so the UI can decide to hide the chart.
+    // Şu an bunun için bir arka yüz (backend) servisi bulunmuyor. 
+    // Sahte veri dönmeyin. UI'ın (Arayüzün) grafiği gizleyebilmesi için boş liste dönün.
     return [];
   }
   
@@ -57,9 +61,9 @@ class DashboardService {
   }
 
   async getRecentActivityLogs(): Promise<ActivityLogDto[]> {
-    // Fetch from real audit logs instead of fake data
+    // Sahte veri yerine gerçek denetim izi (audit log) kayıtlarını getir
     try {
-      // Catch errors silently to avoid throwing 403 Forbidden exceptions in the browser console for non-admins
+      // Yetkisi olmayan (admin olmayan) kullanıcılar için 403 Forbidden hatalarını konsolda göstermemek adına hataları sessizce yakala.
       const response = await apiClient.get<any[]>('/dynamic-forms/admin/audit-logs', { validateStatus: s => s < 500 });
       if (response.status === 403) return [];
       const data = response.data;
@@ -116,7 +120,7 @@ class DashboardService {
   }
 
   async getUrgentPendingApprovals(): Promise<PendingApprovalListItemDto[]> {
-    // Directly pull from the real pending endpoint and taking the top 5
+    // Doğrudan onay bekleyenler servisinden çekip ilk 5 kaydı alıyoruz.
     const { data } = await apiClient.get<PendingApprovalListItemDto[]>('/dynamic-forms/approvals/pending');
     return (data || []).slice(0, 5);
   }

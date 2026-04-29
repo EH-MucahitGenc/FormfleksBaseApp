@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace FormfleksBaseApp.Contracts.Common;
 
+/// <summary>
+/// Uygulama genelinde API yanıtlarını (Başarılı veri veya Hata durumu) standart ve öngörülebilir bir yapıda sarmalamak için kullanılır.
+/// </summary>
 public class ApiResponse<T>
 {
     public bool Succeeded { get; set; }

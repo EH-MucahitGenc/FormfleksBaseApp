@@ -23,7 +23,7 @@ export interface DynamicFormTemplateDto {
   sections: DynamicSectionSchema[];
 }
 
-// --- Real Backend Types (FormDefinitionDto) ---
+// --- Gerçek Arka Yüz Tipleri (Backend Types) ---
 export interface BackendFormFieldDto {
   fieldKey: string;
   label: string;
@@ -50,8 +50,13 @@ export interface FormDefinitionDto {
   fields: BackendFormFieldDto[];
 }
 
-// --- Frontend Adapters ---
+// --- Ön Yüz Uyarlayıcıları (Frontend Adapters) ---
 
+/**
+ * @service DynamicFormService
+ * @description Dinamik form şablonlarının getirilmesi, taslak kaydedilmesi ve form taleplerinin onaya sunulması işlemlerini yöneten servis sınıfı.
+ * Arka yüz (Backend) veri modellerini, ön yüz (Frontend) UI bileşenlerinin beklediği yapıya çeviren Adapter metodlarını (mapBackendToFrontend) barındırır.
+ */
 class DynamicFormService {
   async getTemplateByCode(code: string): Promise<DynamicFormTemplateDto> {
     const { data } = await apiClient.get<FormDefinitionDto>(`/dynamic-forms/${code}`);

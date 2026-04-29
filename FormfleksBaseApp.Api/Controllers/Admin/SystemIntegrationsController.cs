@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FormfleksBaseApp.Api.Controllers.Admin;
 
+/// <summary>
+/// QDMS gibi dış sistemlerle olan entegrasyon işlemlerini ve manuel senkronizasyonları yöneten API.
+/// </summary>
 [ApiController]
 [Route("api/admin/integrations")]
 [Authorize(Policy = "AdminOnly")]
@@ -22,6 +25,9 @@ public class SystemIntegrationsController : ControllerBase
         _mediator = mediator;
     }
 
+    /// <summary>
+    /// QDMS Oracle sisteminden personel verilerini çekerek PostgreSQL'e manuel senkronize eder.
+    /// </summary>
     [HttpPost("sync-personnel")]
     public async Task<IActionResult> SyncPersonnel()
     {
@@ -32,6 +38,9 @@ public class SystemIntegrationsController : ControllerBase
         return BadRequest(new { error = result.Message });
     }
 
+    /// <summary>
+    /// Senkronize edilen personellerin departman ve unvan bazlı istatistiklerini getirir.
+    /// </summary>
     [HttpGet("personnel-stats")]
     public async Task<IActionResult> GetPersonnelStats()
     {
@@ -39,6 +48,9 @@ public class SystemIntegrationsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Geçmiş senkronizasyon işlemlerinin loglarını (başarı, hata, senkronize edilen kayıt sayısı) listeler.
+    /// </summary>
     [HttpGet("sync-logs")]
     public async Task<IActionResult> GetSyncLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -46,6 +58,9 @@ public class SystemIntegrationsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Senkronize edilmiş personelleri sayfalayarak listeler.
+    /// </summary>
     [HttpGet("personnel")]
     public async Task<IActionResult> GetPersonnel([FromQuery] GetPersonnelsQuery query)
     {

@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.DynamicForms.Domain.Enums;
 
+/// <summary>
+/// Kullanıcının oluşturduğu form talebinin (Request) genel durumunu belirtir.
+/// </summary>
 public enum FormRequestStatus
 {
     Draft = 1,

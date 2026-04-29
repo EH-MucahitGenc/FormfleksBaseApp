@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.Contracts.DynamicForms.AuditLogs;
 
+/// <summary>
+/// Sistem denetim izi (Audit Log) kayıtlarını listelemek için kullanılan veri modeli.
+/// </summary>
 public sealed class AuditLogItemDto
 {
     public Guid Id { get; set; }
@@ -13,6 +16,9 @@ public sealed class AuditLogItemDto
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>
+/// Yeni bir denetim izi (Audit Log) kaydı oluşturmak için kullanılan iç/dış istek modeli.
+/// </summary>
 public sealed class AuditLogActionRequestDto
 {
     public string EntityType { get; set; } = default!;

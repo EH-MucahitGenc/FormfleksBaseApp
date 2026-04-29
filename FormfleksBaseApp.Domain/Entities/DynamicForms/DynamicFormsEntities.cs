@@ -1,5 +1,8 @@
 namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 
+/// <summary>
+/// Dinamik form sistemindeki rol tanımlarını tutan varlık.
+/// </summary>
 public sealed class RoleEntity
 {
     public Guid Id { get; set; }
@@ -8,12 +11,18 @@ public sealed class RoleEntity
     public bool Active { get; set; }
 }
 
+/// <summary>
+/// Kullanıcı ve Rol arasındaki çoka çok (many-to-many) ilişkiyi tutan varlık.
+/// </summary>
 public sealed class UserRoleEntity
 {
     public Guid UserId { get; set; }
     public Guid RoleId { get; set; }
 }
 
+/// <summary>
+/// Sistemdeki departman/birim tanımlarını tutan varlık.
+/// </summary>
 public sealed class DepartmentEntity
 {
     public Guid Id { get; set; }
@@ -22,6 +31,9 @@ public sealed class DepartmentEntity
     public bool Active { get; set; }
 }
 
+/// <summary>
+/// Kullanıcı ve Departman arasındaki ilişkiyi tutan varlık. Bir kullanıcının ana (Primary) departmanı olabilir.
+/// </summary>
 public sealed class UserDepartmentEntity
 {
     public Guid UserId { get; set; }
@@ -29,6 +41,9 @@ public sealed class UserDepartmentEntity
     public bool IsPrimary { get; set; }
 }
 
+/// <summary>
+/// Bir form şablonunun (Örn: İzin Formu, Masraf Formu) ana tanımını tutan varlık.
+/// </summary>
 public sealed class FormTypeEntity
 {
     public Guid Id { get; set; }
@@ -40,6 +55,9 @@ public sealed class FormTypeEntity
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>
+/// Form şablonu içerisindeki bölümleri (sekmeler/gruplar) tanımlayan varlık.
+/// </summary>
 public sealed class FormSectionEntity
 {
     public Guid Id { get; set; }
@@ -48,6 +66,9 @@ public sealed class FormSectionEntity
     public int SortOrder { get; set; }
 }
 
+/// <summary>
+/// Form şablonu içerisindeki her bir alanı (TextBox, Dropdown vb.) ve kurallarını tanımlayan varlık.
+/// </summary>
 public sealed class FormFieldEntity
 {
     public Guid Id { get; set; }
@@ -67,6 +88,9 @@ public sealed class FormFieldEntity
     public bool Active { get; set; }
 }
 
+/// <summary>
+/// Bir form şablonuna ait onay iş akışının genel tanımını ve versiyonunu tutan varlık.
+/// </summary>
 public sealed class WorkflowDefinitionEntity
 {
     public Guid Id { get; set; }
@@ -75,6 +99,9 @@ public sealed class WorkflowDefinitionEntity
     public bool IsActive { get; set; }
 }
 
+/// <summary>
+/// İş akışındaki her bir onay adımını (Kim onaylayacak, kural ne vb.) tanımlayan varlık.
+/// </summary>
 public sealed class WorkflowStepEntity
 {
     public Guid Id { get; set; }
@@ -93,6 +120,9 @@ public sealed class WorkflowStepEntity
     public bool IsParallel { get; set; }
 }
 
+/// <summary>
+/// Kullanıcılar tarafından doldurulan ve onaya sunulan her bir form talebinin ana kaydını tutan varlık.
+/// </summary>
 public sealed class FormRequestEntity
 {
     public Guid Id { get; set; }
@@ -130,6 +160,9 @@ public sealed class FormRequestEntity
     }
 }
 
+/// <summary>
+/// Bir form talebi doldurulurken girilen alan değerlerini (Cevapları) tutan varlık.
+/// </summary>
 public sealed class FormRequestValueEntity
 {
     public Guid Id { get; set; }
@@ -143,6 +176,9 @@ public sealed class FormRequestValueEntity
     public string? ValueJson { get; set; }
 }
 
+/// <summary>
+/// Bir form talebi üzerindeki anlık onay işlemlerini, bekleyen adımları ve geçmiş aksiyonları tutan varlık.
+/// </summary>
 public sealed class FormRequestApprovalEntity
 {
     public Guid Id { get; set; }
@@ -158,6 +194,9 @@ public sealed class FormRequestApprovalEntity
     public long ConcurrencyToken { get; set; }
 }
 
+/// <summary>
+/// Form şablonları üzerinde kimlerin oluşturma, görme veya onaylama yetkisi olduğunu belirleyen matris varlık.
+/// </summary>
 public sealed class AuthorizationMatrixEntity
 {
     public Guid Id { get; set; }
@@ -169,6 +208,9 @@ public sealed class AuthorizationMatrixEntity
     public bool CanApprove { get; set; }
 }
 
+/// <summary>
+/// Sistem genelinde yapılan kritik işlemlerin (Kayıt, Güncelleme, Silme vb.) denetim izini (Audit) tutan varlık.
+/// </summary>
 public sealed class AuditLogEntity
 {
     public Guid Id { get; set; }

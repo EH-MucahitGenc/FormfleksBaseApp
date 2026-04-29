@@ -15,9 +15,9 @@ export interface FfModalProps {
 }
 
 /**
- * Enterprise V4 Modal
- * Centered overlay with glassmorphism backdrop, smooth scale entrance,
- * keyboard dismiss (Escape), and body scroll lock.
+ * @component FfModal
+ * @description Ekranın ortasında açılan, arka planı bulanıklaştıran (glassmorphism) standart modal (iletişim kutusu) bileşeni.
+ * ESC tuşuyla kapanma ve arkadaki kaydırma (scroll) çubuğunu kilitleme özelliklerine sahiptir.
  */
 export const FfModal: React.FC<FfModalProps> = ({
   isOpen,
@@ -31,7 +31,7 @@ export const FfModal: React.FC<FfModalProps> = ({
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape
+  // ESC ile kapat
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -40,7 +40,7 @@ export const FfModal: React.FC<FfModalProps> = ({
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
-  // Lock body scroll
+  // Sayfa kaydırmasını (scroll) kilitle
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -77,7 +77,7 @@ export const FfModal: React.FC<FfModalProps> = ({
         role="dialog"
         aria-modal="true"
       >
-        {/* Header */}
+        {/* Başlık */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-surface-muted">
           <div className="flex flex-col gap-1 pr-4">
             <h2 className="text-lg font-bold text-brand-dark tracking-tight">{title}</h2>
@@ -92,12 +92,12 @@ export const FfModal: React.FC<FfModalProps> = ({
           </button>
         </div>
 
-        {/* Body */}
+        {/* İçerik */}
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           {children}
         </div>
 
-        {/* Footer */}
+        {/* Alt Kısım */}
         {footer && (
           <div className="border-t border-surface-muted px-6 py-4 bg-surface-ground flex items-center justify-end gap-3 shrink-0">
             {footer}
