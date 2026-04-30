@@ -93,12 +93,76 @@ export const PrintableFormDetail = forwardRef<HTMLDivElement, PrintableFormDetai
             </tr>
           </thead>
           <tbody>
-            {data.values && data.values.length > 0 ? data.values.map((v, idx) => (
-              <tr key={idx}>
-                <td className="border border-gray-300 p-2 font-medium bg-gray-50">{v.label}</td>
-                <td className="border border-gray-300 p-2 font-bold break-words">{v.valueText || '-'}</td>
-              </tr>
-            )) : (
+            {data.values && data.values.length > 0 ? data.values.map((v, idx) => {
+              if (v.fieldType === 11 && v.valueText) {
+                try {
+                  const gridData = JSON.parse(v.valueText);
+                  let gridCols: any[] = [];
+                  if (v.optionsJson) {
+                     gridCols = JSON.parse(v.optionsJson);
+                  } else if (Array.isArray(gridData) && gridData.length > 0) {
+                     gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
+                  }
+
+                  if (Array.isArray(gridData)) {
+                    return (
+                      <tr key={idx}>
+                        <td colSpan={2} className="border border-gray-300 p-0">
+                          <div className="bg-gray-100 font-bold p-2 text-sm">{v.label} (Tablo Tablo)</div>
+                          <table className="w-full text-xs text-left border-t border-gray-300">
+                            <thead>
+                              <tr>
+                                <th className="border-b border-r border-gray-300 p-1 w-8 text-center bg-gray-50">#</th>
+                                {gridCols.map((c: any) => (
+                                  <th key={c.dataField} className="border-b border-r border-gray-300 p-1 font-bold bg-gray-50">{c.caption || c.label || c.dataField}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gridData.length === 0 ? (
+                                <tr>
+                                  <td colSpan={gridCols.length + 1} className="p-2 text-center text-gray-500 italic">Veri girilmemiş</td>
+                                </tr>
+                              ) : gridData.map((row: any, rIdx: number) => (
+                                <tr key={rIdx}>
+                                  <td className="border-b border-r border-gray-300 p-1 text-center">{rIdx + 1}</td>
+                                  {gridCols.map((c: any) => {
+                                    let val = row[c.dataField];
+                                    if (val === true) val = "Evet";
+                                    if (val === false) val = "Hayır";
+                                    return (
+                                      <td key={c.dataField} className="border-b border-r border-gray-300 p-1">{val ?? '-'}</td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    );
+                  }
+                } catch(e) {}
+              }
+
+              if (v.fieldType === 10 && v.valueText) {
+                return (
+                  <tr key={idx}>
+                    <td className="border border-gray-300 p-2 font-medium bg-gray-50">{v.label}</td>
+                    <td className="border border-gray-300 p-2 font-bold break-words italic text-gray-600">
+                      [Eklenmiş Dosya: {v.valueText.split('/').pop()}]
+                    </td>
+                  </tr>
+                );
+              }
+
+              return (
+                <tr key={idx}>
+                  <td className="border border-gray-300 p-2 font-medium bg-gray-50">{v.label}</td>
+                  <td className="border border-gray-300 p-2 font-bold break-words">{v.valueText || '-'}</td>
+                </tr>
+              );
+            }) : (
               <tr>
                 <td colSpan={2} className="border border-gray-300 p-4 text-center italic text-gray-500">
                   Form verisi bulunamadı.

@@ -1,6 +1,7 @@
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
 using FormfleksBaseApp.Application.Common.Interfaces;
+using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,12 @@ public sealed class GetRequestDetailedQueryHandler
     : IRequestHandler<GetRequestDetailedQuery, FormRequestDetailedDto?>
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly IUserRepository _userRepository;
 
-    public GetRequestDetailedQueryHandler(IDynamicFormsDbContext db)
+    public GetRequestDetailedQueryHandler(IDynamicFormsDbContext db, IUserRepository userRepository)
     {
         _db = db;
+        _userRepository = userRepository;
     }
 
     public async Task<FormRequestDetailedDto?> Handle(GetRequestDetailedQuery query, CancellationToken ct)
@@ -115,13 +118,30 @@ public sealed class GetRequestDetailedQueryHandler
             .Where(r => actorRoleIds.Contains(r.Id))
             .ToListAsync(ct);
 
+        string requestorName = "Bilinmeyen Kullanıcı";
+        var reqActorObj = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId);
+        if (reqActorObj != null)
+        {
+            requestorName = $"{reqActorObj.Adi} {reqActorObj.Soyadi}";
+        }
+        else
+        {
+            var reqAppUser = await _userRepository.GetByIdAsync(request.RequestorUserId, ct, false);
+            if (reqAppUser != null && !string.IsNullOrWhiteSpace(reqAppUser.DisplayName))
+            {
+                requestorName = reqAppUser.DisplayName;
+            }
+            else
+            {
+                requestorName = request.RequestorUserId.ToString();
+            }
+        }
+
         var timeline = new List<FormRequestWorkflowStepDto> {
             new FormRequestWorkflowStepDto {
                 Step = "Formun Gönderilmesi",
                 Status = "Submitted",
-                Actor = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId) != null 
-                    ? $"{actors.First(p => p.LinkedUserId == request.RequestorUserId).Adi} {actors.First(p => p.LinkedUserId == request.RequestorUserId).Soyadi}" 
-                    : "Bilinmeyen Kullanıcı",
+                Actor = requestorName,
                 Date = request.CreatedAt
             }
         };
@@ -135,7 +155,19 @@ public sealed class GetRequestDetailedQueryHandler
             {
                 var targetUserId = app.ActionByUserId ?? app.AssigneeUserId;
                 var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
-                actorName = actorObj != null ? $"{actorObj.Adi} {actorObj.Soyadi}" : (targetUserId?.ToString() ?? "Bilinmiyor");
+                
+                if (actorObj != null)
+                {
+                    actorName = $"{actorObj.Adi} {actorObj.Soyadi}";
+                }
+                else if (targetUserId.HasValue)
+                {
+                    var appUser = await _userRepository.GetByIdAsync(targetUserId.Value, ct, false);
+                    if (appUser != null && !string.IsNullOrWhiteSpace(appUser.DisplayName))
+                        actorName = appUser.DisplayName;
+                    else
+                        actorName = targetUserId.Value.ToString();
+                }
             }
             else if (app.AssigneeRoleId.HasValue)
             {
@@ -189,11 +221,12 @@ public sealed class GetRequestDetailedQueryHandler
                     string? computedValue = v.ValueText
                         ?? v.ValueNumber?.ToString()
                         ?? v.ValueDateTime?.ToString("O")
-                        ?? v.ValueBool?.ToString().ToLowerInvariant();
+                        ?? v.ValueBool?.ToString().ToLowerInvariant()
+                        ?? v.ValueJson;
 
                     if (fieldDef != null)
                     {
-                        if (!string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue))
+                        if (!string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue) && fieldDef.FieldType != 11)
                         {
                             try 
                             {
@@ -290,6 +323,8 @@ public sealed class GetRequestDetailedQueryHandler
                     {
                         FieldKey = v.FieldKey,
                         Label = fieldDef?.Label ?? v.FieldKey,
+                        FieldType = fieldDef?.FieldType ?? 0,
+                        OptionsJson = fieldDef?.OptionsJson,
                         ValueText = computedValue
                     };
                 }).ToList(),

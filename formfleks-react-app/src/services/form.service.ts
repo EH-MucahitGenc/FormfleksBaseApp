@@ -47,6 +47,8 @@ export type ApprovalActionRequestDto = {
 export type FormRequestValueDto = {
   fieldKey: string;
   label: string;
+  fieldType?: number;
+  optionsJson?: string;
   valueText?: string;
 };
 

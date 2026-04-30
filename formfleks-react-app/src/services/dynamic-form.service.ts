@@ -2,11 +2,14 @@ import { apiClient } from '@/lib/axios';
 
 export interface DynamicFieldSchema {
   dataField: string;
-  editorType: 'text' | 'number' | 'date' | 'time' | 'datetime' | 'select' | 'textarea' | 'boolean';
+  editorType: 'text' | 'number' | 'date' | 'time' | 'datetime' | 'select' | 'textarea' | 'boolean' | 'grid' | 'file';
   label: string;
   isRequired: boolean;
   colSpan?: number;
   lookupData?: Array<{ id: string | number; name: string }>;
+  // Tablo (Grid) kolon tanımları (eğer editorType === 'grid' ise)
+  gridColumns?: Array<DynamicFieldSchema>;
+  optionsJson?: string;
 }
 
 export interface DynamicSectionSchema {
@@ -27,7 +30,7 @@ export interface DynamicFormTemplateDto {
 export interface BackendFormFieldDto {
   fieldKey: string;
   label: string;
-  fieldType: number; // 1: Text, 2: Textarea, 3: Checkbox, 4: Dropdown, 5: Date, 6: Time, 7: DateTime, 10: File
+  fieldType: number; // 1: Text, 2: Textarea, 3: Checkbox, 4: Dropdown, 5: Date, 6: Time, 7: DateTime, 10: File, 11: Grid
   isRequired: boolean;
   sortOrder: number;
   sectionTitle: string;
@@ -123,6 +126,7 @@ class DynamicFormService {
 
          let editorType: DynamicFieldSchema['editorType'] = 'text';
          let lookupData;
+         let gridColumns;
 
          switch(fieldType) {
            case 1: editorType = 'text'; break;
@@ -151,16 +155,31 @@ class DynamicFormService {
            case 5: editorType = 'date'; break;
            case 6: editorType = 'time'; break;
            case 7: editorType = 'datetime'; break; 
-           case 10: editorType = 'text'; break; // File
+           case 10: 
+             editorType = 'file'; 
+             break;
+           case 11: 
+             editorType = 'grid'; 
+             // Grid kolonları JSON formatında optionsJson içinde gelir
+             if (optionsJson) {
+               try {
+                 gridColumns = JSON.parse(optionsJson);
+               } catch {
+                 gridColumns = [];
+               }
+             }
+             break;
          }
 
          parsedFields.push({
            dataField: fieldKey,
            label: label,
            isRequired: isRequired,
-           colSpan: editorType === 'textarea' ? 2 : 1,
+           colSpan: (editorType === 'textarea' || editorType === 'grid') ? 2 : 1,
            editorType,
-           lookupData
+           lookupData,
+           gridColumns,
+           optionsJson
          });
       });
 

@@ -21,6 +21,8 @@ import {
   FfSelectBox,
   FfField
 } from '@/components/dev-extreme/index';
+import { FfDynamicGridField } from '@/components/dev-extreme/FfDynamicGridField';
+import { FfDynamicFileField } from '@/components/dev-extreme/FfDynamicFileField';
 import NumberBox from 'devextreme-react/number-box';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
 
@@ -155,6 +157,33 @@ export const DynamicFormViewer: React.FC = () => {
   // Maps a dynamic schema field to the corresponding standard Formfleks wrapper
   const renderField = (field: DynamicFieldSchema) => {
     switch (field.editorType) {
+      case 'grid':
+        return (
+          <FfDynamicGridField
+            key={field.dataField}
+            name={field.dataField}
+            label={field.label}
+            required={field.isRequired}
+            columnsSchema={field.gridColumns || []}
+            className={field.colSpan === 2 ? 'col-span-full' : ''}
+          />
+        );
+      case 'file':
+        return (
+          <FfField
+            key={field.dataField}
+            control={control}
+            name={field.dataField}
+            component={FfDynamicFileField as any}
+            label={field.label}
+            componentProps={{
+              isRequired: field.isRequired,
+              fieldKey: field.dataField,
+              optionsJson: field.optionsJson
+            }}
+            className={field.colSpan === 2 ? 'col-span-full' : ''}
+          />
+        );
       case 'select':
         return (
           <FfField

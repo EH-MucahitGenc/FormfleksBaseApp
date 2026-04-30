@@ -159,16 +159,102 @@ export const FormDetail: React.FC = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-2">
               {data.values && data.values.length > 0 ? (
-                data.values.map((f: any, i: number) => (
-                  <div key={i} className="group">
-                    <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                      {f.label || f.fieldKey}
-                    </span>
-                    <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10">
-                      {f.valueText || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+                data.values.map((f: any, i: number) => {
+                  if (f.fieldType === 11 && f.valueText) {
+                    try {
+                      const gridData = JSON.parse(f.valueText);
+                      let gridCols: any[] = [];
+                      if (f.optionsJson) {
+                         gridCols = JSON.parse(f.optionsJson);
+                      } else if (Array.isArray(gridData) && gridData.length > 0) {
+                         gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
+                      }
+
+                      if (Array.isArray(gridData)) {
+                        return (
+                          <div key={i} className="col-span-full group mt-2 mb-4">
+                            <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-2 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                              {f.label || f.fieldKey}
+                            </span>
+                            <div className="overflow-x-auto w-full rounded-lg border border-surface-muted bg-surface-base shadow-sm">
+                              <table className="w-full text-sm text-left">
+                                <thead className="bg-surface-hover text-xs uppercase text-brand-gray border-b border-surface-muted">
+                                  <tr>
+                                    <th className="px-4 py-3 w-12 text-center">#</th>
+                                    {gridCols.map((c: any) => (
+                                      <th key={c.dataField} className="px-4 py-3 font-semibold">{c.caption || c.label || c.dataField}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-surface-muted">
+                                  {gridData.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={gridCols.length + 1} className="px-4 py-6 text-center text-brand-gray italic">
+                                        Bu tabloya henüz bir veri eklenmemiş.
+                                      </td>
+                                    </tr>
+                                  ) : gridData.map((row: any, rIdx: number) => (
+                                    <tr key={rIdx} className="hover:bg-brand-primary/5 transition-colors">
+                                      <td className="px-4 py-3 text-center font-bold text-brand-gray/50">{rIdx + 1}</td>
+                                      {gridCols.map((c: any) => {
+                                          let val = row[c.dataField];
+                                          // Boolean vs check for UI
+                                          if (val === true) val = "Evet";
+                                          if (val === false) val = "Hayır";
+                                          return (
+                                            <td key={c.dataField} className="px-4 py-3 text-brand-dark font-medium">{val ?? '-'}</td>
+                                          );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch(e) {
+                      console.error("Grid parse error", e);
+                    }
+                  }
+
+                  if (f.fieldType === 10 && f.valueText) {
+                    const isImage = f.valueText.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+                    const isPdf = f.valueText.match(/\.(pdf)$/i) != null;
+                    const fileName = f.valueText.split('/').pop() || 'Dosya';
+                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : `https://localhost:7127${f.valueText}`;
+                    
+                    return (
+                      <div key={i} className="group col-span-full md:col-span-1">
+                        <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                          {f.label || f.fieldKey}
+                        </span>
+                        <div className="flex items-center gap-3 bg-surface-muted/30 p-3 rounded-lg border border-surface-muted hover:border-brand-primary/40 transition-colors">
+                           <div className="h-10 w-10 shrink-0 bg-brand-primary/10 rounded-md flex items-center justify-center text-brand-primary">
+                             <FileText className="h-5 w-5" />
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <a href={fullUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-brand-dark hover:text-brand-primary truncate block transition-colors" title="Dosyayı Görüntüle / İndir">
+                                {fileName}
+                              </a>
+                              <span className="text-xs text-brand-gray uppercase">{isImage ? 'Resim' : isPdf ? 'PDF Belgesi' : 'Belge'}</span>
+                           </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={i} className="group">
+                      <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                        {f.label || f.fieldKey}
+                      </span>
+                      <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10">
+                        {f.valueText || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="col-span-full py-8 text-center text-sm font-medium text-brand-gray bg-surface-muted/20 rounded-lg border border-dashed border-brand-gray/30">
                   Bu forma ait girilmiş bir veri bulunmuyor.
