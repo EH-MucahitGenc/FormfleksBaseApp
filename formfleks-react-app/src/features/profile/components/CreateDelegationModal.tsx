@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { FfModal, FfButton } from '@/components/ui';
 import { useForm, Controller } from 'react-hook-form';
-import { FfSelectBox, FfDateBox, FfTextBox } from '@/components/dev-extreme';
-import { CreateUserDelegationRequest } from '@/services/delegation.service';
+import { FfSelectBox } from '@/components/dev-extreme/FfSelectBox';
+import { FfDateBox } from '@/components/dev-extreme/FfDateBox';
+import { FfTextBox } from '@/components/dev-extreme/FfTextBox';
+import type { CreateUserDelegationRequest } from '@/services/delegation.service';
 import { useCreateDelegation } from '../hooks/useDelegations';
 import { adminService } from '@/services/admin.service';
 
@@ -66,13 +68,12 @@ export const CreateDelegationModal: React.FC<CreateDelegationModalProps> = ({ on
             control={control}
             rules={{ required: 'Başlangıç Tarihi zorunludur' }}
             render={({ field }) => {
-              // @ts-ignore
               return <FfDateBox
                 label="Başlangıç Tarihi"
                 value={field.value}
                 onValueChanged={(e: any) => field.onChange(e.value)}
                 error={errors.startDate?.message}
-                componentProps={{ type: "datetime" }}
+                type="datetime"
               />;
             }}
           />
@@ -82,13 +83,13 @@ export const CreateDelegationModal: React.FC<CreateDelegationModalProps> = ({ on
             control={control}
             rules={{ required: 'Bitiş Tarihi zorunludur' }}
             render={({ field }) => {
-              // @ts-ignore
               return <FfDateBox
                 label="Bitiş Tarihi"
                 value={field.value}
                 onValueChanged={(e: any) => field.onChange(e.value)}
                 error={errors.endDate?.message}
-                componentProps={{ type: "datetime", min: watch('startDate') }}
+                type="datetime"
+                min={watch('startDate') ? new Date(watch('startDate')) : undefined}
               />;
             }}
           />

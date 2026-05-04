@@ -125,7 +125,8 @@ export const FfTimeBox: React.FC<FfFieldProps> = ({ name, label, required, place
 };
 
 // ----------------------------------------------------------------------
-export const FfDateBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
+// ----------------------------------------------------------------------
+export const FfDateBoxRHF: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
   const { control } = useFormContext();
 
   return (
@@ -168,7 +169,7 @@ export const FfDateBox: React.FC<FfFieldProps> = ({ name, label, required, place
   );
 };
 
-export const FfDateTimeBox: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
+export const FfDateTimeBoxRHF: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled }) => {
   const { control } = useFormContext();
 
   return (

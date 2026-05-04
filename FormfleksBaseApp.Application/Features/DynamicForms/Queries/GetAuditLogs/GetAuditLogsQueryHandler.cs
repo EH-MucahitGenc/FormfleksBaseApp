@@ -1,3 +1,4 @@
+using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Contracts.DynamicForms.AuditLogs;
 using MediatR;
@@ -8,10 +9,12 @@ namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetAuditLog
 public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery, List<AuditLogItemDto>>
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly IUserRepository _userRepository;
 
-    public GetAuditLogsQueryHandler(IDynamicFormsDbContext db)
+    public GetAuditLogsQueryHandler(IDynamicFormsDbContext db, IUserRepository userRepository)
     {
         _db = db;
+        _userRepository = userRepository;
     }
 
     public async Task<List<AuditLogItemDto>> Handle(GetAuditLogsQuery request, CancellationToken ct)
@@ -30,7 +33,7 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
             .ToDictionaryAsync(u => u.LinkedUserId!.Value, u => u.Adi + " " + u.Soyadi, ct);
 
         // 2. Resolve FormRequests
-        var requestIds = rawLogs.Where(x => x.EntityType == "FormRequest").Select(x => x.EntityId).Distinct().ToList();
+        var requestIds = rawLogs.Where(x => x.EntityType == "FormRequest" || x.EntityType == "FormRequestApproval").Select(x => x.EntityId).Distinct().ToList();
         var requestDict = await _db.FormRequests
             .AsNoTracking()
             .Where(r => requestIds.Contains(r.Id))
@@ -58,18 +61,42 @@ public sealed class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery
                 CreatedAt = x.CreatedAt
             };
 
-            if (x.ActorUserId.HasValue && actorsDict.TryGetValue(x.ActorUserId.Value, out var aName))
+            if (x.ActorUserId.HasValue)
             {
-                dto.ActorName = aName;
+                if (actorsDict.TryGetValue(x.ActorUserId.Value, out var aName))
+                {
+                    dto.ActorName = aName;
+                }
+                else
+                {
+                    // Fallback to AppUser if not in QdmsPersoneller
+                    var fallbackUser = await _userRepository.GetByIdAsync(x.ActorUserId.Value, ct, false);
+                    if (fallbackUser != null && !string.IsNullOrWhiteSpace(fallbackUser.DisplayName))
+                    {
+                        dto.ActorName = fallbackUser.DisplayName;
+                        actorsDict[x.ActorUserId.Value] = fallbackUser.DisplayName; // Cache for next loop iterations
+                    }
+                }
             }
             
             if (x.EntityType == "FormRequest" && requestDict.TryGetValue(x.EntityId, out var rCode))
             {
                 dto.TargetName = rCode;
             }
-            else if (x.EntityType == "FormRequestApproval" && approvalDict.TryGetValue(x.EntityId, out var aCode))
+            else if (x.EntityType == "FormRequestApproval")
             {
-                dto.TargetName = aCode;
+                if (approvalDict.TryGetValue(x.EntityId, out var aCode))
+                {
+                    dto.TargetName = aCode;
+                }
+                else if (requestDict.TryGetValue(x.EntityId, out var rCode2))
+                {
+                    dto.TargetName = rCode2;
+                }
+                else 
+                {
+                    dto.TargetName = x.EntityId.ToString();
+                }
             }
             else
             {

@@ -199,6 +199,7 @@ export const Users: React.FC = () => {
               />
                <FfField 
                  component={FfSelectBox}
+                 control={methods.control}
                  name="roleId"
                  label="Yetki / Rol"
                  componentProps={{

@@ -47,7 +47,7 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
   const gridRef = useRef<any>(null);
 
   // TanStack Query for seamless server state management
-  const { data, isLoading, isError, error, isFetching } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey,
     queryFn: fetchFn,
     // By default staleTime is 0, which means instant background refetching on mount.

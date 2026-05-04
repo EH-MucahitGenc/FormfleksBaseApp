@@ -7,6 +7,8 @@ export interface ActivityLogItem {
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
   createdAt: string;
+  actorName?: string;
+  targetName?: string;
 }
 
 interface ActivityFeedProps {
@@ -43,10 +45,23 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ logs }) => {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-brand-dark leading-snug">{log.message}</p>
-                  <span className="text-xs text-brand-gray mt-1 block">
-                    {new Date(log.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <p className="text-sm font-medium text-brand-dark leading-snug">
+                    {log.message}
+                    {log.targetName && <span className="font-bold text-brand-primary ml-1">({log.targetName})</span>}
+                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
+                    <span className="text-xs text-brand-gray/80 flex items-center gap-1">
+                      {new Date(log.createdAt).toLocaleString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {log.actorName && (
+                      <>
+                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-surface-muted"></span>
+                        <span className="text-xs font-semibold text-brand-dark flex items-center gap-1">
+                          <span className="text-brand-gray font-normal">Kişi:</span> {log.actorName}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

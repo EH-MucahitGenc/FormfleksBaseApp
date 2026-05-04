@@ -22,6 +22,8 @@ export interface ActivityLogDto {
   message: string;
   createdAt: string;
   type: 'info' | 'success' | 'warning' | 'error';
+  actorName?: string;
+  targetName?: string;
 }
 
 /**
@@ -111,7 +113,9 @@ class DashboardService {
           id: log.id || String(index),
           message: msg,
           createdAt: log.createdAt,
-          type: type
+          type: type,
+          actorName: log.actorName,
+          targetName: log.targetName
         };
       });
     } catch {

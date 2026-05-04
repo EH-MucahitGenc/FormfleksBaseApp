@@ -761,7 +761,7 @@ export const FormDesigner: React.FC = () => {
       </FfModal>
 
       <FfModal isOpen={!!fileManager} onClose={saveFileSettings} title="Dosya Yükleme Ayarları" size="sm"
-        actions={
+        footer={
             <div className="flex justify-end gap-3 w-full">
                <FfButton variant="primary" onClick={saveFileSettings} leftIcon={<CheckCircle2 className="h-4 w-4" />}>
                  Kaydet ve Kapat

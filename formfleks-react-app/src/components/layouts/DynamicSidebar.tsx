@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogOut, LayoutDashboard, FileText, Settings, Building2, 
-  Users, LayoutTemplate, Route, IdCard, 
+  Users, LayoutTemplate, Route, 
   ChevronLeft, Shield, CheckSquare, User, Activity 
 } from 'lucide-react';
 import { cn } from '@/components/ui';

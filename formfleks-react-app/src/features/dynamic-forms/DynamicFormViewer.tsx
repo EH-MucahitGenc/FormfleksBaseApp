@@ -13,8 +13,8 @@ import { FfEmptyState } from '@/components/shared/FfEmptyState';
 import { 
   FfTextField, 
   FfTimeBox,
-  FfDateTimeBox,
-  FfDateBox,
+  FfDateTimeBoxRHF,
+  FfDateBoxRHF,
   FormSection 
 } from '@/components/dev-extreme/FfFormLayout';
 import {
@@ -203,7 +203,7 @@ export const DynamicFormViewer: React.FC = () => {
         );
       case 'date':
         return (
-          <FfDateBox
+          <FfDateBoxRHF
             key={field.dataField}
             name={field.dataField}
             label={field.label}
@@ -223,7 +223,7 @@ export const DynamicFormViewer: React.FC = () => {
         );
       case 'datetime':
         return (
-          <FfDateTimeBox
+          <FfDateTimeBoxRHF
             key={field.dataField}
             name={field.dataField}
             label={field.label}

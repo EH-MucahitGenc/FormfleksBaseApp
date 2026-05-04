@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, File, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, File, X, AlertCircle, Loader2 } from 'lucide-react';
 import { fileService } from '@/services/file.service';
 
 interface FfDynamicFileFieldProps {
@@ -13,7 +13,6 @@ interface FfDynamicFileFieldProps {
 }
 
 export const FfDynamicFileField = ({
-  fieldKey,
   label,
   isRequired,
   value,

@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Route, Save, Plus, Trash2, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, GitMerge } from 'lucide-react';
 import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfSelectBox } from '@/components/dev-extreme';
-import { systemAdminService, type FormTemplateWorkflowStepUpsertDto } from '@/services/system-admin.service';
+import { systemAdminService, type FormTemplateWorkflowStepUpsertDto, type FormTemplateSummaryDto } from '@/services/system-admin.service';
+import type { AdminUserDto, AdminRoleDto } from '@/services/admin.service';
 
 export const WorkflowDesigner: React.FC = () => {
   const queryClient = useQueryClient();
@@ -17,21 +18,23 @@ export const WorkflowDesigner: React.FC = () => {
   // UI State
   const [message, setMessage] = useState<{ type: 'success'|'error', text: string } | null>(null);
 
-  // Queries
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+  const { data: templatesQueryData, isLoading: templatesLoading } = useQuery({
     queryKey: ['adminFormTemplates'],
     queryFn: systemAdminService.getTemplates
   });
+  const templates: FormTemplateSummaryDto[] = templatesQueryData || [];
 
-  const { data: roles = [] } = useQuery({
+  const { data: rolesQueryData } = useQuery({
     queryKey: ['adminRolesLookup'],
     queryFn: systemAdminService.getRolesLookup
   });
+  const roles: AdminRoleDto[] = rolesQueryData || [];
 
-  const { data: users = [] } = useQuery({
+  const { data: usersQueryData } = useQuery({
     queryKey: ['adminUsersLookup'],
     queryFn: systemAdminService.getUsersLookup
   });
+  const users: AdminUserDto[] = usersQueryData || [];
 
   // Fetch workflow when form changes
   const { data: existingSteps, isFetching: stepsFetching } = useQuery({
