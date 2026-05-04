@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Route, Save, Plus, Trash2, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, GitMerge } from 'lucide-react';
 import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
+import { FfSelectBox } from '@/components/dev-extreme';
 import { systemAdminService, type FormTemplateWorkflowStepUpsertDto } from '@/services/system-admin.service';
 
 export const WorkflowDesigner: React.FC = () => {
@@ -25,6 +26,11 @@ export const WorkflowDesigner: React.FC = () => {
   const { data: roles = [] } = useQuery({
     queryKey: ['adminRolesLookup'],
     queryFn: systemAdminService.getRolesLookup
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['adminUsersLookup'],
+    queryFn: systemAdminService.getUsersLookup
   });
 
   // Fetch workflow when form changes
@@ -307,13 +313,30 @@ export const WorkflowDesigner: React.FC = () => {
                                             </label>
                                             
                                             {step.assigneeType === 1 && (
-                                                <input type="text" value={step.assigneeUserId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeUserId: e.target.value })} className="w-full bg-surface-hover border border-brand-primary/20 rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary font-mono" placeholder="Kullanıcı GUID..." />
+                                                <div className="bg-surface-base rounded-lg border border-brand-primary/20">
+                                                    <FfSelectBox 
+                                                        value={step.assigneeUserId || ''} 
+                                                        onValueChanged={e => handleUpdateStep(sIdx, { assigneeUserId: e.value })} 
+                                                        dataSource={users}
+                                                        valueExpr="id"
+                                                        displayExpr={(item: any) => item ? `${item.name || item.email} (${item.email})` : ''}
+                                                        placeholder="Kullanıcı Ara & Seçiniz..."
+                                                        searchEnabled={true}
+                                                    />
+                                                </div>
                                             )}
                                             {step.assigneeType === 2 && (
-                                                <select value={step.assigneeRoleId || ''} onChange={e => handleUpdateStep(sIdx, { assigneeRoleId: e.target.value })} className="w-full bg-surface-hover border border-brand-primary/20 rounded-lg px-3 py-2 text-sm text-brand-dark focus:ring-1 focus:ring-brand-primary">
-                                                    <option value="">Rol Seçiniz</option>
-                                                    {roles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
-                                                </select>
+                                                <div className="bg-surface-base rounded-lg border border-brand-primary/20">
+                                                    <FfSelectBox 
+                                                        value={step.assigneeRoleId || ''} 
+                                                        onValueChanged={e => handleUpdateStep(sIdx, { assigneeRoleId: e.value })} 
+                                                        dataSource={roles}
+                                                        valueExpr="id"
+                                                        displayExpr={(item: any) => item ? `${item.name} (${item.code})` : ''}
+                                                        placeholder="Rol Ara & Seçiniz..."
+                                                        searchEnabled={true}
+                                                    />
+                                                </div>
                                             )}
                                             {step.assigneeType >= 10 && (
                                                 <div className="px-3 py-2 text-sm text-brand-accent bg-brand-accent/5 border border-brand-accent/20 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis italic font-medium">Bu rol HR ağacından çalışma anında (runtime) bulunur.</div>
@@ -340,12 +363,29 @@ export const WorkflowDesigner: React.FC = () => {
                                             <div className="md:col-span-3">
                                                 <label className="text-[11px] font-bold text-brand-gray uppercase mb-1.5 opacity-60">Fallback Hedefi</label>
                                                 {step.fallbackAction === 2 ? (
-                                                    <input type="text" placeholder="Guid..." value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-surface-base border border-surface-muted rounded py-1.5 px-2 text-xs font-mono"/>
+                                                    <div className="bg-surface-base rounded py-1.5 border border-surface-muted">
+                                                        <FfSelectBox 
+                                                            value={step.fallbackUserId || ''} 
+                                                            onValueChanged={e => handleUpdateStep(sIdx, { fallbackUserId: e.value })} 
+                                                            dataSource={users}
+                                                            valueExpr="id"
+                                                            displayExpr={(item: any) => item ? `${item.name || item.email}` : ''}
+                                                            placeholder="Kullanıcı Ara..."
+                                                            searchEnabled={true}
+                                                        />
+                                                    </div>
                                                 ) : (
-                                                    <select value={step.fallbackUserId || ''} onChange={e => handleUpdateStep(sIdx, { fallbackUserId: e.target.value })} className="w-full bg-surface-base border border-surface-muted rounded py-1.5 px-2 text-xs">
-                                                        <option value="">Rol Seç...</option>
-                                                        {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                                    </select>
+                                                    <div className="bg-surface-base rounded py-1.5 border border-surface-muted">
+                                                        <FfSelectBox 
+                                                            value={step.fallbackUserId || ''} 
+                                                            onValueChanged={e => handleUpdateStep(sIdx, { fallbackUserId: e.value })} 
+                                                            dataSource={roles}
+                                                            valueExpr="id"
+                                                            displayExpr="name"
+                                                            placeholder="Rol Ara..."
+                                                            searchEnabled={true}
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
