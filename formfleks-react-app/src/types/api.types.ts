@@ -126,18 +126,6 @@ export interface EmailSettingsDto {
   enableSsl: boolean;
 }
 
-// ─── Visitors ────────────────────────────────────────
-export interface VisitorDto {
-  id: string;
-  visitorName: string;
-  companyName: string;
-  visitDate: string;
-  visitReason: string;
-  hostEmployeeName: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-}
-
 // ─── System Admin ────────────────────────────────────
 export interface AuditLogDto {
   id: string;

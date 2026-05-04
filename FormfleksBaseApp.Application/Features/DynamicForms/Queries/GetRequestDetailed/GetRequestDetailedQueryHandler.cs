@@ -8,6 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRequestDetailed;
 
+/// <summary>
+/// Sistemde doldurulmuş ve onay sürecine girmiş (veya tamamlanmış) bir formun (talebin) tüm detaylarını getiren Query Handler sınıfıdır.
+/// Bu sınıf form içerisindeki verileri (JSON), onay tarihçesini, onay bekleyen kişileri ve formu dolduran kişinin 
+/// QdmsPersonel sistemi üzerindeki gerçek Ad-Soyad bilgilerini eşleştirerek UI (Kullanıcı Arayüzü) katmanına sunar.
+/// Güvenlik gereği sadece formu dolduran veya onay sürecinde yer alan kişilerin erişimine izin verir.
+/// </summary>
 public sealed class GetRequestDetailedQueryHandler
     : IRequestHandler<GetRequestDetailedQuery, FormRequestDetailedDto?>
 {
@@ -137,14 +143,35 @@ public sealed class GetRequestDetailedQueryHandler
             }
         }
 
-        var timeline = new List<FormRequestWorkflowStepDto> {
-            new FormRequestWorkflowStepDto {
+        var auditLogs = await _db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.EntityType == "FormRequest" && a.EntityId == request.Id && a.ActionType == "FormSubmitted")
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync(ct);
+
+        var timeline = new List<FormRequestWorkflowStepDto>();
+
+        bool isFirstSubmit = true;
+        foreach (var log in auditLogs)
+        {
+            timeline.Add(new FormRequestWorkflowStepDto {
+                Step = isFirstSubmit ? "Formun Gönderilmesi" : "Formun Revize Edilmesi",
+                Status = isFirstSubmit ? "Submitted" : "Revised",
+                Actor = requestorName,
+                Date = log.CreatedAt
+            });
+            isFirstSubmit = false;
+        }
+
+        if (timeline.Count == 0)
+        {
+            timeline.Add(new FormRequestWorkflowStepDto {
                 Step = "Formun Gönderilmesi",
                 Status = "Submitted",
                 Actor = requestorName,
                 Date = request.CreatedAt
-            }
-        };
+            });
+        }
 
         foreach (var app in approvals.OrderBy(a => a.ActionAt.HasValue ? 0 : 1).ThenBy(a => a.ActionAt).ThenBy(a => a.StepNo))
         {
@@ -184,6 +211,12 @@ public sealed class GetRequestDetailedQueryHandler
                 Comment = app.ActionComment
             });
         }
+
+        // Sort all executed/past events chronologically
+        var pastEvents = timeline.Where(t => t.Date.HasValue).OrderBy(t => t.Date).ToList();
+        var futureEvents = timeline.Where(t => !t.Date.HasValue).ToList();
+        
+        timeline = pastEvents.Concat(futureEvents).ToList();
 
         // Add Future Steps
         // Find the currently active or last active step

@@ -79,7 +79,6 @@ export const DynamicSidebar = ({
       <div className="flex-1 overflow-y-auto py-6 px-3 flex flex-col gap-1.5 scrollbar-thin">
         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" isCollapsed={!isSidebarOpen} />
         <NavItem to="/approvals" icon={CheckSquare} label="Onaylarım" isCollapsed={!isSidebarOpen} />
-        <NavItem to="/visitors" icon={IdCard} label="Ziyaretçiler" isCollapsed={!isSidebarOpen} />
         
         {/* Dynamic Forms Section (Collapsible) */}
         {!isSidebarOpen && <div className="mt-2 mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-brand-gray/50 text-center">Formlar</div>}

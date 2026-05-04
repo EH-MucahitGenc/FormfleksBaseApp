@@ -7,6 +7,11 @@ namespace FormfleksBaseApp.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
+/// <summary>
+/// Dinamik formlar ve sistem genelindeki dosya yükleme (File Upload) işlemlerini yöneten API Controller sınıfıdır.
+/// Yüklenen dosyaları güvenlik ve performans amacıyla veritabanı yerine sunucunun wwwroot/uploads dizininde saklar.
+/// Path Traversal saldırılarını önlemek için dosyalara benzersiz Guid isimleri atar.
+/// </summary>
 public class FilesController : ControllerBase
 {
     private readonly IWebHostEnvironment _env;

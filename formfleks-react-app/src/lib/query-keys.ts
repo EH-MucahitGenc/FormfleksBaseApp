@@ -41,9 +41,4 @@ export const queryKeys = {
     email: ['settings', 'email'] as const,
     profile: ['settings', 'profile'] as const,
   },
-
-  // --- Visitors Module ---
-  visitors: {
-    list: ['visitors', 'list'] as const,
-  },
 } as const;

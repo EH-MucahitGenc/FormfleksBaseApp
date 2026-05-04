@@ -1,3 +1,4 @@
+using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
@@ -10,12 +11,17 @@ namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetPendingA
 public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPendingApprovalsQuery, IReadOnlyList<PendingApprovalListItemDto>>
 {
     private readonly IDynamicFormsDbContext _db;
-    private readonly Microsoft.Extensions.Logging.ILogger<GetPendingApprovalsQueryHandler> _logger;
+    private readonly ILogger<GetPendingApprovalsQueryHandler> _logger;
+    private readonly IUserRepository _userRepository;
 
-    public GetPendingApprovalsQueryHandler(IDynamicFormsDbContext db, Microsoft.Extensions.Logging.ILogger<GetPendingApprovalsQueryHandler> logger)
+    public GetPendingApprovalsQueryHandler(
+        IDynamicFormsDbContext db, 
+        ILogger<GetPendingApprovalsQueryHandler> logger,
+        IUserRepository userRepository)
     {
         _db = db;
         _logger = logger;
+        _userRepository = userRepository;
     }
 
     public async Task<IReadOnlyList<PendingApprovalListItemDto>> Handle(GetPendingApprovalsQuery request, CancellationToken ct)
@@ -66,6 +72,24 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                           ApprovalConcurrencyToken = app.ConcurrencyToken,
                           CreatedAt = r.CreatedAt
                       }).ToListAsync(ct);
+
+        // Fallback for "Bilinmiyor"
+        var missingNameUserIds = result.Where(x => x.RequestorName == "Bilinmiyor").Select(x => x.RequestorUserId).Distinct().ToList();
+        if (missingNameUserIds.Any())
+        {
+            foreach (var reqUserId in missingNameUserIds)
+            {
+                var appUser = await _userRepository.GetByIdAsync(reqUserId, ct, track: false);
+                if (appUser != null)
+                {
+                    var fallbackName = !string.IsNullOrWhiteSpace(appUser.DisplayName) ? appUser.DisplayName : appUser.Email;
+                    foreach (var item in result.Where(x => x.RequestorUserId == reqUserId))
+                    {
+                        item.RequestorName = fallbackName;
+                    }
+                }
+            }
+        }
 
         _logger.LogWarning("DIAGNOSTICS: Returning {Count} mapped list items to ActorUserId: {ActorId}.", result.Count, request.ActorUserId);
         return result;

@@ -126,7 +126,6 @@ builder.Services.AddValidatorsFromAssembly(typeof(FormfleksBaseApp.Application.A
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // EF Core (Postgres)
-builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IVisitorRepository, FormfleksBaseApp.Infrastructure.Persistence.Repositories.VisitorRepository>();
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 

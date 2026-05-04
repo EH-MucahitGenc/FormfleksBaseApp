@@ -298,6 +298,11 @@ export const FormDetail: React.FC = () => {
                     bgIcon = 'bg-surface-muted/30';
                     Icon = Clock;
                     statusText = 'Sırada Bekliyor';
+                  } else if (w.status === 'Revised') {
+                    statusColor = 'border-brand-primary text-brand-primary font-bold';
+                    bgIcon = 'bg-brand-primary/10';
+                    Icon = Edit;
+                    statusText = 'Form Revize Edildi';
                   } else if (w.status === 'Pending') {
                     statusColor = 'border-brand-primary text-brand-primary';
                     bgIcon = 'bg-brand-primary/10';
