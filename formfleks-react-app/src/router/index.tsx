@@ -70,7 +70,6 @@ export const router = createBrowserRouter([
               { path: '', element: <Suspense fallback={<PageFallback />}><MyForms /></Suspense> },
               { path: 'd/:formCode', element: <Suspense fallback={<PageFallback />}><DynamicFormViewer /></Suspense> },
               { path: 'create', element: <Suspense fallback={<PageFallback />}><NewFormRequest /></Suspense> },
-              { path: 'create/:formCode', element: <Suspense fallback={<PageFallback />}><NewFormRequest /></Suspense> },
               { path: ':id', element: <Suspense fallback={<PageFallback />}><FormDetail /></Suspense> }
             ]
           },

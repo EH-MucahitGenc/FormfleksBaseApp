@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogOut, LayoutDashboard, FileText, Settings, Building2, 
   Users, LayoutTemplate, Route, 
-  ChevronLeft, Shield, CheckSquare, User, Activity 
+  ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck 
 } from 'lucide-react';
 import { cn } from '@/components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -45,6 +45,9 @@ export const DynamicSidebar = ({
 
   // Open the forms section automatically if we are currently viewing a form
   const [isFormsExpanded, setIsFormsExpanded] = useState(() => location.pathname.includes('/forms/d/'));
+  const [formSearch, setFormSearch] = useState('');
+
+  const filteredForms = authorizedForms.filter(f => f.name.toLocaleLowerCase('tr-TR').includes(formSearch.toLocaleLowerCase('tr-TR')));
 
   useEffect(() => {
     fetchAuthorizedForms();
@@ -104,15 +107,25 @@ export const DynamicSidebar = ({
           
           {isFormsExpanded && isSidebarOpen && (
             <div className="flex flex-col gap-1 mt-1 pl-4 bg-surface-muted/30 py-2 rounded-lg border-l-2 border-brand-primary/20 ml-2">
+              <div className="px-3 mb-2">
+                <input
+                  type="text"
+                  placeholder="Formlarda ara..."
+                  className="w-full bg-white border border-surface-muted rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-brand-primary transition-colors placeholder:text-brand-gray/50"
+                  value={formSearch}
+                  onChange={(e) => setFormSearch(e.target.value)}
+                  onClick={(e) => e.stopPropagation()} // Prevent sidebar toggle if clicked inside
+                />
+              </div>
               {isLoading ? (
                 <div className="px-3 animate-pulse flex flex-col gap-3 py-2">
                    <div className="h-4 bg-surface-muted rounded-md w-3/4"></div>
                    <div className="h-4 bg-surface-muted rounded-md w-1/2"></div>
                 </div>
-              ) : authorizedForms.length === 0 ? (
+              ) : filteredForms.length === 0 ? (
                 <div className="text-xs text-brand-gray/60 px-4 py-2 italic font-medium">Form bulunamadı.</div>
               ) : (
-                authorizedForms.map(form => (
+                filteredForms.map(form => (
                   <NavLink
                     key={form.code}
                     to={`/forms/d/${form.code}`}
@@ -153,6 +166,7 @@ export const DynamicSidebar = ({
         
         <div className="mt-auto pt-4 border-t border-surface-muted">
           <NavItem to="/settings/profile" icon={User} label="Profilim" isCollapsed={!isSidebarOpen} />
+          <NavItem to="/settings/delegations" icon={UserCheck} label="Vekalet Devri" isCollapsed={!isSidebarOpen} />
           <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />
         </div>
       </div>

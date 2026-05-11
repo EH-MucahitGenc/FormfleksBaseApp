@@ -66,13 +66,13 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                 columnAutoWidth={true}
                 wordWrapEnabled={true}
                 onSaved={(e) => {
-                  // Batch düzenleme sonrası tüm grid datasını form state'ine geçir
+                  // Hücre (cell) düzenleme sonrası veya satır ekleme/silme işlemi tamamlandığında tüm grid datasını form state'ine geçir
                   const newData = e.component.option('dataSource');
-                  onChange(newData);
+                  onChange([...newData]); // Dizi referansını yenileyerek hook-form'un algılamasını sağla
                 }}
               >
                 <Editing
-                  mode="batch"
+                  mode="cell"
                   allowAdding={!disabled}
                   allowUpdating={!disabled}
                   allowDeleting={!disabled}

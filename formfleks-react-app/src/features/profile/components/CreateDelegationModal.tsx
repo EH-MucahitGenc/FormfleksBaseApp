@@ -53,7 +53,7 @@ export const CreateDelegationModal: React.FC<CreateDelegationModalProps> = ({ on
             <FfSelectBox
               label="Vekil (Devralan Kullanıcı)"
               items={users}
-              displayExpr="adi"
+              displayExpr="name"
               valueExpr="id"
               value={field.value}
               onValueChanged={(e: any) => field.onChange(e.value)}

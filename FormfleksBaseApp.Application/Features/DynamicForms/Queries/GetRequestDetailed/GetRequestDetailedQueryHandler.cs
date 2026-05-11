@@ -247,23 +247,21 @@ public sealed class GetRequestDetailedQueryHandler
             FormTypeName = formType?.Name ?? "",
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
-            Values = values
-                .OrderBy(v => formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey)?.SortOrder ?? 9999)
-                .Select(v => {
-                    var fieldDef = formFields.FirstOrDefault(f => f.FieldKey == v.FieldKey);
-                    string? computedValue = v.ValueText
-                        ?? v.ValueNumber?.ToString()
-                        ?? v.ValueDateTime?.ToString("O")
-                        ?? v.ValueBool?.ToString().ToLowerInvariant()
-                        ?? v.ValueJson;
+            Values = formFields
+                .OrderBy(f => f.SortOrder)
+                .Select(f => {
+                    var v = values.FirstOrDefault(val => string.Equals(val.FieldKey, f.FieldKey, StringComparison.OrdinalIgnoreCase));
+                    string? computedValue = v?.ValueText
+                        ?? v?.ValueNumber?.ToString()
+                        ?? v?.ValueDateTime?.ToString("O")
+                        ?? v?.ValueBool?.ToString().ToLowerInvariant()
+                        ?? v?.ValueJson;
 
-                    if (fieldDef != null)
+                    if (!string.IsNullOrWhiteSpace(f.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue) && f.FieldType != 11)
                     {
-                        if (!string.IsNullOrWhiteSpace(fieldDef.OptionsJson) && !string.IsNullOrWhiteSpace(computedValue) && fieldDef.FieldType != 11)
-                        {
                             try 
                             {
-                                using var doc = System.Text.Json.JsonDocument.Parse(fieldDef.OptionsJson);
+                                using var doc = System.Text.Json.JsonDocument.Parse(f.OptionsJson);
                                 if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
                                 {
                                     string searchVal = computedValue;
@@ -316,7 +314,7 @@ public sealed class GetRequestDetailedQueryHandler
                             {
                                 try 
                                 {
-                                    var fallbackParts = fieldDef.OptionsJson.Split(',').Select(s => s.Trim()).ToList();
+                                    var fallbackParts = f.OptionsJson.Split(',').Select(s => s.Trim()).ToList();
                                     string searchVal = computedValue;
                                     int? searchIdx = null;
                                     if (decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
@@ -343,21 +341,20 @@ public sealed class GetRequestDetailedQueryHandler
                         
                         if (!string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
                         {
-                            if (fieldDef.FieldType == 4 || fieldDef.FieldType == 5)
+                            if (f.FieldType == 4 || f.FieldType == 5)
                                 computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy");
-                            else if (fieldDef.FieldType == 6)
+                            else if (f.FieldType == 6)
                                 computedValue = dt.ToLocalTime().ToString("HH:mm");
                             else 
                                 computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
                         }
-                    }
 
                     return new FormRequestValueDto
                     {
-                        FieldKey = v.FieldKey,
-                        Label = fieldDef?.Label ?? v.FieldKey,
-                        FieldType = fieldDef?.FieldType ?? 0,
-                        OptionsJson = fieldDef?.OptionsJson,
+                        FieldKey = f.FieldKey,
+                        Label = f.Label ?? f.FieldKey,
+                        FieldType = f.FieldType,
+                        OptionsJson = f.OptionsJson,
                         ValueText = computedValue
                     };
                 }).ToList(),
