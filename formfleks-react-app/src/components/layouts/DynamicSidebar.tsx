@@ -159,6 +159,7 @@ export const DynamicSidebar = ({
             <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/departments" icon={Building2} label="Departmanlar" isCollapsed={!isSidebarOpen} />
+            <NavItem to="/admin/hr-authorizations" icon={UserCheck} label="İK Şube Yetkileri" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/personnel-sync" icon={Users} label="Personel Senkronizasyonu" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />
           </>

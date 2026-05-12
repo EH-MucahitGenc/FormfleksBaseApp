@@ -299,6 +299,7 @@ export const WorkflowDesigner: React.FC = () => {
                                                     <option value={11}>Departman Yöneticisi</option>
                                                     <option value={12}>Kısım/Bölüm Lideri</option>
                                                     <option value={13}>Üst Yönetici (2 Kademe)</option>
+                                                    <option value={14}>Lokasyon İK Sorumlusu</option>
                                                 </optgroup>
                                                 <optgroup label="Sabit Atamalar">
                                                     <option value={1}>Spesifik Kullanıcı</option>

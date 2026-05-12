@@ -67,8 +67,8 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                 wordWrapEnabled={true}
                 onSaved={(e) => {
                   // Hücre (cell) düzenleme sonrası veya satır ekleme/silme işlemi tamamlandığında tüm grid datasını form state'ine geçir
-                  const newData = e.component.option('dataSource');
-                  onChange([...newData]); // Dizi referansını yenileyerek hook-form'un algılamasını sağla
+                  const newData = e.component.option('dataSource') as any[];
+                  onChange([...(newData || [])]); // Dizi referansını yenileyerek hook-form'un algılamasını sağla
                 }}
               >
                 <Editing

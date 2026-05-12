@@ -20,8 +20,10 @@ import 'devextreme/dist/css/dx.light.css'; // Will be overridden by global CSS
 import './dx-overrides.css'; // We'll create this to fix DX borders and make it look premium
 
 export interface FfDataGridProps {
-  queryKey: string[];
-  fetchFn: () => Promise<any[]>;
+  queryKey?: string[] | any[];
+  fetchFn?: () => Promise<any[]>;
+  dataSource?: any;
+  loading?: boolean;
   columns: any[]; // DevExpress Column configuration array or children
   title?: string;
   enableExport?: boolean;
@@ -35,6 +37,8 @@ export interface FfDataGridProps {
 export const FfDataGrid: React.FC<FfDataGridProps> = ({
   queryKey,
   fetchFn,
+  dataSource,
+  loading,
   columns,
   title,
   enableExport = true,
@@ -47,12 +51,14 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
   const gridRef = useRef<any>(null);
 
   // TanStack Query for seamless server state management
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey,
-    queryFn: fetchFn,
-    // By default staleTime is 0, which means instant background refetching on mount.
-    // This solves grid caching problems like invisible new approvals.
+  const { data: fetchedData, isLoading: isQueryLoading, isError, error } = useQuery({
+    queryKey: queryKey || ['_mock_'],
+    queryFn: fetchFn || (async () => []),
+    enabled: !!queryKey && !!fetchFn,
   });
+
+  const finalData = dataSource !== undefined ? dataSource : fetchedData;
+  const isFinalLoading = loading !== undefined ? loading : isQueryLoading;
 
   const handleRowClick = useCallback((e: any) => {
     if (onRowClick) {
@@ -60,7 +66,7 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
     }
   }, [onRowClick]);
 
-  if (isLoading) {
+  if (isFinalLoading) {
     return (
       <div className={cn("w-full h-[400px]", className)}>
         <FfSkeletonLoader type="grid" />
@@ -81,7 +87,7 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
   }
 
   // Pure Empty State implementation bypassing awful native DX empty template
-  if (!data || data.length === 0) {
+  if (!finalData || finalData.length === 0) {
     return <FfEmptyState className={className} />;
   }
 
@@ -90,7 +96,7 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
 
       <DataGrid
         ref={gridRef}
-        dataSource={data}
+        dataSource={finalData}
         showBorders={false} // Crucial for Bento Box modern premium aesthetic
         showColumnLines={false}
         showRowLines={true}

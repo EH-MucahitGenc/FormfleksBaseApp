@@ -64,8 +64,22 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         bool hasUserAuth = approval.AssigneeUserId == reqDto.ActorUserId;
         bool hasRoleAuth = approval.AssigneeRoleId.HasValue && userRoleIds.Contains(approval.AssigneeRoleId.Value);
+        
+        bool hasBranchHrAuth = false;
+        if (currentStep.AssigneeType == (short)WorkflowAssigneeType.LocationHR)
+        {
+            var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == req.RequestorUserId, ct);
+            var reqLocation = reqPers?.Isyeri_Tanimi;
 
-        if (!hasUserAuth && !hasRoleAuth)
+            var hrAuths = await _db.HrAuthorizations
+                .AsNoTracking()
+                .Where(x => x.UserId == reqDto.ActorUserId && x.Active)
+                .ToListAsync(ct);
+
+            hasBranchHrAuth = hrAuths.Any(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
+        }
+
+        if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth)
             throw new BusinessException("Bu dokümanı şu anki kademede onaylama/reddetme yetkiniz bulunmuyor.");
 
         approval.ActionByUserId = reqDto.ActorUserId;

@@ -27,6 +27,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
     public DbSet<UserDelegationEntity> UserDelegations => Set<UserDelegationEntity>();
+    public DbSet<FormfleksBaseApp.Domain.Entities.Admin.HrAuthorization> HrAuthorizations => Set<FormfleksBaseApp.Domain.Entities.Admin.HrAuthorization>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -292,6 +293,23 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.ErrorsJson).HasColumnName("errors_json").HasColumnType("jsonb");
             
             e.HasIndex(x => x.StartTime);
+        });
+
+        modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.HrAuthorization>(e =>
+        {
+            e.ToTable("hr_authorizations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
+            e.Property(x => x.IsGlobalManager).HasColumnName("is_global_manager").HasColumnType("boolean");
+            e.Property(x => x.LocationName).HasColumnName("location_name").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.Active).HasColumnName("active").HasColumnType("boolean");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
+
+            e.HasIndex(x => new { x.UserId, x.Active });
+            e.HasIndex(x => new { x.LocationName, x.Active });
+            e.HasIndex(x => x.IsGlobalManager);
         });
     }
 }

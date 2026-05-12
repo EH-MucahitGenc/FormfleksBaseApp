@@ -20,6 +20,7 @@ const DynamicFormViewer = lazy(() => import('@/features/dynamic-forms/DynamicFor
 const Users = lazy(() => import('@/features/admin/Users').then(m => ({ default: m.Users })));
 const Roles = lazy(() => import('@/features/admin/Roles').then(m => ({ default: m.Roles })));
 const Departments = lazy(() => import('@/features/admin/Departments').then(m => ({ default: m.Departments })));
+const HrAuthorizations = lazy(() => import('@/features/admin/HrAuthorizations'));
 const AuditLogs = lazy(() => import('@/features/admin/AuditLogs').then(m => ({ default: m.AuditLogs })));
 const FormDesigner = lazy(() => import('@/features/admin/form-designer/FormDesigner').then(m => ({ default: m.FormDesigner })));
 const WorkflowDesigner = lazy(() => import('@/features/admin/workflow-designer/WorkflowDesigner').then(m => ({ default: m.WorkflowDesigner })));
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: 'roles', element: <Suspense fallback={<PageFallback />}><Roles /></Suspense> },
                   { path: 'departments', element: <Suspense fallback={<PageFallback />}><Departments /></Suspense> },
+                  { path: 'hr-authorizations', element: <Suspense fallback={<PageFallback />}><HrAuthorizations /></Suspense> },
                   { path: 'audit-logs', element: <Suspense fallback={<PageFallback />}><AuditLogs /></Suspense> },
                   { path: 'personnel-sync', element: <Suspense fallback={<PageFallback />}><PersonnelSync /></Suspense> },
                   { path: 'system-settings', element: <Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense> }

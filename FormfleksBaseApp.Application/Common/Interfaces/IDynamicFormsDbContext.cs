@@ -23,6 +23,7 @@ public interface IDynamicFormsDbContext
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs { get; }
     DbSet<UserDelegationEntity> UserDelegations { get; }
+    DbSet<FormfleksBaseApp.Domain.Entities.Admin.HrAuthorization> HrAuthorizations { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

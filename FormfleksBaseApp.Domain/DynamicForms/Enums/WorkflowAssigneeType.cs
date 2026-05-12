@@ -13,7 +13,8 @@ public enum WorkflowAssigneeType : short
     DirectManager = 10,
     DepartmentManager = 11,
     SectionLeader = 12,
-    UpperManager = 13
+    UpperManager = 13,
+    LocationHR = 14
 }
 
 /// <summary>

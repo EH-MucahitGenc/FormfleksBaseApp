@@ -50,13 +50,27 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
             }
         }
 
+        var hrAuths = await _db.HrAuthorizations
+            .AsNoTracking()
+            .Where(x => x.UserId == request.ActorUserId && x.Active)
+            .ToListAsync(ct);
+            
+        bool isGlobalHr = hrAuths.Any(x => x.IsGlobalManager);
+        var myLocations = hrAuths.Where(x => !x.IsGlobalManager && !string.IsNullOrWhiteSpace(x.LocationName))
+            .Select(x => x.LocationName).ToList();
+
         var result = await (from app in _db.FormRequestApprovals.AsNoTracking()
                       join r in _db.FormRequests.AsNoTracking() on app.RequestId equals r.Id
+                      join ws in _db.WorkflowSteps.AsNoTracking() on app.WorkflowStepId equals ws.Id
                       join t in _db.FormTypes.AsNoTracking() on r.FormTypeId equals t.Id
                       join p in _db.QdmsPersoneller.AsNoTracking() on r.RequestorUserId equals p.LinkedUserId into personeller
                       from person in personeller.DefaultIfEmpty()
                       where app.Status == (short)ApprovalStatus.Pending
-                      && (app.AssigneeUserId == request.ActorUserId || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value)))
+                      && (
+                          app.AssigneeUserId == request.ActorUserId 
+                          || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value))
+                          || (ws.AssigneeType == 14 && (isGlobalHr || (person != null && myLocations.Contains(person.Isyeri_Tanimi))))
+                      )
                       orderby app.StepNo ascending, r.CreatedAt ascending
                       select new PendingApprovalListItemDto
                       {
