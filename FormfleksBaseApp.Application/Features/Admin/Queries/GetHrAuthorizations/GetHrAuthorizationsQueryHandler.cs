@@ -29,6 +29,7 @@ public class GetHrAuthorizationsQueryHandler : IRequestHandler<GetHrAuthorizatio
     {
         var auths = await _db.HrAuthorizations
             .AsNoTracking()
+            .Where(x => x.Active)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
 

@@ -11,7 +11,7 @@ public enum WorkflowAssigneeType : short
     
     // Enterprise Organizational Roles
     DirectManager = 10,
-    DepartmentManager = 11,
+
     SectionLeader = 12,
     UpperManager = 13,
     LocationHR = 14

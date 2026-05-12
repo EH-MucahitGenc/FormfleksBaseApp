@@ -117,7 +117,7 @@ export default function HrAuthorizations() {
           active: auth.active
         });
       }
-      if (auth.locationName) {
+      if (auth.locationName && !map.get(auth.userId).locations.includes(auth.locationName)) {
         map.get(auth.userId).locations.push(auth.locationName);
       }
     });

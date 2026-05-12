@@ -76,44 +76,4 @@ export const useDeleteRole = () => {
   });
 };
 
-// ─── Departments ─────────────────────────────────────
 
-export const useDepartments = () =>
-  useQuery({
-    queryKey: queryKeys.admin.departments,
-    queryFn: adminService.getDepartments,
-  });
-
-export const useCreateDepartment = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: adminService.createDepartment,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.admin.departments });
-      notify.created('Departman');
-    },
-  });
-};
-
-export const useUpdateDepartment = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof adminService.updateDepartment>[1] }) =>
-      adminService.updateDepartment(id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.admin.departments });
-      notify.updated('Departman');
-    },
-  });
-};
-
-export const useDeleteDepartment = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => adminService.deleteDepartment(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.admin.departments });
-      notify.deleted('Departman');
-    },
-  });
-};

@@ -12,8 +12,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
     public DbSet<RoleEntity> Roles => Set<RoleEntity>();
     public DbSet<UserRoleEntity> UserRoles => Set<UserRoleEntity>();
-    public DbSet<DepartmentEntity> Departments => Set<DepartmentEntity>();
-    public DbSet<UserDepartmentEntity> UserDepartments => Set<UserDepartmentEntity>();
+
     public DbSet<FormTypeEntity> FormTypes => Set<FormTypeEntity>();
     public DbSet<FormSectionEntity> FormSections => Set<FormSectionEntity>();
     public DbSet<FormFieldEntity> FormFields => Set<FormFieldEntity>();
@@ -68,25 +67,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.RoleId).HasColumnName("role_id").HasColumnType("uuid");
         });
 
-        modelBuilder.Entity<DepartmentEntity>(e =>
-        {
-            e.ToTable("departments");
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
-            e.Property(x => x.Code).HasColumnName("code").HasColumnType("character varying(50)").HasMaxLength(50);
-            e.Property(x => x.Name).HasColumnName("name").HasColumnType("character varying(150)").HasMaxLength(150);
-            e.Property(x => x.Active).HasColumnName("active").HasColumnType("boolean");
-            e.HasIndex(x => x.Code).IsUnique();
-        });
 
-        modelBuilder.Entity<UserDepartmentEntity>(e =>
-        {
-            e.ToTable("user_departments");
-            e.HasKey(x => new { x.UserId, x.DepartmentId });
-            e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
-            e.Property(x => x.DepartmentId).HasColumnName("department_id").HasColumnType("uuid");
-            e.Property(x => x.IsPrimary).HasColumnName("is_primary").HasColumnType("boolean");
-        });
 
         modelBuilder.Entity<FormTypeEntity>(e =>
         {

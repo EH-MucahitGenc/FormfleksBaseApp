@@ -89,11 +89,7 @@ public class ApprovalEngineService : IApprovalEngineService
                 {
                     resolvedUserId = await ResolveUpperManagerAsync(requestorPersonnel, ct);
                 }
-                else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.DepartmentManager)
-                {
-                    // Şimdilik DepartmentManager'ı da UpperManager gibi 2 tırmanış yapıyoruz. İleride Departman Koduna göre taranacak.
-                    resolvedUserId = await ResolveUpperManagerAsync(requestorPersonnel, ct);
-                }
+
                 else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationHR)
                 {
                     // LocationHR (Lokasyon İK) rolü, çalışma zamanında (runtime) dinamik olarak

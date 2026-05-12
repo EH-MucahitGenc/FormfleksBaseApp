@@ -12,7 +12,7 @@ export const queryKeys = {
   admin: {
     users: ['admin', 'users'] as const,
     roles: ['admin', 'roles'] as const,
-    departments: ['admin', 'departments'] as const,
+
     auditLogs: ['admin', 'audit-logs'] as const,
     formTemplates: ['admin', 'form-templates'] as const,
     workflows: ['admin', 'workflows'] as const,

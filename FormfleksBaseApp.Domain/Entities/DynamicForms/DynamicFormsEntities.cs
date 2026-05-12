@@ -20,26 +20,7 @@ public sealed class UserRoleEntity
     public Guid RoleId { get; set; }
 }
 
-/// <summary>
-/// Sistemdeki departman/birim tanımlarını tutan varlık.
-/// </summary>
-public sealed class DepartmentEntity
-{
-    public Guid Id { get; set; }
-    public string Code { get; set; } = default!;
-    public string Name { get; set; } = default!;
-    public bool Active { get; set; }
-}
 
-/// <summary>
-/// Kullanıcı ve Departman arasındaki ilişkiyi tutan varlık. Bir kullanıcının ana (Primary) departmanı olabilir.
-/// </summary>
-public sealed class UserDepartmentEntity
-{
-    public Guid UserId { get; set; }
-    public Guid DepartmentId { get; set; }
-    public bool IsPrimary { get; set; }
-}
 
 /// <summary>
 /// Bir form şablonunun (Örn: İzin Formu, Masraf Formu) ana tanımını tutan varlık.

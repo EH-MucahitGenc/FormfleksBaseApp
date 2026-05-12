@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  LogOut, LayoutDashboard, FileText, Settings, Building2, 
+  LogOut, LayoutDashboard, FileText, Settings,
   Users, LayoutTemplate, Route, 
   ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck 
 } from 'lucide-react';
@@ -158,7 +158,7 @@ export const DynamicSidebar = ({
             <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Yönetim</div>
             <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />
-            <NavItem to="/admin/departments" icon={Building2} label="Departmanlar" isCollapsed={!isSidebarOpen} />
+
             <NavItem to="/admin/hr-authorizations" icon={UserCheck} label="İK Şube Yetkileri" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/personnel-sync" icon={Users} label="Personel Senkronizasyonu" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />

@@ -7,8 +7,7 @@ public interface IDynamicFormsDbContext
 {
     DbSet<RoleEntity> Roles { get; }
     DbSet<UserRoleEntity> UserRoles { get; }
-    DbSet<DepartmentEntity> Departments { get; }
-    DbSet<UserDepartmentEntity> UserDepartments { get; }
+
     DbSet<FormTypeEntity> FormTypes { get; }
     DbSet<FormSectionEntity> FormSections { get; }
     DbSet<FormFieldEntity> FormFields { get; }

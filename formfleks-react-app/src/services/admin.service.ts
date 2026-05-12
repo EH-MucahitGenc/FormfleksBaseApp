@@ -16,12 +16,6 @@ export interface AdminRoleDto {
   active: boolean;
 }
 
-export interface AdminDepartmentDto {
-  id: string;
-  code: string;
-  name: string;
-  active: boolean;
-}
 
 // User Action DTOs
 export interface UpdateUserRequest {
@@ -38,13 +32,7 @@ export interface CreateRoleCommand {
 }
 export type UpdateRoleCommand = CreateRoleCommand;
 
-// Department Action DTOs
-export interface CreateDepartmentCommand {
-  code: string;
-  name: string;
-  active: boolean;
-}
-export type UpdateDepartmentCommand = CreateDepartmentCommand;
+
 
 export const adminService = {
   // --- USERS ---
@@ -78,22 +66,4 @@ export const adminService = {
   deleteRole: async (id: string): Promise<void> => {
     await apiClient.delete(`/admin/roles/${id}`);
   },
-
-  // --- DEPARTMENTS ---
-  getDepartments: async (): Promise<AdminDepartmentDto[]> => {
-    const { data } = await apiClient.get<AdminDepartmentDto[]>('/admin/departments');
-    return data;
-  },
-
-  createDepartment: async (req: CreateDepartmentCommand): Promise<void> => {
-    await apiClient.post('/admin/departments', req);
-  },
-
-  updateDepartment: async (id: string, req: UpdateDepartmentCommand): Promise<void> => {
-    await apiClient.put(`/admin/departments/${id}`, req);
-  },
-
-  deleteDepartment: async (id: string): Promise<void> => {
-    await apiClient.delete(`/admin/departments/${id}`);
-  }
 };
