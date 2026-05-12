@@ -46,13 +46,30 @@ public sealed class GetRequestDetailedQueryHandler
                 .Select(ur => ur.RoleId)
                 .ToListAsync(ct);
 
-            bool isApprover = await _db.FormRequestApprovals
-                .AnyAsync(a => a.RequestId == query.RequestId && 
-                    (
-                        a.AssigneeUserId == query.RequestorUserId || 
-                        a.ActionByUserId == query.RequestorUserId ||
-                        (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value))
-                    ), ct);
+            var hrAuths = await _db.HrAuthorizations
+                .AsNoTracking()
+                .Where(x => x.UserId == query.RequestorUserId && x.Active)
+                .ToListAsync(ct);
+                
+            bool isGlobalHr = hrAuths.Any(x => x.IsGlobalManager);
+            var myLocations = hrAuths.Where(x => !x.IsGlobalManager && !string.IsNullOrWhiteSpace(x.LocationName))
+                .Select(x => x.LocationName).ToList();
+
+            var formCreatorPerson = await _db.QdmsPersoneller
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId && p.IsActive, ct);
+
+            bool isApprover = await (from a in _db.FormRequestApprovals.AsNoTracking()
+                                     join ws in _db.WorkflowSteps.AsNoTracking() on a.WorkflowStepId equals ws.Id into wsGroup
+                                     from ws in wsGroup.DefaultIfEmpty()
+                                     where a.RequestId == query.RequestId
+                                     && (
+                                         a.AssigneeUserId == query.RequestorUserId || 
+                                         a.ActionByUserId == query.RequestorUserId ||
+                                         (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value)) ||
+                                         (ws != null && ws.AssigneeType == 14 && (isGlobalHr || (formCreatorPerson != null && myLocations.Contains(formCreatorPerson.Isyeri_Tanimi))))
+                                     )
+                                     select a).AnyAsync(ct);
             
             if (!isApprover)
                 return null; // 404 Not Found (Unauthorized)

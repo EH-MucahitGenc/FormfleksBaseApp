@@ -134,7 +134,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, ct);
+                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, ct);
             }
         }
 
@@ -154,11 +154,38 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return new ApprovalActionResponseDto { Success = true };
     }
     
-    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name)>();
 
-        if (assignedUserId.HasValue)
+        if (assigneeType == (short)WorkflowAssigneeType.LocationHR)
+        {
+            var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
+            var reqLocation = authReqPers?.Isyeri_Tanimi;
+
+            var authorizedHrIds = await _db.HrAuthorizations
+                .AsNoTracking()
+                .Where(x => x.Active && (x.IsGlobalManager || x.LocationName == reqLocation))
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var hrUserId in authorizedHrIds)
+            {
+                var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
+                if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                {
+                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}"));
+                }
+                else
+                {
+                    var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
+                    if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
+                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen İK Sorumlusu"));
+                }
+            }
+        }
+        else if (assignedUserId.HasValue)
         {
             var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
             string? targetEmail = assgnPers?.Email;

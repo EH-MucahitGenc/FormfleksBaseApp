@@ -14,7 +14,7 @@ namespace FormfleksBaseApp.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/admin/users")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize]
 public sealed class AdminUsersController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -42,6 +42,7 @@ public sealed class AdminUsersController : ControllerBase
 
     /// <summary>Kullanıcı güncelle (sadece DisplayName ve roller)</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto, CancellationToken ct)
     {
         await _mediator.Send(new UpdateAdminUserCommand(id, dto), ct);
@@ -50,6 +51,7 @@ public sealed class AdminUsersController : ControllerBase
 
     /// <summary>Kullanıcıyı pasif yap (soft delete)</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
         await _mediator.Send(new DeleteAdminUserCommand(id), ct);

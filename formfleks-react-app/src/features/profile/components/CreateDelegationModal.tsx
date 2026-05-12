@@ -26,7 +26,10 @@ export const CreateDelegationModal: React.FC<CreateDelegationModalProps> = ({ on
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    adminService.getUsers().then(res => setUsers(res)).catch(() => {});
+    adminService.getUsers().then(res => {
+      // Sadece aktif kullanıcıları göster
+      setUsers(res.filter(u => u.isActive));
+    }).catch(() => {});
   }, []);
 
   const onSubmit = (data: CreateUserDelegationRequest) => {
