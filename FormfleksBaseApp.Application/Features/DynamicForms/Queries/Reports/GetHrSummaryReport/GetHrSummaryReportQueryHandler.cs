@@ -96,6 +96,14 @@ public sealed class GetHrSummaryReportQueryHandler : IRequestHandler<GetHrSummar
             });
         }
 
-        return result.OrderByDescending(r => r.TotalForms).ToList();
+        var filtered = result.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(request.Location))
+            filtered = filtered.Where(r => r.Location == request.Location);
+
+        if (!string.IsNullOrWhiteSpace(request.Department))
+            filtered = filtered.Where(r => r.Department == request.Department);
+
+        return filtered.OrderByDescending(r => r.TotalForms).ToList();
     }
 }

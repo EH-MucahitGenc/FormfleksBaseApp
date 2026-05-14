@@ -8,5 +8,7 @@ namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.Get
 public sealed record GetHrSummaryReportQuery(
     DateTime? StartDate,
     DateTime? EndDate,
-    Guid? RequestorUserId
+    Guid? RequestorUserId,
+    string? Department,
+    string? Location
 ) : IRequest<List<HrSummaryReportDto>>;

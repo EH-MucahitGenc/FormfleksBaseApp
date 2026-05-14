@@ -8,5 +8,6 @@ public sealed record GetHrAdvancedAnalyticsQuery(
     DateTime? StartDate,
     DateTime? EndDate,
     Guid? RequestorUserId,
-    string? Department
+    string? Department,
+    string? Location
 ) : IRequest<HrAdvancedAnalyticsDto>;

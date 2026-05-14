@@ -209,3 +209,111 @@
   font-size: 1.125rem !important;
   font-weight: 500 !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   PRINT / PDF Styles — Premium Branded Output
+   ═══════════════════════════════════════════════════════ */
+@media print {
+  /* Force color printing — kritik satır */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Sayfa boyutu ve kenar boşlukları */
+  @page {
+    size: A4 landscape;
+    margin: 1.2cm 1.5cm;
+  }
+
+  /* Sayfa gövdesi */
+  html, body {
+    background: #ffffff !important;
+    font-family: 'Outfit', 'Calibri', sans-serif !important;
+    font-size: 10pt !important;
+    color: #1e293b !important;
+  }
+
+  /* Scrollbar ve animasyonları gizle */
+  ::-webkit-scrollbar { display: none !important; }
+  * { animation: none !important; transition: none !important; }
+
+  /* Dashboard filtre barı, tab bar, sidebar vs. gizle */
+  .hr-print-hide {
+    display: none !important;
+  }
+
+  /* Print container'ı tam genişlikte göster */
+  .hr-print-area {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Sayfa kırılımı — her bölüm yeni sayfada başlayabilir */
+  .print-page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Sayfa kırılımını engelle — kartlar vs. bölünmesin */
+  .print-no-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Renkli gradient arka planlar */
+  .print-bg-navy    { background-color: #1E3A5F !important; color: #ffffff !important; }
+  .print-bg-blue    { background-color: #2D6A9F !important; color: #ffffff !important; }
+  .print-bg-light   { background-color: #D6E8F7 !important; }
+  .print-bg-green   { background-color: #D4EDDA !important; color: #155724 !important; }
+  .print-bg-red     { background-color: #F8D7DA !important; color: #721C24 !important; }
+  .print-bg-yellow  { background-color: #FFF3CD !important; color: #856404 !important; }
+  .print-bg-gray    { background-color: #E2E3E5 !important; color: #383D41 !important; }
+  .print-bg-orange  { background-color: #F97316 !important; color: #ffffff !important; }
+  .print-bg-zebra   { background-color: #F0F7FF !important; }
+
+  /* Tablo stilleri */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+  }
+
+  .print-table th {
+    background-color: #1E3A5F !important;
+    color: #ffffff !important;
+    padding: 7px 10px !important;
+    text-align: center !important;
+    font-weight: 700 !important;
+    font-size: 9pt !important;
+    border: 1px solid #2D6A9F !important;
+  }
+
+  .print-table td {
+    padding: 5px 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+  }
+
+  .print-table tr:nth-child(even) td {
+    background-color: #F0F7FF !important;
+  }
+
+  /* KPI kart stilleri (print) */
+  .print-kpi-card {
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Recharts SVG grafikleri print'te render olsun */
+  svg {
+    overflow: visible !important;
+  }
+}
