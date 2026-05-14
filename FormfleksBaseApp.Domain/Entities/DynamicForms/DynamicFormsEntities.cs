@@ -175,19 +175,6 @@ public sealed class FormRequestApprovalEntity
     public long ConcurrencyToken { get; set; }
 }
 
-/// <summary>
-/// Form şablonları üzerinde kimlerin oluşturma, görme veya onaylama yetkisi olduğunu belirleyen matris varlık.
-/// </summary>
-public sealed class AuthorizationMatrixEntity
-{
-    public Guid Id { get; set; }
-    public Guid FormTypeId { get; set; }
-    public Guid? RoleId { get; set; }
-    public Guid? UserId { get; set; }
-    public bool CanCreate { get; set; }
-    public bool CanViewAll { get; set; }
-    public bool CanApprove { get; set; }
-}
 
 /// <summary>
 /// Sistem genelinde yapılan kritik işlemlerin (Kayıt, Güncelleme, Silme vb.) denetim izini (Audit) tutan varlık.

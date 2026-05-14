@@ -16,7 +16,6 @@ public interface IDynamicFormsDbContext
     DbSet<FormRequestEntity> FormRequests { get; }
     DbSet<FormRequestValueEntity> FormRequestValues { get; }
     DbSet<FormRequestApprovalEntity> FormRequestApprovals { get; }
-    DbSet<AuthorizationMatrixEntity> AuthorizationMatrix { get; }
     DbSet<AuditLogEntity> AuditLogs { get; }
     
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller { get; }

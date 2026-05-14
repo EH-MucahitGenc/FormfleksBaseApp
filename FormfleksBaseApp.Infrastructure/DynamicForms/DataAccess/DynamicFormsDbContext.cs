@@ -21,7 +21,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestEntity> FormRequests => Set<FormRequestEntity>();
     public DbSet<FormRequestValueEntity> FormRequestValues => Set<FormRequestValueEntity>();
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
-    public DbSet<AuthorizationMatrixEntity> AuthorizationMatrix => Set<AuthorizationMatrixEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
@@ -201,20 +200,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint");
             e.HasIndex(x => new { x.RequestId, x.StepNo });
             e.HasIndex(x => new { x.Status, x.AssigneeRoleId, x.AssigneeUserId });
-        });
-
-        modelBuilder.Entity<AuthorizationMatrixEntity>(e =>
-        {
-            e.ToTable("authorization_matrix");
-            e.HasKey(x => x.Id);
-            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
-            e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
-            e.Property(x => x.RoleId).HasColumnName("role_id").HasColumnType("uuid");
-            e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
-            e.Property(x => x.CanCreate).HasColumnName("can_create").HasColumnType("boolean");
-            e.Property(x => x.CanViewAll).HasColumnName("can_view_all").HasColumnType("boolean");
-            e.Property(x => x.CanApprove).HasColumnName("can_approve").HasColumnType("boolean");
-            e.HasIndex(x => new { x.FormTypeId, x.RoleId, x.UserId }).IsUnique();
         });
 
         modelBuilder.Entity<AuditLogEntity>(e =>
