@@ -23,6 +23,7 @@ const Roles = lazy(() => import('@/features/admin/Roles').then(m => ({ default: 
 const LocationRoles = lazy(() => import('@/features/admin/LocationRoles'));
 const AuditLogs = lazy(() => import('@/features/admin/AuditLogs').then(m => ({ default: m.AuditLogs })));
 const FormDesigner = lazy(() => import('@/features/admin/form-designer/FormDesigner').then(m => ({ default: m.FormDesigner })));
+const HrReportingDashboard = lazy(() => import('@/features/reports/HrReportingDashboard').then(m => ({ default: m.HrReportingDashboard })));
 const WorkflowDesigner = lazy(() => import('@/features/admin/workflow-designer/WorkflowDesigner').then(m => ({ default: m.WorkflowDesigner })));
 const ApplicationSettings = lazy(() => import('@/features/settings/ApplicationSettings').then(m => ({ default: m.ApplicationSettings })));
 const UserProfile = lazy(() => import('@/features/settings/UserProfile').then(m => ({ default: m.UserProfile })));
@@ -96,6 +97,13 @@ export const router = createBrowserRouter([
                   { path: 'system-settings', element: <Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense> }
                 ]
               }
+            ]
+          },
+          {
+            path: 'hr',
+            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin', 'HumanResources', 'IK', 'IK-Admin', 'HR']} />,
+            children: [
+              { path: 'reports', element: <Suspense fallback={<PageFallback />}><HrReportingDashboard /></Suspense> }
             ]
           },
           {

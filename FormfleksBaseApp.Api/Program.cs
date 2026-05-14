@@ -117,6 +117,16 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin", "ADMIN", "admin"));
     options.AddPolicy("HasAppRole", policy => policy.RequireAuthenticatedUser());
     options.AddPolicy("AdminOrHr", policy => policy.RequireRole("Admin", "ADMIN", "admin", "HumanResources", "IK", "IK-Admin", "HR"));
+    
+    // Dinamik rollerin veritabanından çekilerek atanması için özel bir Handler yazılabilir veya şimdilik geniş bir Role listesi + Claim kontrolü yapılabilir.
+    options.AddPolicy("HrReportAccess", policy => policy.RequireAssertion(context =>
+    {
+        // Şimdilik Admin veya HR yetkisi olanlar girsin. Gelişmiş aşamada Claim ("Permission", "ViewReports") aranabilir.
+        return context.User.IsInRole("Admin") || context.User.IsInRole("ADMIN") || context.User.IsInRole("admin") 
+               || context.User.IsInRole("HR") || context.User.IsInRole("IK") || context.User.IsInRole("HumanResources") || context.User.IsInRole("IK-Admin")
+               // Gelecekte eklenecek "ReportViewer" gibi roller koda dokunmadan yetki alsın diye Claim tabanlı onay da veriyoruz:
+               || context.User.HasClaim(c => c.Type == "Permission" && c.Value == "ViewReports");
+    }));
 });
 
 // MediatR + FluentValidation + Pipeline

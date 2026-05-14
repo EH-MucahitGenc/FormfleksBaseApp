@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogOut, LayoutDashboard, FileText, Settings,
   Users, LayoutTemplate, Route, 
-  ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck 
+  ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck, BarChart2
 } from 'lucide-react';
 import { cn } from '@/components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -147,6 +147,9 @@ export const DynamicSidebar = ({
         
         {canSeeDesigners && (
           <>
+            <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">İnsan Kaynakları & Raporlar</div>
+            <NavItem to="/hr/reports" icon={BarChart2} label="Form Analizleri" isCollapsed={!isSidebarOpen} />
+
             <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Sistem & Araçlar</div>
             <NavItem to="/admin/form-designer" icon={LayoutTemplate} label="Form Tasarımcısı" isCollapsed={!isSidebarOpen} />
             <NavItem to="/admin/workflow-designer" icon={Route} label="Onay Rotaları" isCollapsed={!isSidebarOpen} />
