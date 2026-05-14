@@ -66,17 +66,17 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         bool hasRoleAuth = approval.AssigneeRoleId.HasValue && userRoleIds.Contains(approval.AssigneeRoleId.Value);
         
         bool hasBranchHrAuth = false;
-        if (currentStep.AssigneeType == (short)WorkflowAssigneeType.LocationHR)
+        if (currentStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && currentStep.TargetLocationRoleId.HasValue)
         {
             var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == req.RequestorUserId, ct);
             var reqLocation = reqPers?.Isyeri_Tanimi;
 
-            var hrAuths = await _db.HrAuthorizations
+            var locationRoles = await _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.UserId == reqDto.ActorUserId && x.Active)
+                .Where(x => x.UserId == reqDto.ActorUserId && x.RoleId == currentStep.TargetLocationRoleId.Value && x.IsActive)
                 .ToListAsync(ct);
 
-            hasBranchHrAuth = hrAuths.Any(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
+            hasBranchHrAuth = locationRoles.Any(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
         }
 
         if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth)
@@ -101,6 +101,8 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.ReturnedForRevision;
+                
+            await NotifyRequesterRevisionAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, ct);
         }
         else // Approve
         {
@@ -134,7 +136,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, ct);
+                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, ct);
             }
         }
 
@@ -154,23 +156,23 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return new ApprovalActionResponseDto { Success = true };
     }
     
-    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name)>();
 
-        if (assigneeType == (short)WorkflowAssigneeType.LocationHR)
+        if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
             var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
 
-            var authorizedHrIds = await _db.HrAuthorizations
+            var authorizedLocationUserIds = await _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.Active && (x.IsGlobalManager || x.LocationName == reqLocation))
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && (x.IsGlobalManager || x.LocationName == reqLocation))
                 .Select(x => x.UserId)
                 .Distinct()
                 .ToListAsync(ct);
 
-            foreach (var hrUserId in authorizedHrIds)
+            foreach (var hrUserId in authorizedLocationUserIds)
             {
                 var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
                 if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
@@ -240,7 +242,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         {
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", ct);
             }
         }
     }
@@ -263,7 +265,29 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
-            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, ct);
+            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, reqPers?.Isyeri_Tanimi ?? "", ct);
+        }
+    }
+
+    private async Task NotifyRequesterRevisionAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, CancellationToken ct)
+    {
+        var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
+        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
+
+        string? targetEmail = reqPers?.Email;
+        string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+
+        if (string.IsNullOrWhiteSpace(targetEmail))
+        {
+            var baseReqUser = await _userRepository.GetByIdAsync(requestorUserId, ct, false);
+            targetEmail = baseReqUser?.Email;
+            if (baseReqUser != null && !string.IsNullOrWhiteSpace(baseReqUser.DisplayName))
+                reqName = baseReqUser.DisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
+        {
+            await _emailService.SendApprovalReturnedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, reqPers?.Isyeri_Tanimi ?? "", ct);
         }
     }
 }

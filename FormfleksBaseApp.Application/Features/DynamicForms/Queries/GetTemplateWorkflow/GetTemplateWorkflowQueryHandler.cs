@@ -44,7 +44,8 @@ public sealed class GetTemplateWorkflowQueryHandler : IRequestHandler<GetTemplat
             AllowReturnForRevision = s.AllowReturnForRevision,
             FallbackAction = s.FallbackAction,
             FallbackUserId = s.FallbackUserId,
-            IsParallel = s.IsParallel
+            IsParallel = s.IsParallel,
+            TargetLocationRoleId = s.TargetLocationRoleId
         }).ToList();
     }
 }

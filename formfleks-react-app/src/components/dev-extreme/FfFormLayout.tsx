@@ -44,6 +44,7 @@ export interface FfFieldProps {
   className?: string;
   disabled?: boolean;
   mode?: 'text' | 'password' | 'email' | 'search' | 'tel' | 'url';
+  autoComplete?: string;
 }
 
 const FieldWrapper: React.FC<{ label: string; required?: boolean; error?: string; children: React.ReactNode; className?: string }> = ({ 
@@ -61,7 +62,7 @@ const FieldWrapper: React.FC<{ label: string; required?: boolean; error?: string
   );
 };
 
-export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled, mode }) => {
+export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled, mode, autoComplete }) => {
   const { control } = useFormContext();
 
   return (
@@ -82,6 +83,7 @@ export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, pla
             disabled={disabled}
             mode={mode || "text"}
             stylingMode="outlined"
+            inputAttr={{ autoComplete: autoComplete }}
             className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}
           />
         </FieldWrapper>

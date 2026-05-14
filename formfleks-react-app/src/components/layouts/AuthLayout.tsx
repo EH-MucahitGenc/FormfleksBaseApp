@@ -16,8 +16,13 @@ export const AuthLayout: React.FC = () => {
         <div className="bg-gradient-to-b from-white to-surface-hover/30 px-8 pt-12 pb-8 flex flex-col items-center justify-center border-b border-surface-muted/40 relative">
            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-primary via-brand-accent to-brand-primary"></div>
            
-           <div className="mb-5 bg-surface-base p-3.5 rounded-2xl shadow-soft border border-surface-muted/50 transition-transform hover:scale-105 duration-300">
-             <img src="/logo.svg" alt="Formfleks Logo" className="w-auto h-12 object-contain" />
+           <div className="mb-5 flex items-center justify-center gap-4">
+             <div className="bg-surface-base p-3.5 rounded-2xl shadow-soft border border-surface-muted/50 transition-transform hover:scale-105 duration-300">
+               <img src="/erkurtlogo.svg" alt="Erkurt Holding Logo" className="w-auto h-12 object-contain" />
+             </div>
+             <div className="bg-surface-base p-3.5 rounded-2xl shadow-soft border border-surface-muted/50 transition-transform hover:scale-105 duration-300">
+               <img src="/logo.svg" alt="Formfleks Logo" className="w-auto h-12 object-contain" />
+             </div>
            </div>
            
            <h2 className="text-xl text-center font-black tracking-tight text-brand-dark">Kurumsal Form ve Onay Platformu</h2>

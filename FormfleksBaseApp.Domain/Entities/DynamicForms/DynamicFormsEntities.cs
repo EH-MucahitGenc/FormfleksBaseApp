@@ -99,6 +99,9 @@ public sealed class WorkflowStepEntity
     public short FallbackAction { get; set; } // 0=Skip, 1=FallToUpperManager, 2=FallToFixedUser
     public Guid? FallbackUserId { get; set; }
     public bool IsParallel { get; set; }
+    
+    // Enterprise Organizational Roles Additions
+    public Guid? TargetLocationRoleId { get; set; }
 }
 
 /// <summary>

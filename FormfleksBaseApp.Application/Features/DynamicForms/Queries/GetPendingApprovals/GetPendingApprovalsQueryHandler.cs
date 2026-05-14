@@ -50,14 +50,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
             }
         }
 
-        var hrAuths = await _db.HrAuthorizations
-            .AsNoTracking()
-            .Where(x => x.UserId == request.ActorUserId && x.Active)
-            .ToListAsync(ct);
-            
-        bool isGlobalHr = hrAuths.Any(x => x.IsGlobalManager);
-        var myLocations = hrAuths.Where(x => !x.IsGlobalManager && !string.IsNullOrWhiteSpace(x.LocationName))
-            .Select(x => x.LocationName).ToList();
+
 
         var result = await (from app in _db.FormRequestApprovals.AsNoTracking()
                       join r in _db.FormRequests.AsNoTracking() on app.RequestId equals r.Id
@@ -69,7 +62,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                       && (
                           app.AssigneeUserId == request.ActorUserId 
                           || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value))
-                          || (ws.AssigneeType == 14 && (isGlobalHr || (person != null && myLocations.Contains(person.Isyeri_Tanimi))))
+                          || (ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (person != null && lr.LocationName == person.Isyeri_Tanimi))))
                       )
                       orderby app.StepNo ascending, r.CreatedAt ascending
                       select new PendingApprovalListItemDto

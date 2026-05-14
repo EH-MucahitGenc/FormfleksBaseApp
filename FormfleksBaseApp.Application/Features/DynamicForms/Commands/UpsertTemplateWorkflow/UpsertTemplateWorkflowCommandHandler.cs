@@ -64,7 +64,8 @@ public sealed class UpsertTemplateWorkflowCommandHandler : IRequestHandler<Upser
                 AllowReturnForRevision = sDto.AllowReturnForRevision,
                 FallbackAction = sDto.FallbackAction,
                 FallbackUserId = sDto.FallbackUserId,
-                IsParallel = sDto.IsParallel
+                IsParallel = sDto.IsParallel,
+                TargetLocationRoleId = sDto.TargetLocationRoleId
             });
             stepNo++;
         }

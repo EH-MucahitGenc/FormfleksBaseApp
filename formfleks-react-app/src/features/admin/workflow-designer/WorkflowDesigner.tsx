@@ -299,7 +299,7 @@ export const WorkflowDesigner: React.FC = () => {
                                                     <option value={11}>Departman Yöneticisi</option>
                                                     <option value={12}>Kısım/Bölüm Lideri</option>
                                                     <option value={13}>Üst Yönetici (2 Kademe)</option>
-                                                    <option value={14}>Lokasyon İK Sorumlusu</option>
+                                                    <option value={15}>Lokasyon Bazlı Dinamik Rol</option>
                                                 </optgroup>
                                                 <optgroup label="Sabit Atamalar">
                                                     <option value={1}>Spesifik Kullanıcı</option>
@@ -342,8 +342,21 @@ export const WorkflowDesigner: React.FC = () => {
                                                     />
                                                 </div>
                                             )}
-                                            {step.assigneeType >= 10 && (
+                                            {step.assigneeType >= 10 && step.assigneeType !== 15 && (
                                                 <div className="px-3 py-2 text-sm text-brand-accent bg-brand-accent/5 border border-brand-accent/20 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis italic font-medium">Bu rol HR ağacından çalışma anında (runtime) bulunur.</div>
+                                            )}
+                                            {step.assigneeType === 15 && (
+                                                <div className="bg-surface-base rounded-lg border border-brand-primary/20">
+                                                    <FfSelectBox 
+                                                        value={step.targetLocationRoleId || ''} 
+                                                        onValueChanged={e => handleUpdateStep(sIdx, { targetLocationRoleId: e.value })} 
+                                                        dataSource={roles}
+                                                        valueExpr="id"
+                                                        displayExpr={(item: any) => item ? `${item.name} (${item.code})` : ''}
+                                                        placeholder="Rol Ara & Seçiniz..."
+                                                        searchEnabled={true}
+                                                    />
+                                                </div>
                                             )}
                                             {step.assigneeType === 3 && (
                                                 <div className="px-3 py-2 text-sm text-brand-gray bg-surface-hover border border-surface-muted rounded-lg italic text-center">Tavsiye Edilmez</div>

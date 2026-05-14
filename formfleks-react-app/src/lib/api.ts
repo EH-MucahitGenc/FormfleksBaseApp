@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 // Create Formfleks Base API instance
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7124/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7127/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,7 +72,7 @@ api.interceptors.response.use(
       // Handle 400 Bad Request
       else if (status === 400) {
         const data = error.response.data as any;
-        const message = data?.message || data?.title || 'Geçersiz istek. Lütfen verilerinizi kontrol edin.';
+        const message = data?.detail || data?.message || data?.title || 'Geçersiz istek. Lütfen verilerinizi kontrol edin.';
         import('./notifications').then(({ notify }) => {
           notify.error(message);
         });
@@ -98,7 +98,7 @@ api.interceptors.response.use(
           const refreshToken = useAuthStore.getState().refreshToken;
           if (!refreshToken) throw new Error("No refresh token");
 
-          const rs = await axios.post(`${import.meta.env.VITE_API_URL || 'https://localhost:7124/api'}/auth/refresh`, {
+          const rs = await axios.post(`${import.meta.env.VITE_API_URL || 'https://localhost:7127/api'}/auth/refresh`, {
             refreshToken,
           });
 

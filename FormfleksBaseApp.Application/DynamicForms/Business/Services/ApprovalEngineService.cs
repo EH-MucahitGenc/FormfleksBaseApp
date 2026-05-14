@@ -90,9 +90,9 @@ public class ApprovalEngineService : IApprovalEngineService
                     resolvedUserId = await ResolveUpperManagerAsync(requestorPersonnel, ct);
                 }
 
-                else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationHR)
+                else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole)
                 {
-                    // LocationHR (Lokasyon İK) rolü, çalışma zamanında (runtime) dinamik olarak
+                    // LocationBasedRole (Lokasyon Bazlı Rol) çalışma zamanında (runtime) dinamik olarak
                     // GetPendingApprovalsQuery içerisinde filtrelenir.
                     // Bu nedenle tek bir statik AssigneeUserId veya RoleId'ye bağlanmaz.
                     // Adımı olduğu gibi (null, null) olarak döndürüp, formun bu adımda beklemesini sağlıyoruz.

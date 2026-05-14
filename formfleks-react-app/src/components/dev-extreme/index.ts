@@ -2,6 +2,7 @@ export * from './FfDataGrid';
 export * from './FfFormLayout';
 export * from './FfTextBox';
 export * from './FfSelectBox';
+export * from './FfTagBox';
 export * from './FfNumberBox';
 export * from './FfDateBox';
 export * from './FfField';

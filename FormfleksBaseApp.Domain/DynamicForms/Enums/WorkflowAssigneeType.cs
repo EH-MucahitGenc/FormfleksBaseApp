@@ -14,7 +14,7 @@ public enum WorkflowAssigneeType : short
 
     SectionLeader = 12,
     UpperManager = 13,
-    LocationHR = 14
+    LocationBasedRole = 15 // Lokasyon Bazlı Dinamik Rol (Sistemde atanmış şube bazlı rolleri kullanır)
 }
 
 /// <summary>

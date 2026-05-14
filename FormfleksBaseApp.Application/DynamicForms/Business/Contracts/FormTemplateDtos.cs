@@ -47,6 +47,7 @@ public sealed class FormTemplateWorkflowStepUpsertDto
     public short FallbackAction { get; set; }
     public Guid? FallbackUserId { get; set; }
     public bool IsParallel { get; set; }
+    public Guid? TargetLocationRoleId { get; set; }
 }
 
 public sealed class FormTemplateSummaryDto

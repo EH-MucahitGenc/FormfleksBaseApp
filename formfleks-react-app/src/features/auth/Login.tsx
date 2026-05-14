@@ -75,6 +75,7 @@ export const Login: React.FC = () => {
              name="username" 
              label="Kullanıcı Adı" 
              placeholder="ad.soyad" 
+             autoComplete="username"
              required 
            />
 
@@ -85,6 +86,7 @@ export const Login: React.FC = () => {
                label="Şifre" 
                placeholder="••••••••" 
                mode={showPassword ? 'text' : 'password'}
+               autoComplete="current-password"
                required 
              />
              <button 

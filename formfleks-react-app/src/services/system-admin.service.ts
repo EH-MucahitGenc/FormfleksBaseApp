@@ -61,6 +61,7 @@ export interface FormTemplateWorkflowStepDto {
   fallbackAction?: number;
   fallbackUserId?: string;
   isParallel?: boolean;
+  targetLocationRoleId?: string;
 }
 
 export type FormTemplateWorkflowStepUpsertDto = FormTemplateWorkflowStepDto;

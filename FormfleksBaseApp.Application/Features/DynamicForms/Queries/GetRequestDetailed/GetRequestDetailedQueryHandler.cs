@@ -37,6 +37,10 @@ public sealed class GetRequestDetailedQueryHandler
 
         bool isAuthorized = request.RequestorUserId == query.RequestorUserId;
 
+        var formCreatorPerson = await _db.QdmsPersoneller
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId && p.IsActive, ct);
+
         // If not the creator, check if they are an assigned approver
         if (!isAuthorized)
         {
@@ -46,19 +50,6 @@ public sealed class GetRequestDetailedQueryHandler
                 .Select(ur => ur.RoleId)
                 .ToListAsync(ct);
 
-            var hrAuths = await _db.HrAuthorizations
-                .AsNoTracking()
-                .Where(x => x.UserId == query.RequestorUserId && x.Active)
-                .ToListAsync(ct);
-                
-            bool isGlobalHr = hrAuths.Any(x => x.IsGlobalManager);
-            var myLocations = hrAuths.Where(x => !x.IsGlobalManager && !string.IsNullOrWhiteSpace(x.LocationName))
-                .Select(x => x.LocationName).ToList();
-
-            var formCreatorPerson = await _db.QdmsPersoneller
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId && p.IsActive, ct);
-
             bool isApprover = await (from a in _db.FormRequestApprovals.AsNoTracking()
                                      join ws in _db.WorkflowSteps.AsNoTracking() on a.WorkflowStepId equals ws.Id into wsGroup
                                      from ws in wsGroup.DefaultIfEmpty()
@@ -67,7 +58,7 @@ public sealed class GetRequestDetailedQueryHandler
                                          a.AssigneeUserId == query.RequestorUserId || 
                                          a.ActionByUserId == query.RequestorUserId ||
                                          (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value)) ||
-                                         (ws != null && ws.AssigneeType == 14 && (isGlobalHr || (formCreatorPerson != null && myLocations.Contains(formCreatorPerson.Isyeri_Tanimi))))
+                                         (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (formCreatorPerson != null && lr.LocationName == formCreatorPerson.Isyeri_Tanimi))))
                                      )
                                      select a).AnyAsync(ct);
             
@@ -262,6 +253,7 @@ public sealed class GetRequestDetailedQueryHandler
             RequestNo = request.RequestNo,
             FormTypeCode = formType?.Code ?? "",
             FormTypeName = formType?.Name ?? "",
+            RequesterCompany = formCreatorPerson?.Isyeri_Tanimi ?? "",
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
             Values = formFields

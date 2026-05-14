@@ -65,6 +65,7 @@ export type FormRequestDetailedDto = {
   requestNo: string;
   formTypeCode: string;
   formTypeName: string;
+  requesterCompany: string;
   status: RequestStatus;
   concurrencyToken: number;
   values: FormRequestValueDto[];

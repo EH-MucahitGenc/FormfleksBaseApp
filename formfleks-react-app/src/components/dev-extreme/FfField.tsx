@@ -41,7 +41,10 @@ export function FfField<TFieldValues extends FieldValues>({
              error={error?.message}
              value={value}
              onValueChanged={(e: any) => {
-               if (e.value !== value) {
+               const isEqual = Array.isArray(value) && Array.isArray(e.value) 
+                  ? JSON.stringify(e.value) === JSON.stringify(value)
+                  : e.value === value;
+               if (!isEqual) {
                  onChange(e.value);
                }
              }}

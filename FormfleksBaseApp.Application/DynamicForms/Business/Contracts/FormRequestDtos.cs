@@ -87,6 +87,7 @@ public sealed class FormRequestDetailedDto
     public string RequestNo { get; set; } = default!;
     public string FormTypeCode { get; set; } = default!;
     public string FormTypeName { get; set; } = default!;
+    public string RequesterCompany { get; set; } = string.Empty;
     public FormRequestStatus Status { get; set; }
     public long ConcurrencyToken { get; set; }
     public IReadOnlyList<FormRequestValueDto> Values { get; set; } = [];
