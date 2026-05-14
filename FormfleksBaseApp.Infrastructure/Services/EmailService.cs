@@ -62,7 +62,7 @@ public class EmailService : IEmailService
                             <table cellpadding="0" cellspacing="0" border="0" role="presentation">
                               <tr>
                                 <td style="background-color:rgba(0,0,0,0.18);border-radius:8px;padding:6px 14px;">
-                                  <img src="{{baseUrl}}/{{(requesterCompany.Contains("Erkurt", StringComparison.OrdinalIgnoreCase) ? "erkurtlogo.svg" : "logo.svg")}}" alt="{{(requesterCompany.Contains("Erkurt", StringComparison.OrdinalIgnoreCase) ? "Erkurt Holding" : "Formfleks")}}" style="max-height: 24px; display: block;" />
+                                  <img src="{{baseUrl}}/{{(requesterCompany.Contains("Erkurt", StringComparison.OrdinalIgnoreCase) ? "erkurtlogo.png" : "logo.png")}}" alt="{{(requesterCompany.Contains("Erkurt", StringComparison.OrdinalIgnoreCase) ? "Erkurt Holding" : "Formfleks")}}" style="max-height: 24px; display: block;" />
                                 </td>
                                 <td style="padding-left:12px;">
                                   <span style="font-size:11px;font-weight:600;color:{{accentTextColor}};opacity:0.8;letter-spacing:1.2px;text-transform:uppercase;">Kurumsal Form ve Onay Platformu</span>
@@ -215,7 +215,7 @@ public class EmailService : IEmailService
         _config = config;
     }
 
-    private string GetBaseUrl() => (_config["FrontendBaseUrl"] ?? "http://localhost:3000").TrimEnd('/');
+    private string GetBaseUrl() => (_config["FrontendBaseUrl"] ?? "http://localhost:3001").TrimEnd('/');
 
     // ══════════════════════════════════════════════════════════════════════════
     // 1. ONAY BEKLİYOR — Atanan yöneticiye (Amber/Gold tema)

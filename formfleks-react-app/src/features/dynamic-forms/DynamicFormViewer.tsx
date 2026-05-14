@@ -146,10 +146,11 @@ export const DynamicFormViewer: React.FC = () => {
     // Eksik alanları kırmızı renkle ekranda belirtmek için trigger'ı çağırıyoruz.
     const isValid = await trigger();
     if (!isValid) {
-      notify.error("Taslak olarak kaydediliyor, ancak göndermeden önce zorunlu alanları doldurmalısınız.");
+      notify.error("Taslak olarak kaydetmeden veya göndermeden önce zorunlu alanları doldurmalısınız.");
+      return; // Do not save draft if not valid
     }
     
-    // Taslak kaydedilirken formun o anki verilerini al (validasyon bloğuna takılmadan)
+    // Taslak kaydedilirken formun o anki verilerini al
     const data = getValues();
     draftMutation.mutate(data);
   };

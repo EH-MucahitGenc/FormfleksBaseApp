@@ -69,6 +69,7 @@ export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, pla
     <Controller
       name={name}
       control={control}
+      rules={{ required: required ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
         <FieldWrapper label={label} required={required} error={error?.message} className={className}>
           <TextBox
@@ -99,6 +100,7 @@ export const FfTimeBox: React.FC<FfFieldProps> = ({ name, label, required, place
       <Controller
         name={name}
         control={control}
+        rules={{ required: required ? "Bu alan zorunludur" : false }}
         render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => (
           <FieldWrapper label={label} required={required} error={error?.message} className={className}>
             <DateBox
@@ -135,6 +137,7 @@ export const FfDateBoxRHF: React.FC<FfFieldProps> = ({ name, label, required, pl
     <Controller
       name={name}
       control={control}
+      rules={{ required: required ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
         // DateBox crashes randomly on strings if they aren't fully formatted or parsed securely
         const dateValue = value && typeof value === 'string' 
@@ -178,6 +181,7 @@ export const FfDateTimeBoxRHF: React.FC<FfFieldProps> = ({ name, label, required
     <Controller
       name={name}
       control={control}
+      rules={{ required: required ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
         const dateValue = value && typeof value === 'string' 
           ? (!isNaN(new Date(value).getTime()) ? new Date(value) : null) 

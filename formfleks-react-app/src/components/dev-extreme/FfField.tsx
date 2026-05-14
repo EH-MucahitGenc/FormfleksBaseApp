@@ -11,6 +11,7 @@ interface FfFieldProps<TFieldValues extends FieldValues, TProps = any> {
   componentProps?: Omit<TProps, 'value' | 'onValueChanged' | 'error' | 'label' | 'helperText'> & Record<string, any>;
   containerClassName?: string;
   className?: string;
+  required?: boolean;
 }
 
 /**
@@ -25,12 +26,14 @@ export function FfField<TFieldValues extends FieldValues>({
   label,
   helperText,
   componentProps,
+  required,
   ...rest
 }: FfFieldProps<TFieldValues>) {
   return (
     <Controller
       name={name}
       control={control}
+      rules={{ required: required || componentProps?.required || componentProps?.isRequired ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, onBlur, value, ref }, fieldState: { error } }) => {
         // We pass value to DX components, and listen to onValueChanged.
         return (
