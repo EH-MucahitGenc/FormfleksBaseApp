@@ -142,6 +142,15 @@ public class EmailSenderBackgroundWorker : BackgroundService
             IsBodyHtml = true
         };
 
+        if (message.Attachments != null && message.Attachments.Any())
+        {
+            foreach (var attachment in message.Attachments)
+            {
+                var ms = new MemoryStream(attachment.Content);
+                mailMessage.Attachments.Add(new Attachment(ms, attachment.FileName, attachment.ContentType));
+            }
+        }
+
         foreach (var to in message.ToAddresses)
         {
             mailMessage.To.Add(to);

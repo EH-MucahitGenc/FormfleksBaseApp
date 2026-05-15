@@ -20,13 +20,23 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
     private readonly IApprovalEngineService _engine;
     private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
+    private readonly IPdfGeneratorService _pdfGenerator;
+    private readonly IFormAttachmentCollectorService _attachmentCollector;
 
-    public ExecuteApprovalActionCommandHandler(IDynamicFormsDbContext db, IApprovalEngineService engine, IEmailService emailService, IUserRepository userRepository)
+    public ExecuteApprovalActionCommandHandler(
+        IDynamicFormsDbContext db, 
+        IApprovalEngineService engine, 
+        IEmailService emailService, 
+        IUserRepository userRepository,
+        IPdfGeneratorService pdfGenerator,
+        IFormAttachmentCollectorService attachmentCollector)
     {
         _db = db;
         _engine = engine;
         _emailService = emailService;
         _userRepository = userRepository;
+        _pdfGenerator = pdfGenerator;
+        _attachmentCollector = attachmentCollector;
     }
 
     public async Task<ApprovalActionResponseDto> Handle(ExecuteApprovalActionCommand request, CancellationToken ct)
@@ -86,6 +96,19 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         approval.ActionComment = reqDto.Comment;
         approval.ActionAt = DateTime.UtcNow;
 
+        _db.AuditLogs.Add(new AuditLogEntity
+        {
+            EntityType = "FormRequestApproval",
+            EntityId = req.Id,
+            ActionType = reqDto.ActionType == ApprovalActionType.Approve ? "Approved" :
+                         reqDto.ActionType == ApprovalActionType.Reject ? "Rejected" : "ReturnedForRevision",
+            ActorUserId = reqDto.ActorUserId,
+            DetailJson = System.Text.Json.JsonSerializer.Serialize(new { Comment = reqDto.Comment, StepNo = req.CurrentStepNo }),
+            CreatedAt = DateTime.UtcNow
+        });
+
+        Func<List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>, Task>? sendNotificationTask = null;
+
         if (reqDto.ActionType == ApprovalActionType.Reject)
         {
             req.Reject((short)FormRequestStatus.Rejected);
@@ -93,7 +116,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.Rejected;
                 
-            await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, false, ct);
+            sendNotificationTask = (atts) => NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, false, atts, ct);
         }
         else if (reqDto.ActionType == ApprovalActionType.ReturnForRevision)
         {
@@ -102,7 +125,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.ReturnedForRevision;
                 
-            await NotifyRequesterRevisionAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, ct);
+            sendNotificationTask = (atts) => NotifyRequesterRevisionAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, atts, ct);
         }
         else // Approve
         {
@@ -119,7 +142,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (nextStep is null)
             {
                 req.Approve((short)FormRequestStatus.Approved);
-                await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, ct);
+                sendNotificationTask = (atts) => NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, atts, ct);
             }
             else
             {
@@ -136,27 +159,44 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, ct);
+                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, atts, ct);
             }
         }
 
-        _db.AuditLogs.Add(new AuditLogEntity
-        {
-            EntityType = "FormRequestApproval",
-            EntityId = req.Id,
-            ActionType = reqDto.ActionType == ApprovalActionType.Approve ? "Approved" :
-                         reqDto.ActionType == ApprovalActionType.Reject ? "Rejected" : "ReturnedForRevision",
-            ActorUserId = reqDto.ActorUserId,
-            DetailJson = System.Text.Json.JsonSerializer.Serialize(new { Comment = reqDto.Comment, StepNo = req.CurrentStepNo }),
-            CreatedAt = DateTime.UtcNow
-        });
-
+        // 1. Önce veri tabanına işlemleri kaydediyoruz ki PDF motoru yepyeni güncel onay ve statü bilgilerini okuyabilsin.
         await _db.SaveChangesAsync(ct);
+
+        // 2. Şimdi en güncel verilerle PDF üretiyoruz.
+        var attachments = await GenerateAttachmentsSafeAsync(req.Id, ct);
+
+        // 3. Son olarak ilgili e-posta bildirimini asenkron görev olarak işletiyoruz.
+        if (sendNotificationTask != null)
+        {
+            await sendNotificationTask(attachments);
+        }
 
         return new ApprovalActionResponseDto { Success = true };
     }
     
-    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, CancellationToken ct)
+    private async Task<List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>> GenerateAttachmentsSafeAsync(Guid requestId, CancellationToken ct)
+    {
+        var attachments = new List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>();
+        try 
+        {
+            var pdfAttachment = await _pdfGenerator.GenerateFormPdfAsync(requestId, ct);
+            if (pdfAttachment != null) attachments.Add(pdfAttachment);
+
+            var fileAttachments = await _attachmentCollector.CollectAttachmentsAsync(requestId, ct);
+            if (fileAttachments != null && fileAttachments.Any()) attachments.AddRange(fileAttachments);
+        }
+        catch
+        {
+            // Sessizce hatayı yut (PDF veya dosya okunamasa bile onay akışı kesilmemeli)
+        }
+        return attachments;
+    }
+
+    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name)>();
 
@@ -242,12 +282,12 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         {
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
             }
         }
     }
 
-    private async Task NotifyRequesterFinalStatusAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, bool isApproved, CancellationToken ct)
+    private async Task NotifyRequesterFinalStatusAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, bool isApproved, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
     {
         var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
         var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
@@ -265,11 +305,11 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
-            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, reqPers?.Isyeri_Tanimi ?? "", ct);
+            await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
         }
     }
 
-    private async Task NotifyRequesterRevisionAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, CancellationToken ct)
+    private async Task NotifyRequesterRevisionAsync(Guid requestorUserId, string requestNo, Guid requestId, Guid formTypeId, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
     {
         var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
         var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
@@ -287,7 +327,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
-            await _emailService.SendApprovalReturnedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, reqPers?.Isyeri_Tanimi ?? "", ct);
+            await _emailService.SendApprovalReturnedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
         }
     }
 }

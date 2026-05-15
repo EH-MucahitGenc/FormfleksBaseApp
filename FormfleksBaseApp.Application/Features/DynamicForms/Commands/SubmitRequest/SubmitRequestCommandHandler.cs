@@ -23,14 +23,25 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
     private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<SubmitRequestCommandHandler> _logger;
+    private readonly IPdfGeneratorService _pdfGenerator;
+    private readonly IFormAttachmentCollectorService _attachmentCollector;
 
-    public SubmitRequestCommandHandler(IDynamicFormsDbContext db, IApprovalEngineService engine, IEmailService emailService, IUserRepository userRepository, ILogger<SubmitRequestCommandHandler> logger)
+    public SubmitRequestCommandHandler(
+        IDynamicFormsDbContext db, 
+        IApprovalEngineService engine, 
+        IEmailService emailService, 
+        IUserRepository userRepository, 
+        ILogger<SubmitRequestCommandHandler> logger,
+        IPdfGeneratorService pdfGenerator,
+        IFormAttachmentCollectorService attachmentCollector)
     {
         _db = db;
         _engine = engine;
         _emailService = emailService;
         _userRepository = userRepository;
         _logger = logger;
+        _pdfGenerator = pdfGenerator;
+        _attachmentCollector = attachmentCollector;
     }
 
     public async Task<FormRequestResultDto> Handle(SubmitRequestCommand request, CancellationToken ct)
@@ -75,9 +86,28 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                     AssigneeRoleId = assignedRole,
                     AssigneeUserId = assignedUser
                 });
-                
+                _db.AuditLogs.Add(new AuditLogEntity
+                {
+                    EntityType = "FormRequest",
+                    EntityId = req.Id,
+                    ActionType = "FormSubmitted",
+                    ActorUserId = req.RequestorUserId,
+                    DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {req.CurrentStepNo}}}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _db.SaveChangesAsync(ct);
+
                 // Email Bildirimi (Background Queue'ya atılır)
                 await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, ct);
+
+                return new FormRequestResultDto
+                {
+                    RequestId = req.Id,
+                    Status = (FormRequestStatus)req.Status,
+                    CurrentStepNo = req.CurrentStepNo,
+                    ConcurrencyToken = req.ConcurrencyToken
+                };
             }
         }
 
@@ -190,10 +220,25 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
         if (formType != null)
         {
+            var attachments = new List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>();
+
+            try 
+            {
+                var pdfAttachment = await _pdfGenerator.GenerateFormPdfAsync(requestId, ct);
+                if (pdfAttachment != null) attachments.Add(pdfAttachment);
+
+                var fileAttachments = await _attachmentCollector.CollectAttachmentsAsync(requestId, ct);
+                if (fileAttachments != null && fileAttachments.Any()) attachments.AddRange(fileAttachments);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate attachments for RequestId: {RequestId}", requestId);
+            }
+
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
                 _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
             }
         }
     }

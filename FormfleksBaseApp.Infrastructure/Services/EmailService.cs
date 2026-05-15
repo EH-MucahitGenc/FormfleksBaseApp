@@ -196,7 +196,7 @@ public class EmailService : IEmailService
     // ══════════════════════════════════════════════════════════════════════════
     public async Task SendApprovalRequestEmailAsync(
         string toEmail, string assigneeName, string formRequestNo,
-        Guid formRequestId, string formTypeName, string requesterName, string requesterCompany,
+        Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null,
         CancellationToken cancellationToken = default)
     {
         var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
@@ -234,7 +234,8 @@ public class EmailService : IEmailService
         {
             ToAddresses = new List<string> { toEmail },
             Subject = $"⏳ Onay İsteği: {formRequestNo} — {formTypeName}",
-            HtmlBody = html
+            HtmlBody = html,
+            Attachments = attachments ?? new List<EmailAttachment>()
         }, cancellationToken);
     }
 
@@ -243,7 +244,7 @@ public class EmailService : IEmailService
     // ══════════════════════════════════════════════════════════════════════════
     public async Task SendApprovalCompletedEmailAsync(
         string toEmail, string requesterName, string formRequestNo,
-        Guid formRequestId, string formTypeName, bool isApproved, string requesterCompany,
+        Guid formRequestId, string formTypeName, bool isApproved, string requesterCompany, List<EmailAttachment>? attachments = null,
         CancellationToken cancellationToken = default)
     {
         var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
@@ -310,7 +311,8 @@ public class EmailService : IEmailService
         {
             ToAddresses = new List<string> { toEmail },
             Subject = emailSubject,
-            HtmlBody = html
+            HtmlBody = html,
+            Attachments = attachments ?? new List<EmailAttachment>()
         }, cancellationToken);
     }
 
@@ -319,7 +321,7 @@ public class EmailService : IEmailService
     // ══════════════════════════════════════════════════════════════════════════
     public async Task SendApprovalReturnedEmailAsync(
         string toEmail, string requesterName, string formRequestNo,
-        Guid formRequestId, string formTypeName, string requesterCompany,
+        Guid formRequestId, string formTypeName, string requesterCompany, List<EmailAttachment>? attachments = null,
         CancellationToken cancellationToken = default)
     {
         var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
@@ -358,7 +360,8 @@ public class EmailService : IEmailService
         {
             ToAddresses = new List<string> { toEmail },
             Subject = $"🔄 Revizyon Talebi: {formRequestNo} — {formTypeName}",
-            HtmlBody = html
+            HtmlBody = html,
+            Attachments = attachments ?? new List<EmailAttachment>()
         }, cancellationToken);
     }
 

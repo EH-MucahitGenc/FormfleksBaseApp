@@ -148,6 +148,8 @@ builder.Services.AddScoped<IActiveDirectoryAuthenticator, LdapActiveDirectoryAut
 builder.Services.AddSingleton<FormfleksBaseApp.Infrastructure.Services.IEmailBackgroundQueue, FormfleksBaseApp.Infrastructure.Services.EmailBackgroundQueue>();
 builder.Services.AddHostedService<FormfleksBaseApp.Infrastructure.Services.EmailSenderBackgroundWorker>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IEmailService, FormfleksBaseApp.Infrastructure.Services.EmailService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IPdfGeneratorService, FormfleksBaseApp.Infrastructure.Services.PdfGeneratorService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IFormAttachmentCollectorService, FormfleksBaseApp.Infrastructure.Services.FormAttachmentCollectorService>();
 
 // Oracle integration
 builder.Services.AddScoped<IOracleConnectionFactory, OracleConnectionFactory>();
