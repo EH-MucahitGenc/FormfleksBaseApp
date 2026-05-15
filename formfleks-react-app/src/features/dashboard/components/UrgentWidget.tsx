@@ -21,7 +21,12 @@ export const UrgentWidget: React.FC<UrgentWidgetProps> = ({ items }) => {
     <GlassCard noPadding className="overflow-hidden">
       <div className="px-6 py-4 border-b flex justify-between items-center">
         <h3 className="font-bold text-brand-dark flex items-center gap-2">
-          <Clock className="h-5 w-5 text-status-warning" />
+          <div className="relative flex h-5 w-5 items-center justify-center">
+            {items && items.length > 0 && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-warning opacity-75"></span>
+            )}
+            <Clock className="relative h-5 w-5 text-status-warning" />
+          </div>
           Acil Onay Bekleyenler
         </h3>
         <button
@@ -33,8 +38,12 @@ export const UrgentWidget: React.FC<UrgentWidgetProps> = ({ items }) => {
       </div>
       <div className="divide-y border-surface-muted">
         {!items || items.length === 0 ? (
-          <div className="p-6 text-center text-sm text-brand-gray">
-            Bekleyen acil bir işiniz bulunmamaktadır.
+          <div className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="h-12 w-12 rounded-full bg-status-success/10 flex items-center justify-center mb-3">
+              <Clock className="h-6 w-6 text-status-success" />
+            </div>
+            <p className="text-sm font-medium text-brand-dark mb-1">Harika! Bekleyen acil işiniz yok.</p>
+            <p className="text-xs text-brand-gray">Tüm süreçleriniz zamanında ilerliyor.</p>
           </div>
         ) : (
           items.map((item) => (

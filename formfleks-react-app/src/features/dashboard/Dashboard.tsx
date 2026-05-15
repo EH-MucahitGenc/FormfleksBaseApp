@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
 import { FfBarChart } from '@/components/charts/FfBarChart';
 import { FfPieChart } from '@/components/charts/FfPieChart';
-import { useDashboardStats, useDeptChart, useStatusChart, useRecentLogs, useUrgentApprovals } from './hooks/useDashboard';
+import { FfAreaChart } from '@/components/charts/FfAreaChart';
+import { useDashboardStats, useFormTypeChart, useStatusChart, useRecentLogs, useUrgentApprovals, useTrendChart } from './hooks/useDashboard';
 import { UrgentWidget } from './components/UrgentWidget';
 import { ActivityFeed } from './components/ActivityFeed';
 import { useCountUp } from '@/hooks/useCountUp';
@@ -48,12 +49,13 @@ export const Dashboard: React.FC = () => {
 
   // All data via custom hooks
   const { data: stats, isLoading: isStatsLoading } = useDashboardStats();
-  const { data: deptChart, isLoading: isDeptLoading } = useDeptChart();
+  const { data: formTypeChart, isLoading: isFormTypeLoading } = useFormTypeChart();
   const { data: statusChart, isLoading: isStatusLoading } = useStatusChart();
+  const { data: trendChart, isLoading: isTrendLoading } = useTrendChart();
   const { data: logs, isLoading: isLogsLoading } = useRecentLogs();
   const { data: urgentApprovals, isLoading: isApprovalsLoading } = useUrgentApprovals();
 
-  const isLoading = isStatsLoading || isDeptLoading || isStatusLoading || isLogsLoading || isApprovalsLoading;
+  const isLoading = isStatsLoading || isFormTypeLoading || isStatusLoading || isTrendLoading || isLogsLoading || isApprovalsLoading;
 
   if (isLoading) {
     return (
@@ -132,21 +134,30 @@ export const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <UrgentWidget items={urgentApprovals} />
 
+          {/* Charts Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <GlassCard noPadding className="p-6 flex flex-col group">
-              <h3 className="font-bold text-brand-dark mb-4 text-sm group-hover:text-brand-primary transition-colors">Departmanlara Göre Dağılım</h3>
+              <h3 className="font-bold text-brand-dark mb-4 text-sm group-hover:text-brand-primary transition-colors">Form Kullanım Analizi (En Çok)</h3>
               <div className="flex-1 min-h-[250px] flex items-center justify-center">
-                <FfBarChart data={deptChart || []} />
+                <FfBarChart data={formTypeChart || []} />
               </div>
             </GlassCard>
 
             <GlassCard noPadding className="p-6 flex flex-col group">
-              <h3 className="font-bold text-brand-dark mb-4 text-sm group-hover:text-brand-primary transition-colors">Talep Durum Dağılımı</h3>
+              <h3 className="font-bold text-brand-dark mb-4 text-sm group-hover:text-brand-primary transition-colors">Taleplerimin Durum Dağılımı</h3>
               <div className="flex-1 min-h-[250px] flex items-center justify-center">
                 <FfPieChart data={statusChart || []} colors={STATUS_COLORS} />
               </div>
             </GlassCard>
           </div>
+
+          {/* Full Width Area Chart */}
+          <GlassCard noPadding className="p-6 flex flex-col group mt-6">
+            <h3 className="font-bold text-brand-dark mb-4 text-sm group-hover:text-brand-primary transition-colors">Aylık Aktivite Yoğunluğu (Son 30 Gün)</h3>
+            <div className="flex-1 min-h-[250px] flex items-center justify-center">
+              <FfAreaChart data={trendChart || []} color="#8b5cf6" />
+            </div>
+          </GlassCard>
         </div>
 
         {/* Right: Activity Feed */}

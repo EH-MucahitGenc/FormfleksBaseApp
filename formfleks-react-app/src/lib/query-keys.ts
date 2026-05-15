@@ -29,8 +29,9 @@ export const queryKeys = {
   // --- Dashboard Module ---
   dashboard: {
     stats: ['dashboard', 'stats'] as const,
-    deptChart: ['dashboard', 'dept-chart'] as const,
+    formTypeChart: ['dashboard', 'form-type-chart'] as const,
     statusChart: ['dashboard', 'status-chart'] as const,
+    trendChart: ['dashboard', 'trend-chart'] as const,
     recentLogs: ['dashboard', 'recent-logs'] as const,
     urgentApprovals: ['dashboard', 'urgent-approvals'] as const,
   },

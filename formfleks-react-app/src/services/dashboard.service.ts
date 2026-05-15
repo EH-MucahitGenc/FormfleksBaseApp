@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/axios';
-import type { PendingApprovalListItemDto } from './form.service';
+import type { PendingApprovalListItemDto, MyFormRequestListItemDto } from './form.service';
 
 export interface DashboardStatsDto {
   totalFormsSubmitted: number;
@@ -52,14 +52,84 @@ class DashboardService {
     };
   }
 
-  async getFormsByDepartmentChart(): Promise<ChartDataPointDto[]> {
-    // Şu an bunun için bir arka yüz (backend) servisi bulunmuyor. 
-    // Sahte veri dönmeyin. UI'ın (Arayüzün) grafiği gizleyebilmesi için boş liste dönün.
-    return [];
+  async getFormsByFormTypeChart(): Promise<ChartDataPointDto[]> {
+    try {
+      const { data } = await apiClient.get<MyFormRequestListItemDto[]>('/dynamic-forms/requests/my');
+      if (!data || data.length === 0) return [];
+      
+      const counts: Record<string, number> = {};
+      data.forEach(req => {
+        counts[req.formTypeName] = (counts[req.formTypeName] || 0) + 1;
+      });
+      
+      return Object.entries(counts)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+    } catch {
+      return [];
+    }
   }
   
   async getFormsByStatusChart(): Promise<ChartDataPointDto[]> {
-    return [];
+    try {
+      const { data } = await apiClient.get<MyFormRequestListItemDto[]>('/dynamic-forms/requests/my');
+      if (!data || data.length === 0) return [];
+
+      const statusMap: Record<number, string> = {
+        1: 'Taslak',
+        2: 'Değerlendirmede',
+        3: 'Onay Bekliyor',
+        4: 'Onaylandı',
+        5: 'Reddedildi',
+        6: 'İptal',
+        7: 'Revizyon'
+      };
+
+      const counts: Record<string, number> = {};
+      data.forEach(req => {
+        const statusName = statusMap[req.status] || 'Bilinmiyor';
+        counts[statusName] = (counts[statusName] || 0) + 1;
+      });
+
+      // Sadece verisi olan statüleri döndür
+      return Object.entries(counts)
+        .filter(([, value]) => value > 0)
+        .map(([label, value]) => ({ label, value }));
+    } catch {
+      return [];
+    }
+  }
+
+  async getActivityTrendChart(): Promise<ChartDataPointDto[]> {
+    try {
+      const { data } = await apiClient.get<MyFormRequestListItemDto[]>('/dynamic-forms/requests/my');
+      if (!data || data.length === 0) return [];
+
+      const counts: Record<string, number> = {};
+      
+      const today = new Date();
+      for(let i=29; i>=0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const dateStr = d.toLocaleDateString('en-CA'); // YYYY-MM-DD format (yerel saat dilimine uygun)
+        counts[dateStr] = 0;
+      }
+
+      data.forEach(req => {
+        const d = new Date(req.createdAt);
+        const dateStr = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toLocaleDateString('en-CA');
+        if(counts[dateStr] !== undefined) {
+            counts[dateStr]++;
+        }
+      });
+
+      return Object.entries(counts).map(([dateStr, value]) => {
+         const [, month, day] = dateStr.split('-');
+         return { label: `${day}.${month}`, value };
+      });
+    } catch {
+      return [];
+    }
   }
 
   async getRecentActivityLogs(): Promise<ActivityLogDto[]> {

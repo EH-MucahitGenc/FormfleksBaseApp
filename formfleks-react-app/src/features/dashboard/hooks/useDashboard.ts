@@ -10,10 +10,10 @@ export const useDashboardStats = () =>
     queryFn: () => dashboardService.getOverviewStats(),
   });
 
-export const useDeptChart = () =>
+export const useFormTypeChart = () =>
   useQuery({
-    queryKey: queryKeys.dashboard.deptChart,
-    queryFn: () => dashboardService.getFormsByDepartmentChart(),
+    queryKey: queryKeys.dashboard.formTypeChart,
+    queryFn: () => dashboardService.getFormsByFormTypeChart(),
   });
 
 export const useStatusChart = () =>
@@ -32,4 +32,10 @@ export const useUrgentApprovals = () =>
   useQuery({
     queryKey: queryKeys.dashboard.urgentApprovals,
     queryFn: () => dashboardService.getUrgentPendingApprovals(),
+  });
+
+export const useTrendChart = () =>
+  useQuery({
+    queryKey: queryKeys.dashboard.trendChart,
+    queryFn: () => dashboardService.getActivityTrendChart(),
   });
