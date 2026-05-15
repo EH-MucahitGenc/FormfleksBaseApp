@@ -10,6 +10,8 @@ public sealed class FormTemplateUpsertDto
     public IReadOnlyList<FormTemplateSectionUpsertDto> Sections { get; set; } = [];
     public IReadOnlyList<FormTemplateFieldUpsertDto> Fields { get; set; } = [];
     public IReadOnlyList<FormTemplateWorkflowStepUpsertDto> WorkflowSteps { get; set; } = [];
+    public IReadOnlyList<string>? AllowedCreateRoleCodes { get; set; }
+    public IReadOnlyList<string>? AllowedReportRoleCodes { get; set; }
 }
 
 public sealed class FormTemplateSectionUpsertDto
@@ -59,6 +61,8 @@ public sealed class FormTemplateSummaryDto
     public int FieldCount { get; set; }
     public int WorkflowStepCount { get; set; }
     public DateTime CreatedAt { get; set; }
+    public IReadOnlyList<string>? AllowedCreateRoleCodes { get; set; }
+    public IReadOnlyList<string>? AllowedReportRoleCodes { get; set; }
 }
 
 public sealed class RoleLookupDto

@@ -112,22 +112,9 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin", "ADMIN", "admin"));
-    options.AddPolicy("HasAppRole", policy => policy.RequireAuthenticatedUser());
-    options.AddPolicy("AdminOrHr", policy => policy.RequireRole("Admin", "ADMIN", "admin", "HumanResources", "IK", "IK-Admin", "HR"));
-    
-    // Dinamik rollerin veritabanından çekilerek atanması için özel bir Handler yazılabilir veya şimdilik geniş bir Role listesi + Claim kontrolü yapılabilir.
-    options.AddPolicy("HrReportAccess", policy => policy.RequireAssertion(context =>
-    {
-        // Şimdilik Admin veya HR yetkisi olanlar girsin. Gelişmiş aşamada Claim ("Permission", "ViewReports") aranabilir.
-        return context.User.IsInRole("Admin") || context.User.IsInRole("ADMIN") || context.User.IsInRole("admin") 
-               || context.User.IsInRole("HR") || context.User.IsInRole("IK") || context.User.IsInRole("HumanResources") || context.User.IsInRole("IK-Admin")
-               // Gelecekte eklenecek "ReportViewer" gibi roller koda dokunmadan yetki alsın diye Claim tabanlı onay da veriyoruz:
-               || context.User.HasClaim(c => c.Type == "Permission" && c.Value == "ViewReports");
-    }));
-});
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, FormfleksBaseApp.Api.Authorization.PermissionPolicyProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, FormfleksBaseApp.Api.Authorization.PermissionAuthorizationHandler>();
 
 // MediatR + FluentValidation + Pipeline
 FormfleksBaseApp.Application.DependencyInjection.AddApplicationServices(builder.Services);
@@ -149,9 +136,11 @@ builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IDynam
 builder.Services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Features.AdminUsers.Interfaces.IAdminUserRepository, FormfleksBaseApp.Infrastructure.Repositories.AdminUsers.AdminUserRepository>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IRolePermissionRepository, FormfleksBaseApp.Infrastructure.Persistence.Repositories.RolePermissionRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
+builder.Services.AddTransient<FormfleksBaseApp.Infrastructure.Persistence.Seeders.PermissionSeeder>();
 
 builder.Services.AddScoped<IActiveDirectoryAuthenticator, LdapActiveDirectoryAuthenticator>();
 
@@ -254,6 +243,20 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.MapControllers();
+
+// Execute Database Seeders
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var permissionSeeder = scope.ServiceProvider.GetRequiredService<FormfleksBaseApp.Infrastructure.Persistence.Seeders.PermissionSeeder>();
+        await permissionSeeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while seeding the database.");
+    }
+}
 
 app.Run();
 

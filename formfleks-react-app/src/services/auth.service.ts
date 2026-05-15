@@ -28,7 +28,7 @@ export const authService = {
        throw new Error('Geçersiz sunucu yanıtı: Token alınamadı.');
     }
 
-    const { token, refreshToken, username: responseUsername, roles, userId, firstName, lastName } = result;
+    const { token, refreshToken, username: responseUsername, roles, permissions, userId, firstName, lastName } = result;
 
     // Arka yüzden (Backend) gelen gerçek kimlik bilgilerini kullan
     const authenticUser: User = {
@@ -37,6 +37,7 @@ export const authService = {
       firstName: firstName || username,
       lastName: lastName || '',
       roles: roles || [],
+      permissions: permissions || [],
       avatarUrl: `https://ui-avatars.com/api/?name=${(firstName || username).substring(0,2)}&background=f6894c&color=fff`
     };
     

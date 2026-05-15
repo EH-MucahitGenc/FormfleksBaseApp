@@ -16,7 +16,7 @@ namespace FormfleksBaseApp.Api.Controllers.DynamicForms;
 
 [ApiController]
 [Route("api/dynamic-forms/[controller]")]
-[Authorize(Policy = "HrReportAccess")] // Dynamic policy instead of hardcoded roles
+[Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyReportsView)]
 public class ReportsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -55,7 +55,8 @@ public class AuthController : ControllerBase
             UserId = authResponse.UserId,
             FirstName = authResponse.FirstName,
             LastName = authResponse.LastName,
-            Roles = authResponse.Roles
+            Roles = authResponse.Roles,
+            Permissions = authResponse.Permissions
         });
     }
 

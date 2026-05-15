@@ -52,6 +52,8 @@ public class EmailService : IEmailService
             ? string.Concat(parts.Take(2).Select(p => p[0]))
             : recipientName[..1];
 
+        string accentLabelTitleCase = string.Join(" ", accentLabel.Split(' ').Select(w => w.Length > 0 ? char.ToUpper(w[0]) + w.Substring(1).ToLower() : ""));
+
         return $$"""
         <!DOCTYPE html>
         <html lang="tr" xmlns="http://www.w3.org/1999/xhtml">
@@ -61,231 +63,131 @@ public class EmailService : IEmailService
           <meta http-equiv="X-UA-Compatible" content="IE=edge">
           <title>{{brandName}} — {{subject}}</title>
         </head>
-        <body style="margin:0;padding:0;background-color:#dde3ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <body style="margin:0;padding:0;background-color:#eef2f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background-color:#eef2f6;padding:40px 16px;">
+            <tr><td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;border-radius:12px;overflow:hidden;background-color:#ffffff;box-shadow:0 10px 25px rgba(0,0,0,0.05);">
+                
+                <!-- HEADER -->
+                <tr>
+                  <td style="background-color:{{accentColor}};padding:16px 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                      <tr>
+                        <td valign="middle" style="width:120px;">
+                          <img src="{{baseUrl}}/{{logoFile}}" alt="{{logoAlt}}" style="max-height:24px;display:block;border-radius:4px;" />
+                        </td>
+                        <td valign="middle" style="padding-left:12px;">
+                          <span style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:0.5px;text-transform:uppercase;">KURUMSAL FORM VE ONAY PLATFORMU</span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="right">
+                            <tr>
+                              <td style="background-color:rgba(0,0,0,0.2);border-radius:20px;padding:6px 14px;">
+                                <span style="font-size:11px;font-weight:800;color:#ffffff;letter-spacing:0.5px;white-space:nowrap;">{{statusIcon}} {{accentLabel}}</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-          <!-- OUTER TABLE -->
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
-                 style="background-color:#dde3ed;padding:48px 16px;">
-            <tr>
-              <td align="center">
+                <!-- HERO -->
+                <tr>
+                  <td style="background-color:#0f172a;padding:40px 20px;text-align:center;">
+                    <div style="font-size:48px;line-height:1;margin-bottom:16px;">{{statusIcon}}</div>
+                    <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">{{statusIcon}} {{accentLabelTitleCase}}</h1>
+                    <p style="margin:0;font-size:12px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">{{platformLabel}} Kurumsal Form ve Onay Platformu</p>
+                  </td>
+                </tr>
 
-                <!-- CARD -->
-                <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation"
-                       style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;border:1px solid #b8c4d4;">
+                <!-- CONTENT -->
+                <tr>
+                  <td style="padding:40px 36px 20px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;">SAYIN,</p>
+                    <h2 style="margin:0 0 24px;font-size:24px;font-weight:900;color:#0f172a;">{{recipientName}}</h2>
+                    
+                    <div style="font-size:15px;line-height:1.8;color:#475569;">
+                      {{bodyHtml}}
+                    </div>
+                  </td>
+                </tr>
 
-                  <!-- ░░░ HEADER: sol koyu / sağ durum etiketi ░░░ -->
-                  <tr>
-                    <td style="background-color:#0f172a;padding:20px 28px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-                        <tr>
-                          <!-- Marka -->
-                          <td valign="middle">
-                            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
-                              <tr>
-                                <td style="background-color:{{accentColor}};border-radius:6px;padding:5px 11px;vertical-align:middle;">
-                                  <img src="{{baseUrl}}/{{logoFile}}" alt="{{logoAlt}}" style="max-height:18px;display:block;" />
-                                </td>
-                                <td style="padding-left:10px;vertical-align:middle;">
-                                  <span style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:0.2px;">{{brandName}}</span>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                          <!-- Durum etiketi -->
-                          <td align="right" valign="middle">
-                            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
-                              <tr>
-                                <td style="background-color:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:50px;padding:5px 14px;">
-                                  <span style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;">
-                                    {{accentLabel}}
-                                  </span>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
+                <!-- TALEP BİLGİLERİ CARD -->
+                <tr>
+                  <td style="padding:0 36px 36px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                      <tr>
+                        <td style="background-color:{{accentColor}};padding:12px 16px;">
+                          <span style="font-size:12px;font-weight:800;color:#ffffff;letter-spacing:1px;text-transform:uppercase;">📋 TALEP BİLGİLERİ</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="background-color:#f8fafc;padding:20px;">
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                            <tr>
+                              <td width="50%" style="padding-bottom:16px;vertical-align:top;">
+                                <div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">KAYIT NO</div>
+                                <div style="font-size:14px;font-weight:900;color:#0f172a;">{{formRequestNo}}</div>
+                              </td>
+                              <td width="50%" style="padding-bottom:16px;vertical-align:top;">
+                                <div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">TALEP EDEN</div>
+                                <div style="font-size:14px;font-weight:900;color:#0f172a;">{{requesterName}}</div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colspan="2" style="border-top:1px solid #e2e8f0;padding-top:16px;">
+                                <div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">FORM TİPİ</div>
+                                <div style="font-size:14px;font-weight:900;color:#0f172a;">{{formTypeName}}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-                  <!-- ░░░ HERO: asimetrik split ░░░ -->
-                  <tr>
-                    <!-- Sol kolon: başlık ve rozet -->
-                    <td width="58%" style="background-color:#0f172a;padding:36px 0 36px 28px;vertical-align:top;">
-                      <p style="margin:0 0 14px;font-size:10px;font-weight:700;color:#475569;letter-spacing:1.8px;text-transform:uppercase;">{{recipientRole}}</p>
-                      <h1 style="margin:0 0 20px;font-size:22px;font-weight:900;color:#f1f5f9;line-height:1.25;letter-spacing:-0.5px;">{{accentLabel}}</h1>
-                      <table cellpadding="0" cellspacing="0" border="0" role="presentation">
-                        <tr>
-                          <td style="background-color:#1e293b;border-radius:6px;padding:6px 14px;">
-                            <span style="font-size:11px;font-weight:700;color:{{accentColor}};letter-spacing:0.5px;">
-                              {{statusIcon}} &nbsp;{{formRequestNo}}
-                            </span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                    <!-- Sağ kolon: ikon + tarih -->
-                    <td style="background-color:{{accentColor}};padding:36px 20px;vertical-align:middle;text-align:center;">
-                      <div style="font-size:44px;line-height:1;margin-bottom:14px;">{{statusIcon}}</div>
-                      <p style="margin:0;font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);letter-spacing:1px;text-transform:uppercase;line-height:1.8;">
-                        Kurumsal Form<br>&amp; Onay Platformu
-                      </p>
-                    </td>
-                  </tr>
+                <!-- CTA BUTTON -->
+                <tr>
+                  <td style="padding:0 36px 40px;text-align:center;">
+                    <a href="{{actionUrl}}" style="display:inline-block;background-color:{{accentColor}};color:#ffffff;font-size:14px;font-weight:800;text-decoration:none;padding:16px 36px;border-radius:30px;letter-spacing:0.5px;">
+                      {{actionLabel}} &rarr;
+                    </a>
+                    <p style="margin:20px 0 0;font-size:11px;color:#94a3b8;">
+                      Buton çalışmıyorsa: <br/><a href="{{actionUrl}}" style="color:#3b82f6;text-decoration:underline;line-height:2;">{{actionUrl}}</a>
+                    </p>
+                  </td>
+                </tr>
 
-                  <!-- ░░░ İNCE BİLGİ ŞERİDİ ░░░ -->
-                  <tr>
-                    <td colspan="2" style="background-color:#f8fafc;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:10px 28px;">
-                      <span style="font-size:11px;font-weight:600;color:{{accentColor}};">
-                        {{platformLabel}} &nbsp;·&nbsp; {{formTypeName}}
-                      </span>
-                    </td>
-                  </tr>
+              </table>
+              
+              <!-- FOOTER OUTSIDE CARD -->
+              <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="max-width:600px;width:100%;margin-top:20px;">
+                <tr>
+                  <td style="text-align:center;">
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#64748b;">{{brandName}} Kurumsal Form ve Onay Platformu</p>
+                    <p style="margin:0;font-size:11px;color:#94a3b8;">Bu e-posta otomatik olarak gönderilmiştir. Lütfen doğrudan yanıt vermeyiniz.</p>
+                    <p style="margin:16px 0 0;font-size:10px;color:#64748b;">Powered by <span style="font-weight:800;color:{{accentColor}};">FORMFLEKS YAZILIM</span> &copy; 2026</p>
+                  </td>
+                </tr>
+              </table>
 
-                  <!-- ░░░ CONTENT ░░░ -->
-                  <tr>
-                    <td colspan="2" style="background-color:#ffffff;padding:32px 28px 0;">
-
-                      <!-- Alıcı avatar + isim -->
-                      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:24px;">
-                        <tr>
-                          <td style="width:42px;height:42px;background-color:#f1f5f9;border-radius:50%;text-align:center;vertical-align:middle;font-size:14px;font-weight:800;color:{{accentColor}};line-height:42px;">
-                            {{initials}}
-                          </td>
-                          <td style="padding-left:12px;vertical-align:middle;">
-                            <div style="font-size:14px;font-weight:700;color:#0f172a;">{{recipientName}}</div>
-                            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">{{recipientRole}} &middot; {{brandName}}</div>
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- Gövde metni -->
-                      <div style="font-size:15px;line-height:1.8;color:#475569;padding-bottom:28px;border-bottom:1px solid #f1f5f9;">
-                        {{bodyHtml}}
-                      </div>
-
-                    </td>
-                  </tr>
-
-                  <!-- ░░░ DETAY SATIRLARI ░░░ -->
-                  <tr>
-                    <td colspan="2" style="background-color:#ffffff;padding:0 28px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:24px 0;">
-
-                        <!-- Başlık -->
-                        <tr>
-                          <td colspan="2" style="padding-bottom:10px;">
-                            <span style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1.5px;text-transform:uppercase;">Talep Detayları</span>
-                          </td>
-                        </tr>
-
-                        <!-- Kayıt No -->
-                        <tr>
-                          <td style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <span style="font-size:12px;color:#94a3b8;font-weight:500;">Kayıt No</span>
-                          </td>
-                          <td align="right" style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="right">
-                              <tr>
-                                <td style="background-color:#f1f5f9;border-radius:6px;padding:4px 12px;">
-                                  <span style="font-size:12px;font-weight:800;color:{{accentColor}};font-variant-numeric:tabular-nums;">{{formRequestNo}}</span>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-
-                        <!-- Talep Eden -->
-                        <tr>
-                          <td style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <span style="font-size:12px;color:#94a3b8;font-weight:500;">Talep Eden</span>
-                          </td>
-                          <td align="right" style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <span style="font-size:13px;font-weight:700;color:#0f172a;">{{requesterName}}</span>
-                          </td>
-                        </tr>
-
-                        <!-- Form Tipi -->
-                        <tr>
-                          <td style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <span style="font-size:12px;color:#94a3b8;font-weight:500;">Form Tipi</span>
-                          </td>
-                          <td align="right" style="padding:11px 0;border-top:1px solid #f1f5f9;vertical-align:middle;">
-                            <span style="font-size:13px;font-weight:700;color:#0f172a;">{{formTypeName}}</span>
-                          </td>
-                        </tr>
-
-                      </table>
-                    </td>
-                  </tr>
-
-                  <!-- ░░░ CTA BUTONU ░░░ -->
-                  <tr>
-                    <td colspan="2" style="background-color:#ffffff;padding:4px 28px 36px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
-                             style="background-color:{{actionBgColor}};border-radius:10px;overflow:hidden;">
-                        <tr>
-                          <td style="padding:18px 22px;vertical-align:middle;">
-                            <div style="font-size:14px;font-weight:800;color:#ffffff;">{{actionLabel}}</div>
-                            <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px;">{{formRequestNo}} &middot; {{formTypeName}}</div>
-                          </td>
-                          <td align="right" style="padding:18px 22px;vertical-align:middle;">
-                            <a href="{{actionUrl}}"
-                               style="display:inline-block;width:32px;height:32px;background-color:rgba(255,255,255,0.15);
-                                      border-radius:50%;text-align:center;line-height:32px;
-                                      font-size:16px;color:#ffffff;text-decoration:none;">&#8594;</a>
-                          </td>
-                        </tr>
-                      </table>
-                      <!-- URL yedek -->
-                      <p style="text-align:center;font-size:11px;color:#94a3b8;margin:12px 0 0;word-break:break-all;line-height:1.6;">
-                        Buton çalışmıyorsa:&nbsp;<a href="{{actionUrl}}" style="color:#3b82f6;text-decoration:underline;">{{actionUrl}}</a>
-                      </p>
-                    </td>
-                  </tr>
-
-                  <!-- ░░░ FOOTER ░░░ -->
-                  <tr>
-                    <td colspan="2" style="background-color:#0f172a;padding:20px 28px 8px;">
-                      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-                        <tr>
-                          <td valign="middle">
-                            <span style="font-size:12px;font-weight:700;color:#475569;">{{brandName}}</span>
-                            <span style="font-size:12px;color:#334155;">&nbsp;&middot;&nbsp;Kurumsal Form &amp; Onay Platformu</span>
-                          </td>
-                          <td align="right" valign="middle">
-                            <span style="font-size:11px;color:#334155;">&copy; 2026</span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colspan="2" style="background-color:#0f172a;padding:0 28px 22px;">
-                      <div style="height:1px;background-color:#1e293b;margin-bottom:12px;"></div>
-                      <span style="font-size:11px;color:#334155;line-height:1.7;">
-                        Bu e-posta otomatik olarak gönderilmiştir. Lütfen bu adrese doğrudan yanıt vermeyiniz.
-                      </span>
-                    </td>
-                  </tr>
-
-                </table>
-                <!-- /CARD -->
-
-              </td>
-            </tr>
+            </td></tr>
           </table>
-
         </body>
         </html>
         """;
     }
+
 
     public EmailService(IEmailBackgroundQueue emailQueue, IConfiguration config)
     {
         _emailQueue = emailQueue;
         _config = config;
     }
+
 
     private string GetBaseUrl() => (_config["FrontendBaseUrl"] ?? "http://localhost:3001").TrimEnd('/');
 

@@ -86,12 +86,17 @@ public sealed class GetFormDefinitionQueryHandler : IRequestHandler<GetFormDefin
             });
         }
 
+        var allowedRoles = string.IsNullOrWhiteSpace(formType.AllowedCreateRoleCodesJson)
+            ? null
+            : System.Text.Json.JsonSerializer.Deserialize<List<string>>(formType.AllowedCreateRoleCodesJson);
+
         return new FormDefinitionDto
         {
             FormTypeId = formType.Id,
             Code = formType.Code,
             Name = formType.Name,
-            Sections = sectionDtos.OrderBy(s => s.SortOrder).ToList()
+            Sections = sectionDtos.OrderBy(s => s.SortOrder).ToList(),
+            AllowedCreateRoleCodes = allowedRoles
         };
     }
 

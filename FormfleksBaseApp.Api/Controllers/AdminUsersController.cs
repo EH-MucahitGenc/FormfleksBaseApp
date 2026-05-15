@@ -42,7 +42,7 @@ public sealed class AdminUsersController : ControllerBase
 
     /// <summary>Kullanıcı güncelle (sadece DisplayName ve roller)</summary>
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyUsersManage)]
     public async Task<ActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto, CancellationToken ct)
     {
         await _mediator.Send(new UpdateAdminUserCommand(id, dto), ct);
@@ -51,7 +51,7 @@ public sealed class AdminUsersController : ControllerBase
 
     /// <summary>Kullanıcıyı pasif yap (soft delete)</summary>
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyUsersManage)]
     public async Task<ActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
         await _mediator.Send(new DeleteAdminUserCommand(id), ct);

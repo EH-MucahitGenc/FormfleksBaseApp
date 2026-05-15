@@ -2,10 +2,11 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export interface ProtectedRouteProps {
-  allowedRoles?: string[];
+  requiredPermission?: string;
+  children?: React.ReactNode;
 }
 
-export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ requiredPermission, children }: ProtectedRouteProps) => {
   const { isAuthenticated, token, user } = useAuthStore();
   const location = useLocation();
 
@@ -13,14 +14,25 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const userRoles = user?.roles || [];
-    const hasRole = allowedRoles.some(role => userRoles.includes(role));
+  // Admin Bypass: Admin rolü varsa hiçbir yetki kontrolüne girme
+  const userRoles = user?.roles || [];
+  const isAdmin = userRoles.some(role => 
+    role.toLowerCase() === 'admin'
+  );
+
+  if (isAdmin) {
+    return children ? <>{children}</> : <Outlet />;
+  }
+
+  // Permission Check
+  if (requiredPermission) {
+    const userPermissions = user?.permissions || [];
+    const hasPermission = userPermissions.includes(requiredPermission);
     
-    if (!hasRole) {
+    if (!hasPermission) {
       return <Navigate to="/dashboard" replace />;
     }
   }
 
-  return <Outlet />;
+  return children ? <>{children}</> : <Outlet />;
 };

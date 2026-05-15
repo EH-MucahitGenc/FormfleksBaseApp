@@ -6,6 +6,7 @@ public sealed class FormDefinitionDto
     public string Code { get; set; } = default!;
     public string Name { get; set; } = default!;
     public IReadOnlyList<FormSectionDto> Sections { get; set; } = [];
+    public IReadOnlyList<string>? AllowedCreateRoleCodes { get; set; }
 }
 
 public sealed class FormSectionDto

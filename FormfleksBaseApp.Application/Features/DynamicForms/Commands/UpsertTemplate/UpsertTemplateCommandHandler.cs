@@ -34,6 +34,8 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
             formType.Code = dto.Code;
             formType.Name = dto.Name;
             formType.Active = dto.Active;
+            formType.AllowedCreateRoleCodesJson = dto.AllowedCreateRoleCodes != null && dto.AllowedCreateRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedCreateRoleCodes) : null;
+            formType.AllowedReportRoleCodesJson = dto.AllowedReportRoleCodes != null && dto.AllowedReportRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedReportRoleCodes) : null;
 
             // Eski section ve field'ları geçici olarak silmek yerine güncelleyeceğiz.
             // Bu sayede Foreign Key kilitlenmelerini (form_request_values -> form_fields) engelliyoruz.
@@ -51,7 +53,9 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                 Name = dto.Name,
                 Active = dto.Active,
                 CreatedByUserId = request.ActorUserId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                AllowedCreateRoleCodesJson = dto.AllowedCreateRoleCodes != null && dto.AllowedCreateRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedCreateRoleCodes) : null,
+                AllowedReportRoleCodesJson = dto.AllowedReportRoleCodes != null && dto.AllowedReportRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedReportRoleCodes) : null
             };
             _db.FormTypes.Add(formType);
         }

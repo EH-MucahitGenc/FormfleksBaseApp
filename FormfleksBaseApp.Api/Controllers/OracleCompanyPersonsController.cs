@@ -12,7 +12,7 @@ namespace FormfleksBaseApp.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/oracle/company-persons")]
-[Authorize(Policy = "HasAppRole")]
+[Authorize]
 public class OracleCompanyPersonsController : ControllerBase
 {
     private readonly IMediator _mediator;

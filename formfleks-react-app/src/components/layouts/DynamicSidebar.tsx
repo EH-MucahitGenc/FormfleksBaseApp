@@ -39,9 +39,27 @@ export const DynamicSidebar = ({
   const { authorizedForms, isLoading, fetchAuthorizedForms } = useNavigationStore();
   
   const userRoles = user?.roles || [];
-  const isAdmin = userRoles.includes('Admin') || userRoles.includes('ADMIN') || userRoles.includes('admin');
-  const isHR = userRoles.includes('IK') || userRoles.includes('HR') || userRoles.includes('HumanResources');
-  const canSeeDesigners = isAdmin || isHR;
+  const userPermissions = user?.permissions || [];
+  
+  const isAdminRole = userRoles.some(r => r.toLowerCase() === 'admin');
+  
+  const hasPermission = (code: string) => {
+    if (isAdminRole) return true;
+    return userPermissions.includes(code);
+  };
+
+  // Grouped Permissions
+  const canSeeHrReports = hasPermission('Reports.View');
+  const canSeeFormDesigner = hasPermission('Forms.Design');
+  const canSeeWorkflowDesigner = hasPermission('Workflows.Manage');
+  const canSeeDesignersSection = canSeeHrReports || canSeeFormDesigner || canSeeWorkflowDesigner;
+
+  const canSeeUsers = hasPermission('Users.Manage');
+  const canSeeRoles = hasPermission('Roles.Manage');
+  const canSeeSysSettings = hasPermission('System.Settings');
+  const canSeeAuditLogs = hasPermission('System.AuditLogs');
+  const canSeePersonnelSync = hasPermission('Personnel.Sync');
+  const canSeeAdminSection = canSeeUsers || canSeeRoles || canSeeSysSettings || canSeeAuditLogs || canSeePersonnelSync || isAdminRole;
 
   // Open the forms section automatically if we are currently viewing a form
   const [isFormsExpanded, setIsFormsExpanded] = useState(() => location.pathname.includes('/forms/d/'));
@@ -145,33 +163,39 @@ export const DynamicSidebar = ({
           )}
         </div>
         
-        {canSeeDesigners && (
+        {canSeeDesignersSection && (
           <>
-            <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">İnsan Kaynakları & Raporlar</div>
-            <NavItem to="/hr/reports" icon={BarChart2} label="Form Analizleri" isCollapsed={!isSidebarOpen} />
+            {canSeeHrReports && (
+              <>
+                <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">İnsan Kaynakları & Raporlar</div>
+                <NavItem to="/hr/reports" icon={BarChart2} label="Form Analizleri" isCollapsed={!isSidebarOpen} />
+              </>
+            )}
 
-            <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Sistem & Araçlar</div>
-            <NavItem to="/admin/form-designer" icon={LayoutTemplate} label="Form Tasarımcısı" isCollapsed={!isSidebarOpen} />
-            <NavItem to="/admin/workflow-designer" icon={Route} label="Onay Rotaları" isCollapsed={!isSidebarOpen} />
+            {(canSeeFormDesigner || canSeeWorkflowDesigner) && (
+               <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Sistem & Araçlar</div>
+            )}
+            {canSeeFormDesigner && <NavItem to="/admin/form-designer" icon={LayoutTemplate} label="Form Tasarımcısı" isCollapsed={!isSidebarOpen} />}
+            {canSeeWorkflowDesigner && <NavItem to="/admin/workflow-designer" icon={Route} label="Onay Rotaları" isCollapsed={!isSidebarOpen} />}
           </>
         )}
 
-        {isAdmin && (
+        {canSeeAdminSection && (
           <>
             <div className="mt-4 mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-brand-gray/50 hidden md:block">Yönetim</div>
-            <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />
-            <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />
+            {canSeeUsers && <NavItem to="/users" icon={Users} label="Kullanıcılar" isCollapsed={!isSidebarOpen} />}
+            {canSeeRoles && <NavItem to="/admin/roles" icon={Shield} label="Yetki Rolleri" isCollapsed={!isSidebarOpen} />}
 
-            <NavItem to="/admin/location-roles" icon={UserCheck} label="Lokasyon Yetkileri" isCollapsed={!isSidebarOpen} />
-            <NavItem to="/admin/personnel-sync" icon={Users} label="Personel Senkronizasyonu" isCollapsed={!isSidebarOpen} />
-            <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />
+            {canSeeRoles && <NavItem to="/admin/location-roles" icon={UserCheck} label="Lokasyon Yetkileri" isCollapsed={!isSidebarOpen} />}
+            {canSeePersonnelSync && <NavItem to="/admin/personnel-sync" icon={Users} label="Personel Senkronizasyonu" isCollapsed={!isSidebarOpen} />}
+            {canSeeAuditLogs && <NavItem to="/admin/audit-logs" icon={Activity} label="Sistem Logları" isCollapsed={!isSidebarOpen} />}
           </>
         )}
         
         <div className="mt-auto pt-4 border-t border-surface-muted">
           <NavItem to="/settings/profile" icon={User} label="Profilim" isCollapsed={!isSidebarOpen} />
           <NavItem to="/settings/delegations" icon={UserCheck} label="Vekalet Devri" isCollapsed={!isSidebarOpen} />
-          <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />
+          {canSeeSysSettings && <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />}
         </div>
       </div>
 

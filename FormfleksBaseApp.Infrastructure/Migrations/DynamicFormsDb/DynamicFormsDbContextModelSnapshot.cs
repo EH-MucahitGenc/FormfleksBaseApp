@@ -510,6 +510,12 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasColumnType("boolean")
                         .HasColumnName("active");
 
+                    b.Property<string>("AllowedCreateRoleCodesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AllowedReportRoleCodesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)

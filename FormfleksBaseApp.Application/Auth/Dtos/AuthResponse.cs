@@ -8,4 +8,5 @@ public class AuthResponse
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public List<string> Roles { get; init; } = new();
+    public List<string> Permissions { get; init; } = new();
 }

@@ -15,7 +15,7 @@ namespace FormfleksBaseApp.Api.Controllers.Admin;
 /// </summary>
 [ApiController]
 [Route("api/admin/integrations")]
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyPersonnelSync)]
 public class SystemIntegrationsController : ControllerBase
 {
     private readonly IMediator _mediator;

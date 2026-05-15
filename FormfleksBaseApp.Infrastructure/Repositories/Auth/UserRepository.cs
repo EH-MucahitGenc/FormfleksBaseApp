@@ -39,6 +39,18 @@ public class UserRepository : IUserRepository
         ).Distinct().ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<string>> GetPermissionsAsync(Guid userId, CancellationToken ct)
+    {
+        return await (
+            from ur in _db.UserRoles.AsNoTracking()
+            join r in _db.Roles.AsNoTracking() on ur.RoleId equals r.Id
+            join rp in _db.RolePermissions.AsNoTracking() on r.Id equals rp.RoleId
+            join p in _db.Permissions.AsNoTracking() on rp.PermissionId equals p.Id
+            where ur.UserId == userId && r.Active
+            select p.Name
+        ).Distinct().ToListAsync(ct);
+    }
+
     public async Task AddAsync(AppUser user, CancellationToken ct)
         => await _db.Users.AddAsync(user, ct);
 

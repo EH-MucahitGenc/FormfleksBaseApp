@@ -22,6 +22,8 @@ export interface FormTemplateSummaryDto {
   fieldCount: number;
   workflowStepCount: number;
   createdAt: string;
+  allowedCreateRoleCodes?: string[];
+  allowedReportRoleCodes?: string[];
 }
 
 export interface FormTemplateFieldUpsertDto {
@@ -48,6 +50,8 @@ export interface FormTemplateUpsertDto {
   active: boolean;
   sections: FormTemplateSectionUpsertDto[];
   fields: FormTemplateFieldUpsertDto[];
+  allowedCreateRoleCodes?: string[];
+  allowedReportRoleCodes?: string[];
 }
 
 // --- WORKFLOW DTOs ---
@@ -110,7 +114,8 @@ export const systemAdminService = {
 
   // Helpers that hook into existing mock service for dropdowns
   getRolesLookup: async (): Promise<AdminRoleDto[]> => {
-     return adminService.getRoles();
+     const { data } = await apiClient.get<any[]>('/dynamic-forms/admin/roles');
+     return data.map(r => ({ id: r.roleId, code: r.code, name: r.name, active: true }));
   },
   getUsersLookup: async (): Promise<AdminUserDto[]> => {
      return adminService.getUsers();

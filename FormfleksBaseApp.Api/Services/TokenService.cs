@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,7 +29,7 @@ public sealed class TokenService : ITokenService
         }
     }
 
-    public string CreateAccessToken(AppUser user, IReadOnlyList<string>? roleCodes = null)
+    public string CreateAccessToken(AppUser user, IReadOnlyList<string>? roleCodes = null, IReadOnlyList<string>? permissions = null)
     {
         var issuer = _config["Jwt:Issuer"];
         var audience = _config["Jwt:Audience"];
@@ -53,6 +53,12 @@ public sealed class TokenService : ITokenService
         {
             foreach (var role in roleCodes.Where(x => !string.IsNullOrWhiteSpace(x)))
                 claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        if (permissions is not null)
+        {
+            foreach (var permission in permissions.Where(x => !string.IsNullOrWhiteSpace(x)))
+                claims.Add(new Claim("Permission", permission));
         }
 
         var token = new JwtSecurityToken(

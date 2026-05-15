@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Api.Controllers.Admin;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyUsersManage)]
 [Route("api/admin/user-location-roles")]
 [ApiController]
 public class AdminUserLocationRolesController : ControllerBase

@@ -34,6 +34,13 @@ public sealed class FormTypeEntity
     public bool Active { get; set; }
     public Guid CreatedByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // JSON array of role codes (e.g., ["HR", "IK", "Admin"]) that are allowed to fill this form.
+    // If null or empty, it means anyone can fill it (or default policy applies).
+    public string? AllowedCreateRoleCodesJson { get; set; } 
+
+    // JSON array of role codes that are allowed to view reports/dashboards for this form.
+    public string? AllowedReportRoleCodesJson { get; set; }
 }
 
 /// <summary>

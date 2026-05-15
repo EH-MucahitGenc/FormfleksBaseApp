@@ -15,7 +15,7 @@ namespace FormfleksBaseApp.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/admin")]
-[Authorize(Policy = "AdminOrHr")]
+[Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyRolesManage)]
 public class AdminSystemController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -64,5 +64,36 @@ public class AdminSystemController : ControllerBase
 
     #endregion
 
+    #region Permissions
 
+    /// <summary>
+    /// Sistemdeki mevcut tüm yetki tanımlarını listeler.
+    /// </summary>
+    [HttpGet("permissions")]
+    public async Task<ActionResult<IReadOnlyList<PermissionDto>>> GetPermissions()
+        => Ok(await _mediator.Send(new FormfleksBaseApp.Application.Features.AdminRoles.Queries.GetPermissions.GetPermissionsQuery()));
+
+    /// <summary>
+    /// Belirtilen rolün sahip olduğu yetki kodlarını (string listesi olarak) getirir.
+    /// </summary>
+    [HttpGet("roles/{id}/permissions")]
+    public async Task<ActionResult<IReadOnlyList<string>>> GetRolePermissions(Guid id)
+        => Ok(await _mediator.Send(new FormfleksBaseApp.Application.Features.AdminRoles.Queries.GetRolePermissions.GetRolePermissionsQuery(id)));
+
+    /// <summary>
+    /// Belirtilen role gönderilen yetki kodlarını (string listesi) atar, eski yetkilerini siler.
+    /// </summary>
+    [HttpPut("roles/{id}/permissions")]
+    public async Task<IActionResult> UpdateRolePermissions(Guid id, [FromBody] List<string> permissions)
+    {
+        var command = new FormfleksBaseApp.Application.Features.AdminRoles.Commands.UpdateRolePermissions.UpdateRolePermissionsCommand
+        {
+            RoleId = id,
+            Permissions = permissions
+        };
+        await _mediator.Send(command);
+        return NoContent();
+    }
+
+    #endregion
 }

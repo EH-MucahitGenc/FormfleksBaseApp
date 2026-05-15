@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
 
-public sealed class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, IReadOnlyList<FormTemplateRoleDto>>
+public sealed class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, IReadOnlyList<RoleLookupDto>>
 {
     private readonly IDynamicFormsDbContext _db;
 
@@ -14,13 +14,13 @@ public sealed class GetRolesQueryHandler : IRequestHandler<GetRolesQuery, IReadO
         _db = db;
     }
 
-    public async Task<IReadOnlyList<FormTemplateRoleDto>> Handle(GetRolesQuery request, CancellationToken ct)
+    public async Task<IReadOnlyList<RoleLookupDto>> Handle(GetRolesQuery request, CancellationToken ct)
     {
         return await _db.Roles
             .AsNoTracking()
             .Where(r => r.Active)
             .OrderBy(r => r.Name)
-            .Select(r => new FormTemplateRoleDto { Id = r.Id, Name = r.Name })
+            .Select(r => new RoleLookupDto { RoleId = r.Id, Code = r.Code, Name = r.Name })
             .ToListAsync(ct);
     }
 }

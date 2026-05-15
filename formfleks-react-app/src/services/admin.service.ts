@@ -16,6 +16,11 @@ export interface AdminRoleDto {
   active: boolean;
 }
 
+export interface PermissionDto {
+  id: string;
+  name: string;
+  description: string;
+}
 
 // User Action DTOs
 export interface UpdateUserRequest {
@@ -65,5 +70,20 @@ export const adminService = {
 
   deleteRole: async (id: string): Promise<void> => {
     await apiClient.delete(`/admin/roles/${id}`);
+  },
+
+  // --- PERMISSIONS ---
+  getPermissions: async (): Promise<PermissionDto[]> => {
+    const { data } = await apiClient.get<PermissionDto[]>('/admin/permissions');
+    return data;
+  },
+
+  getRolePermissions: async (roleId: string): Promise<string[]> => {
+    const { data } = await apiClient.get<string[]>(`/admin/roles/${roleId}/permissions`);
+    return data;
+  },
+
+  updateRolePermissions: async (roleId: string, permissions: string[]): Promise<void> => {
+    await apiClient.put(`/admin/roles/${roleId}/permissions`, permissions);
   },
 };

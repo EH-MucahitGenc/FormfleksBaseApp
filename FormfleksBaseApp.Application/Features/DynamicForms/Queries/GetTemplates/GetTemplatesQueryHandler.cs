@@ -16,17 +16,34 @@ public sealed class GetTemplatesQueryHandler : IRequestHandler<GetTemplatesQuery
 
     public async Task<IReadOnlyList<FormTemplateSummaryDto>> Handle(GetTemplatesQuery request, CancellationToken ct)
     {
-        return await _db.FormTypes
+        var dbResult = await _db.FormTypes
             .AsNoTracking()
             .OrderBy(t => t.Name)
-            .Select(t => new FormTemplateSummaryDto
+            .Select(t => new 
             {
-                FormTypeId = t.Id,
-                Code = t.Code,
-                Name = t.Name,
-                Active = t.Active,
-                CreatedAt = t.CreatedAt
+                t.Id,
+                t.Code,
+                t.Name,
+                t.Active,
+                t.CreatedAt,
+                t.AllowedCreateRoleCodesJson,
+                t.AllowedReportRoleCodesJson
             })
             .ToListAsync(ct);
+
+        return dbResult.Select(t => new FormTemplateSummaryDto
+        {
+            FormTypeId = t.Id,
+            Code = t.Code,
+            Name = t.Name,
+            Active = t.Active,
+            CreatedAt = t.CreatedAt,
+            AllowedCreateRoleCodes = !string.IsNullOrEmpty(t.AllowedCreateRoleCodesJson) 
+                ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(t.AllowedCreateRoleCodesJson) 
+                : new List<string>(),
+            AllowedReportRoleCodes = !string.IsNullOrEmpty(t.AllowedReportRoleCodesJson) 
+                ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(t.AllowedReportRoleCodesJson) 
+                : new List<string>()
+        }).ToList();
     }
 }

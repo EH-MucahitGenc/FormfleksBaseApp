@@ -31,6 +31,8 @@ export const FormDesigner: React.FC = () => {
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [sections, setSections] = useState<SectionState[]>([]);
+  const [allowedCreateRoleCodes, setAllowedCreateRoleCodes] = useState<string[]>([]);
+  const [allowedReportRoleCodes, setAllowedReportRoleCodes] = useState<string[]>([]);
   
   // UI State
   const [saveMessage, setSaveMessage] = useState<{ type: 'success'|'error', text: string } | null>(null);
@@ -83,6 +85,11 @@ export const FormDesigner: React.FC = () => {
     queryFn: systemAdminService.getTemplates
   });
 
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ['adminRolesLookup'],
+    queryFn: systemAdminService.getRolesLookup
+  });
+
   const statusMutation = useMutation({
     mutationFn: ({ formTypeId, active }: { formTypeId: string, active: boolean }) => systemAdminService.setTemplateStatus(formTypeId, active),
     onSuccess: () => {
@@ -108,6 +115,8 @@ export const FormDesigner: React.FC = () => {
     setCode('');
     setName('');
     setIsActive(true);
+    setAllowedCreateRoleCodes([]);
+    setAllowedReportRoleCodes([]);
     setSections([{ id: crypto.randomUUID(), title: 'Genel Bilgiler', fields: [] }]);
   };
 
@@ -115,6 +124,8 @@ export const FormDesigner: React.FC = () => {
     setCode('LEAVE_REQ');
     setName('Yıllık İzin Formu');
     setIsActive(true);
+    setAllowedCreateRoleCodes([]);
+    setAllowedReportRoleCodes(['HR', 'IK', 'Admin']);
     setSections([
       {
         id: crypto.randomUUID(),
@@ -304,7 +315,9 @@ export const FormDesigner: React.FC = () => {
           optionsJson: f.fieldType === 4 && f.optionsJson ? JSON.stringify(f.optionsJson.split(',').map(x => ({ Value: x.trim(), Text: x.trim() }))) : (f.fieldType === 11 || f.fieldType === 10 ? f.optionsJson : undefined),
           placeholder: f.placeholder
         }))
-      )
+      ),
+      allowedCreateRoleCodes: allowedCreateRoleCodes.length > 0 ? allowedCreateRoleCodes : undefined,
+      allowedReportRoleCodes: allowedReportRoleCodes.length > 0 ? allowedReportRoleCodes : undefined
     };
 
     saveMutation.mutate(payload);
@@ -445,6 +458,74 @@ export const FormDesigner: React.FC = () => {
                             <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-status-success"></div>
                             <span className="ml-3 text-sm font-bold text-brand-dark">Kullanıma Açık Mı?</span>
                         </label>
+                    </div>
+                </div>
+            </div>
+
+            {/* Authorization Settings */}
+            <div className="bg-surface-hover/50 p-4 md:p-5 rounded-xl border border-surface-muted mb-8 shadow-sm">
+                <h4 className="text-sm font-bold text-brand-dark mb-4 flex items-center gap-2">
+                   <Settings className="h-4 w-4 text-brand-gray" /> Form Yetki & Erişim Ayarları
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-3">Formu Kimler Doldurabilir? <span className="text-brand-gray/60 normal-case font-normal">(Boşsa Herkes)</span></label>
+                        {rolesLoading ? (
+                            <div className="text-sm text-brand-gray">Roller yükleniyor...</div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {roles.filter((r: any) => !['admin', 'administrator'].includes(r.code.toLowerCase())).map((r: any) => {
+                                    const isSelected = allowedCreateRoleCodes.includes(r.code);
+                                    return (
+                                        <label key={r.code} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-brand-primary/10 border-brand-primary/40 text-brand-primary shadow-sm' : 'bg-surface-base border-surface-muted text-brand-gray hover:border-brand-gray/40'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                className="hidden" 
+                                                checked={isSelected} 
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setAllowedCreateRoleCodes([...allowedCreateRoleCodes, r.code]);
+                                                    else setAllowedCreateRoleCodes(allowedCreateRoleCodes.filter(c => c !== r.code));
+                                                }} 
+                                            />
+                                            <div className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center border transition-colors ${isSelected ? 'bg-brand-primary border-brand-primary text-white' : 'border-brand-gray/40 bg-surface-base'}`}>
+                                                {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                            </div>
+                                            <span className="text-sm font-semibold">{r.name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-3">Raporları Kimler Görebilir? <span className="text-brand-gray/60 normal-case font-normal">(Boşsa Herkes)</span></label>
+                        {rolesLoading ? (
+                            <div className="text-sm text-brand-gray">Roller yükleniyor...</div>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {roles.filter((r: any) => !['admin', 'administrator'].includes(r.code.toLowerCase())).map((r: any) => {
+                                    const isSelected = allowedReportRoleCodes.includes(r.code);
+                                    return (
+                                        <label key={r.code} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-brand-accent/10 border-brand-accent/40 text-brand-accent shadow-sm' : 'bg-surface-base border-surface-muted text-brand-gray hover:border-brand-gray/40'}`}>
+                                            <input 
+                                                type="checkbox" 
+                                                className="hidden" 
+                                                checked={isSelected} 
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setAllowedReportRoleCodes([...allowedReportRoleCodes, r.code]);
+                                                    else setAllowedReportRoleCodes(allowedReportRoleCodes.filter(c => c !== r.code));
+                                                }} 
+                                            />
+                                            <div className={`w-3.5 h-3.5 rounded-sm flex items-center justify-center border transition-colors ${isSelected ? 'bg-brand-accent border-brand-accent text-white' : 'border-brand-gray/40 bg-surface-base'}`}>
+                                                {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                            </div>
+                                            <span className="text-sm font-semibold">{r.name}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <p className="text-xs text-brand-gray mt-4 font-medium">Bu formu listeleyen rapor veya dashboardlarda geçerlidir.</p>
                     </div>
                 </div>
             </div>

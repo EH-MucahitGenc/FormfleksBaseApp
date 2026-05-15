@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, Edit3, ShieldX } from 'lucide-react';
+import { Plus, Trash2, Edit3, ShieldX, Shield } from 'lucide-react';
 
 import { PageHeader, FfButton, FfDrawer, FfStatusBadge, PageContainer, GlassCard, FfConfirmDialog } from '@/components/ui/index';
 import { FfDataGrid, FfTextBox, FfField } from '@/components/dev-extreme/index';
@@ -11,6 +11,7 @@ import { adminService, type AdminRoleDto, type CreateRoleCommand, type UpdateRol
 import { useGridPage } from '@/hooks/useGridPage';
 import { queryKeys } from '@/lib/query-keys';
 import { notify } from '@/lib/notifications';
+import { cn } from '@/components/ui';
 
 // --- VALIDATION SCHEMA ---
 const roleSchema = z.object({
@@ -46,6 +47,31 @@ export const Roles: React.FC = () => {
     onResetForm: () => methods.reset({ code: '', name: '', active: true })
   });
 
+  // --- PERMISSION STATE ---
+  const [isPermDrawerOpen, setIsPermDrawerOpen] = React.useState(false);
+  const [roleForPerms, setRoleForPerms] = React.useState<AdminRoleDto | null>(null);
+  const [selectedPerms, setSelectedPerms] = React.useState<string[]>([]);
+
+  // Fetch all system permissions
+  const { data: allPermissions } = useQuery({
+    queryKey: ['adminPermissions'],
+    queryFn: adminService.getPermissions
+  });
+
+  // Fetch permissions for the selected role
+  const { data: rolePermissions, isFetching: isFetchingPerms } = useQuery({
+    queryKey: ['adminRolePermissions', roleForPerms?.id],
+    queryFn: () => adminService.getRolePermissions(roleForPerms!.id),
+    enabled: !!roleForPerms,
+  });
+
+  // Sync state when permissions load
+  React.useEffect(() => {
+    if (!isFetchingPerms && roleForPerms && rolePermissions) {
+      setSelectedPerms(rolePermissions);
+    }
+  }, [rolePermissions, isFetchingPerms, roleForPerms]);
+
   // --- MUTATIONS ---
   const createMutation = useMutation({
     mutationFn: (data: CreateRoleCommand) => adminService.createRole(data),
@@ -75,6 +101,15 @@ export const Roles: React.FC = () => {
     }
   });
 
+  const updatePermsMutation = useMutation({
+    mutationFn: (data: { roleId: string, perms: string[] }) => adminService.updateRolePermissions(data.roleId, data.perms),
+    onSuccess: () => {
+      notify.success('Yetkiler başarıyla güncellendi.');
+      setIsPermDrawerOpen(false);
+      setRoleForPerms(null);
+    }
+  });
+
   // --- HANDLERS ---
   const handleEdit = useCallback((role: AdminRoleDto) => {
     methods.reset({ code: role.code, name: role.name, active: role.active });
@@ -93,6 +128,23 @@ export const Roles: React.FC = () => {
     if (itemToDelete) deleteMutation.mutate(itemToDelete.id);
   };
 
+  const handleManagePerms = useCallback((role: AdminRoleDto) => {
+    setRoleForPerms(role);
+    setIsPermDrawerOpen(true);
+  }, []);
+
+  const handleSavePerms = () => {
+    if (roleForPerms) {
+      updatePermsMutation.mutate({ roleId: roleForPerms.id, perms: selectedPerms });
+    }
+  };
+
+  const togglePermission = (permName: string) => {
+    setSelectedPerms(prev => 
+      prev.includes(permName) ? prev.filter(p => p !== permName) : [...prev, permName]
+    );
+  };
+
   // --- GRID RENDERERS ---
   const codeRender = useCallback((cellData: any) => (
     <span className="font-semibold text-brand-dark">{cellData.data.code}</span>
@@ -106,6 +158,13 @@ export const Roles: React.FC = () => {
     const r = cellData.data as AdminRoleDto;
     return (
       <div className="flex items-center gap-2">
+        <button 
+          onClick={() => handleManagePerms(r)}
+          className="p-1.5 text-brand-gray hover:text-status-warning hover:bg-status-warning/10 rounded-md transition-colors"
+          title="Yetkileri Yönet"
+        >
+          <Shield className="h-4 w-4" />
+        </button>
         <button 
           onClick={() => handleEdit(r)}
           className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
@@ -122,7 +181,7 @@ export const Roles: React.FC = () => {
         </button>
       </div>
     );
-  }, [handleEdit, confirmDelete]);
+  }, [handleEdit, confirmDelete, handleManagePerms]);
 
   const columns = [
     { dataField: 'code', caption: 'Rol Kodu', width: 220, cellRender: codeRender },
@@ -227,6 +286,66 @@ export const Roles: React.FC = () => {
             </div>
           </form>
         </FormProvider>
+      </FfDrawer>
+
+      {/* --- PERMISSIONS DRAWER --- */}
+      <FfDrawer
+        isOpen={isPermDrawerOpen}
+        onClose={() => { setIsPermDrawerOpen(false); setRoleForPerms(null); }}
+        title="Rol Yetkileri"
+        subtitle={`${roleForPerms?.name} rolünün sisteme erişim yetkilerini yapılandırın.`}
+        size="md"
+        footer={
+          <>
+            <FfButton variant="ghost" onClick={() => setIsPermDrawerOpen(false)}>İptal</FfButton>
+            <FfButton 
+               variant="primary" 
+               onClick={handleSavePerms}
+               isLoading={updatePermsMutation.isPending}
+            >
+              Yetkileri Kaydet
+            </FfButton>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3 py-4">
+          {isFetchingPerms ? (
+             <div className="animate-pulse space-y-3">
+                <div className="h-16 bg-surface-muted rounded-xl w-full border border-surface-muted/50"></div>
+                <div className="h-16 bg-surface-muted rounded-xl w-full border border-surface-muted/50"></div>
+                <div className="h-16 bg-surface-muted rounded-xl w-full border border-surface-muted/50"></div>
+             </div>
+          ) : (
+            (allPermissions || []).map(perm => {
+              const isSelected = selectedPerms.includes(perm.name);
+              return (
+                <div 
+                  key={perm.id} 
+                  onClick={() => togglePermission(perm.name)}
+                  className={cn(
+                    "flex items-center p-4 rounded-xl border cursor-pointer transition-all",
+                    isSelected 
+                      ? "border-brand-primary bg-brand-primary/5 shadow-[0_2px_8px_rgba(var(--brand-primary-rgb),0.1)]" 
+                      : "border-surface-muted bg-surface-base hover:border-brand-primary/30 hover:bg-surface-hover"
+                  )}
+                >
+                   <input 
+                     type="checkbox"
+                     checked={isSelected}
+                     onChange={() => {}} // handled by div click
+                     className="h-5 w-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/50 pointer-events-none shrink-0"
+                   />
+                   <div className="ml-4 flex flex-col">
+                      <span className="font-bold text-brand-dark text-[15px]">{perm.name}</span>
+                      {perm.description && (
+                        <span className="text-xs text-brand-gray mt-1 leading-relaxed">{perm.description}</span>
+                      )}
+                   </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </FfDrawer>
 
       <FfConfirmDialog 

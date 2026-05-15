@@ -27,7 +27,7 @@ namespace FormfleksBaseApp.DynamicForms.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/dynamic-forms")]
-[Authorize(Policy = "HasAppRole")]
+[Authorize]
 public sealed class DynamicFormsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -46,6 +46,21 @@ public sealed class DynamicFormsController : ControllerBase
         var result = await _mediator.Send(new GetFormDefinitionQuery(formCode), ct);
         if (result is null)
             return NotFound();
+
+        var userRoles = User.Claims
+            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .ToList();
+
+        var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || r.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+        if (!isAdmin && result.AllowedCreateRoleCodes != null && result.AllowedCreateRoleCodes.Any())
+        {
+            if (!result.AllowedCreateRoleCodes.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any())
+            {
+                return Forbid();
+            }
+        }
 
         return Ok(result);
     }
@@ -183,7 +198,7 @@ public sealed class DynamicFormsController : ControllerBase
     /// Sistemdeki tüm form şablonlarını yönetici yetkisiyle listeler.
     /// </summary>
     [HttpGet("admin/templates")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyFormsDesign)]
     public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetTemplates(CancellationToken ct)
         => Ok(await _mediator.Send(new GetTemplatesQuery(), ct));
 
@@ -194,16 +209,35 @@ public sealed class DynamicFormsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FormTemplateSummaryDto>>> GetActiveTemplates(CancellationToken ct)
     {
         var templates = await _mediator.Send(new GetTemplatesQuery(), ct);
-        return Ok(templates.Where(t => t.Active).ToList());
+        var activeTemplates = templates.Where(t => t.Active).ToList();
+
+        var userRoles = User.Claims
+            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .ToList();
+
+        var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+
+        if (isAdmin)
+        {
+            return Ok(activeTemplates);
+        }
+
+        var filteredTemplates = activeTemplates.Where(t => 
+            t.AllowedCreateRoleCodes == null || 
+            !t.AllowedCreateRoleCodes.Any() || 
+            t.AllowedCreateRoleCodes.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any()
+        ).ToList();
+
+        return Ok(filteredTemplates);
     }
 
     [HttpGet("admin/roles")]
-    [Authorize(Policy = "AdminOrHr")]
     public async Task<ActionResult<IReadOnlyList<RoleLookupDto>>> GetRoles(CancellationToken ct)
         => Ok(await _mediator.Send(new GetRolesQuery(), ct));
 
     [HttpGet("admin/audit-logs")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicySystemAuditLogs)]
     public async Task<ActionResult<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>>> GetAuditLogs(CancellationToken ct)
         => Ok(await _mediator.Send(new GetAuditLogsQuery(), ct));
 
@@ -211,7 +245,7 @@ public sealed class DynamicFormsController : ControllerBase
     /// Yeni bir form şablonu oluşturur veya var olan şablonu günceller.
     /// </summary>
     [HttpPost("admin/templates")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyFormsDesign)]
     public async Task<ActionResult<FormTemplateSummaryDto>> UpsertTemplate([FromBody] FormTemplateUpsertDto request, CancellationToken ct)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -221,7 +255,7 @@ public sealed class DynamicFormsController : ControllerBase
     }
 
     [HttpGet("admin/templates/{formTypeId:guid}/workflow")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyFormsDesign)]
     public async Task<ActionResult<IReadOnlyList<FormTemplateWorkflowStepUpsertDto>>> GetTemplateWorkflow(Guid formTypeId, CancellationToken ct)
         => Ok(await _mediator.Send(new GetTemplateWorkflowQuery(formTypeId), ct));
 
@@ -229,7 +263,7 @@ public sealed class DynamicFormsController : ControllerBase
     /// Bir form şablonunun onay iş akışını (adımları, onaylayıcıları vb.) oluşturur veya günceller.
     /// </summary>
     [HttpPost("admin/templates/{formTypeId:guid}/workflow")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyFormsDesign)]
     public async Task<ActionResult<object>> UpsertTemplateWorkflow(
         Guid formTypeId,
         [FromBody] IReadOnlyList<FormTemplateWorkflowStepUpsertDto> request,
@@ -246,7 +280,7 @@ public sealed class DynamicFormsController : ControllerBase
     /// Form şablonunun aktiflik/pasiflik durumunu günceller.
     /// </summary>
     [HttpPatch("admin/templates/{formTypeId:guid}/status")]
-    [Authorize(Policy = "AdminOrHr")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicyFormsDesign)]
     public async Task<ActionResult<FormTemplateSummaryDto>> SetTemplateStatus(
         Guid formTypeId,
         [FromBody] TemplateStatusUpdateRequest request,

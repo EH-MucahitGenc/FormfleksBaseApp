@@ -82,36 +82,50 @@ export const router = createBrowserRouter([
               { path: 'history', element: <Suspense fallback={<PageFallback />}><ApprovalHistory /></Suspense> }
             ]
           },
+          { 
+            path: 'users', 
+            element: <ProtectedRoute requiredPermission="Users.Manage"><Suspense fallback={<PageFallback />}><Users /></Suspense></ProtectedRoute> 
+          },
           {
-            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin']} />,
+            path: 'admin',
             children: [
-              { path: 'users', element: <Suspense fallback={<PageFallback />}><Users /></Suspense> },
-              {
-                path: 'admin',
-                children: [
-                  { path: 'roles', element: <Suspense fallback={<PageFallback />}><Roles /></Suspense> },
-
-                  { path: 'location-roles', element: <Suspense fallback={<PageFallback />}><LocationRoles /></Suspense> },
-                  { path: 'audit-logs', element: <Suspense fallback={<PageFallback />}><AuditLogs /></Suspense> },
-                  { path: 'personnel-sync', element: <Suspense fallback={<PageFallback />}><PersonnelSync /></Suspense> },
-                  { path: 'system-settings', element: <Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense> }
-                ]
+              { 
+                path: 'roles', 
+                element: <ProtectedRoute requiredPermission="Roles.Manage"><Suspense fallback={<PageFallback />}><Roles /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'location-roles', 
+                element: <ProtectedRoute requiredPermission="Users.Manage"><Suspense fallback={<PageFallback />}><LocationRoles /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'audit-logs', 
+                element: <ProtectedRoute requiredPermission="System.AuditLogs"><Suspense fallback={<PageFallback />}><AuditLogs /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'personnel-sync', 
+                element: <ProtectedRoute requiredPermission="Personnel.Sync"><Suspense fallback={<PageFallback />}><PersonnelSync /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'system-settings', 
+                element: <ProtectedRoute requiredPermission="System.Settings"><Suspense fallback={<PageFallback />}><ApplicationSettings /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'form-designer', 
+                element: <ProtectedRoute requiredPermission="Forms.Design"><Suspense fallback={<PageFallback />}><FormDesigner /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'workflow-designer', 
+                element: <ProtectedRoute requiredPermission="Workflows.Manage"><Suspense fallback={<PageFallback />}><WorkflowDesigner /></Suspense></ProtectedRoute> 
               }
             ]
           },
           {
             path: 'hr',
-            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin', 'HumanResources', 'IK', 'IK-Admin', 'HR']} />,
             children: [
-              { path: 'reports', element: <Suspense fallback={<PageFallback />}><HrReportingDashboard /></Suspense> }
-            ]
-          },
-          {
-            path: 'admin',
-            element: <ProtectedRoute allowedRoles={['Admin', 'ADMIN', 'admin', 'HumanResources', 'IK', 'IK-Admin', 'HR']} />,
-            children: [
-              { path: 'form-designer', element: <Suspense fallback={<PageFallback />}><FormDesigner /></Suspense> },
-              { path: 'workflow-designer', element: <Suspense fallback={<PageFallback />}><WorkflowDesigner /></Suspense> }
+              { 
+                path: 'reports', 
+                element: <ProtectedRoute requiredPermission="Reports.View"><Suspense fallback={<PageFallback />}><HrReportingDashboard /></Suspense></ProtectedRoute> 
+              }
             ]
           },
           {
