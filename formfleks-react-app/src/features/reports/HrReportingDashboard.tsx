@@ -116,13 +116,13 @@ export const HrReportingDashboard = () => {
     if (!active||!payload?.length) return null;
     const item = payload[0];
     const label = item.payload?.name || item.payload?.dateLabel || item.payload?.formTypeName || item.payload?.statusName || '';
-    return <div className="bg-white border border-surface-muted shadow-xl rounded-xl px-4 py-3"><p className="text-xs font-semibold text-brand-dark mb-1">{label}</p><p className="text-sm font-bold text-brand-primary">{item.value} {item.dataKey==='averageCompletionDays'?'Gün':'Adet'}</p></div>;
+    return <div className="bg-surface-base border border-surface-muted shadow-xl rounded-xl px-4 py-3"><p className="text-xs font-semibold text-brand-dark mb-1">{label}</p><p className="text-sm font-bold text-brand-primary">{item.value} {item.dataKey==='averageCompletionDays'?'Gün':'Adet'}</p></div>;
   };
 
   const hasFilter = selLocation||selDepartment||selUserId||dateMode!=='all';
 
   const SelectBox = ({ icon, value, onChange, placeholder, children }: any) => (
-    <div className="flex items-center gap-2 bg-white border border-surface-muted rounded-xl px-3 py-2 min-w-[170px] shadow-sm">
+    <div className="flex items-center gap-2 bg-surface-base border border-surface-muted rounded-xl px-3 py-2 min-w-[170px] shadow-sm">
       <span className="text-brand-gray shrink-0">{icon}</span>
       <select value={value} onChange={e=>onChange(e.target.value)} className="text-xs font-medium text-brand-dark bg-transparent outline-none w-full cursor-pointer">
         <option value="">{placeholder}</option>
@@ -140,20 +140,20 @@ export const HrReportingDashboard = () => {
       </div>
 
       {/* FILTER BAR */}
-      <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-surface-muted shadow-sm p-4 flex flex-wrap gap-3 items-center">
+      <div className="bg-surface-base/90 backdrop-blur-md rounded-2xl border border-surface-muted shadow-sm p-4 flex flex-wrap gap-3 items-center">
         {/* Date */}
         <div className="flex items-center bg-surface-muted/40 p-1 rounded-xl border border-surface-muted/60 gap-0.5">
           {(['all','thisMonth','lastMonth','custom'] as const).map(m => (
-            <button key={m} onClick={()=>setDateMode(m)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${dateMode===m?'bg-white shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}>
+            <button key={m} onClick={()=>setDateMode(m)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${dateMode===m?'bg-surface-base shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}>
               {m==='all'?'Tümü':m==='thisMonth'?'Bu Ay':m==='lastMonth'?'Geçen Ay':<span className="flex items-center gap-1"><Filter className="h-3 w-3"/>Özel</span>}
             </button>
           ))}
         </div>
         {dateMode==='custom' && (
           <div className="flex items-center gap-2">
-            <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} className="text-xs border border-surface-muted rounded-lg px-2 py-1.5 bg-white"/>
+            <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} className="text-xs border border-surface-muted rounded-lg px-2 py-1.5 bg-surface-base"/>
             <span className="text-brand-gray text-xs">—</span>
-            <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} className="text-xs border border-surface-muted rounded-lg px-2 py-1.5 bg-white"/>
+            <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} className="text-xs border border-surface-muted rounded-lg px-2 py-1.5 bg-surface-base"/>
           </div>
         )}
 
@@ -194,7 +194,7 @@ export const HrReportingDashboard = () => {
       {/* TABS */}
       <div className="flex items-center gap-1 bg-surface-muted/30 p-1 rounded-xl border border-surface-muted/50 w-fit">
         {[{id:'summary',label:'📊 Genel Özet & Tablo'},{id:'advanced',label:'🔬 İleri Seviye Analitikler'}].map(t=>(
-          <button key={t.id} onClick={()=>setActiveTab(t.id as any)} className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab===t.id?'bg-white shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}>{t.label}</button>
+          <button key={t.id} onClick={()=>setActiveTab(t.id as any)} className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab===t.id?'bg-surface-base shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}>{t.label}</button>
         ))}
       </div>
 
@@ -255,10 +255,10 @@ export const HrReportingDashboard = () => {
                     {barData.length>0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={barData} layout="vertical" margin={{top:5,right:30,left:10,bottom:5}}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0"/>
-                          <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#64748B'}}/>
-                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#374151'}} width={165}/>
-                          <RechartsTooltip content={renderTooltip} cursor={{fill:'#F1F5F9'}}/>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
+                          <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
+                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-dark, #374151)'}} width={165}/>
+                          <RechartsTooltip content={renderTooltip} cursor={{fill:'var(--app-surface-muted, #F1F5F9)'}}/>
                           <Bar dataKey="Formlar" radius={[0,6,6,0]} maxBarSize={26}>
                             {barData.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
                           </Bar>
@@ -311,10 +311,10 @@ export const HrReportingDashboard = () => {
                   {advancedData?.slaMetrics?.length ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={advancedData.slaMetrics} layout="vertical" margin={{top:5,right:30,left:10,bottom:5}}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0"/>
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#64748B'}}/>
-                        <YAxis dataKey="formTypeName" type="category" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#374151'}} width={130}/>
-                        <RechartsTooltip content={renderTooltip} cursor={{fill:'#F1F5F9'}}/>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
+                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
+                        <YAxis dataKey="formTypeName" type="category" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-dark, #374151)'}} width={130}/>
+                        <RechartsTooltip content={renderTooltip} cursor={{fill:'var(--app-surface-muted, #F1F5F9)'}}/>
                         <Bar dataKey="averageCompletionDays" radius={[0,6,6,0]} maxBarSize={26}>
                           {advancedData.slaMetrics.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
                         </Bar>
@@ -347,9 +347,9 @@ export const HrReportingDashboard = () => {
                   {advancedData?.trendMetrics?.length ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={advancedData.trendMetrics} margin={{top:5,right:30,left:10,bottom:30}}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0"/>
-                        <XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#64748B'}} angle={-45} textAnchor="end" interval="preserveStartEnd"/>
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#64748B'}}/>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
+                        <XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-gray, #64748B)'}} angle={-45} textAnchor="end" interval="preserveStartEnd"/>
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
                         <RechartsTooltip content={renderTooltip}/>
                         <Line type="monotone" dataKey="requestCount" name="Talep" stroke="#10B981" strokeWidth={3} dot={{r:4,fill:'#10B981',strokeWidth:2,stroke:'#FFF'}} activeDot={{r:6}}/>
                       </LineChart>

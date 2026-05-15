@@ -129,7 +129,7 @@ export const DynamicSidebar = ({
                 <input
                   type="text"
                   placeholder="Formlarda ara..."
-                  className="w-full bg-white border border-surface-muted rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-brand-primary transition-colors placeholder:text-brand-gray/50"
+                  className="w-full bg-surface-muted/50 border border-surface-muted rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-brand-primary transition-colors placeholder:text-brand-gray/50 text-brand-dark"
                   value={formSearch}
                   onChange={(e) => setFormSearch(e.target.value)}
                   onClick={(e) => e.stopPropagation()} // Prevent sidebar toggle if clicked inside

@@ -19,12 +19,12 @@ export const MyForms: React.FC = () => {
 
   const statusRenderer = (data: { data: MyFormRequestListItemDto }) => {
     switch (data.data.status) {
-      case 1: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">Taslak</span>;
+      case 1: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-surface-muted text-brand-gray border border-surface-muted">Taslak</span>;
       case 2: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">Değerlendirmede</span>;
       case 3: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20">Onay Bekliyor</span>;
       case 4: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-success/10 text-status-success border border-status-success/20">Onaylandı</span>;
       case 5: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-danger/10 text-status-danger border border-status-danger/20">Reddedildi</span>;
-      case 6: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">İptal Edildi</span>;
+      case 6: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-surface-muted text-brand-gray border border-surface-muted">İptal Edildi</span>;
       case 7: return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-status-warning/10 text-status-warning border border-status-warning/20">Revizyon Bekliyor</span>;
       default: return <span>Bilinmiyor</span>;
     }

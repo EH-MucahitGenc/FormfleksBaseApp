@@ -29,7 +29,7 @@ export const NewFormRequest: React.FC = () => {
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-3 border border-surface-muted rounded-xl bg-white shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-all"
+          className="block w-full pl-10 pr-3 py-3 border border-surface-muted rounded-xl bg-surface-base shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-all"
           placeholder="Aramak istediğiniz formu yazın..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

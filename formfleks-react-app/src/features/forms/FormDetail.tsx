@@ -133,7 +133,7 @@ export const FormDetail: React.FC = () => {
               variant="outline" 
               leftIcon={<Printer className="h-4 w-4" />}
               onClick={() => handlePrint()}
-              className="bg-white hover:bg-surface-muted"
+              className="bg-surface-base hover:bg-surface-muted"
             >
               PDF İndir / Yazdır
             </FfButton>

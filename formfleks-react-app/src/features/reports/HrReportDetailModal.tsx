@@ -65,7 +65,7 @@ export const HrReportDetailModal = ({ isOpen, onClose, requestorUserId, formType
               </thead>
               <tbody>
                 {data.map((item: HrFormDetailItemDto) => (
-                  <tr key={item.formRequestId} className="bg-white border-b border-surface-muted hover:bg-surface-hover/50">
+                  <tr key={item.formRequestId} className="bg-surface-base border-b border-surface-muted hover:bg-surface-hover/50">
                     <td className="px-4 py-3 font-medium text-brand-primary">{item.formRequestNo}</td>
                     <td className="px-4 py-3">{new Date(item.createdAt).toLocaleDateString('tr-TR')}</td>
                     <td className="px-4 py-3">

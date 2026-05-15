@@ -32,11 +32,11 @@ export const FfBarChart: React.FC<FfBarChartProps> = ({
     <div className={className} style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-surface-muted, #E5E7EB)" />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--app-brand-gray, #6B7280)' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: 'var(--app-brand-gray, #6B7280)' }} axisLine={false} tickLine={false} />
           <Tooltip
-            cursor={{ fill: '#F3F4F6' }}
+            cursor={{ fill: 'var(--app-surface-muted, #F3F4F6)' }}
             contentStyle={{
               borderRadius: '10px',
               border: 'none',

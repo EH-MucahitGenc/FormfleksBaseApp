@@ -52,7 +52,7 @@ export default function PersonnelSyncDashboard() {
         <StatCard
           title="Son Senkronizasyon"
           value={stats?.lastSyncDate ? new Date(stats.lastSyncDate).toLocaleString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Hiç yapılmadı'}
-          icon={<Server className="w-6 h-6 text-gray-500" />}
+          icon={<Server className="w-6 h-6 text-brand-gray" />}
           loading={isStatsLoading}
           valueClassName="text-lg"
         />
@@ -60,18 +60,18 @@ export default function PersonnelSyncDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LOGS TABLE */}
-        <div className="bg-surface-base rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Son Senkronizasyon İşlemleri</h2>
+        <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted p-6 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-brand-dark mb-4">Son Senkronizasyon İşlemleri</h2>
           {isLogsLoading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-100 animate-pulse rounded-md" />
+                <div key={i} className="h-12 bg-surface-muted animate-pulse rounded-md" />
               ))}
             </div>
           ) : (
              <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                  <thead className="text-xs text-brand-gray uppercase bg-surface-muted/50">
                     <tr>
                       <th className="px-4 py-3 rounded-tl-lg">Tarih</th>
                       <th className="px-4 py-3">Tetikleyen</th>
@@ -83,11 +83,11 @@ export default function PersonnelSyncDashboard() {
                   </thead>
                   <tbody>
                     {logsPage?.items?.map(log => (
-                      <tr key={log.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                         <td className="px-4 py-3 font-medium text-gray-900">
+                      <tr key={log.id} className="border-b last:border-0 hover:bg-surface-hover">
+                         <td className="px-4 py-3 font-medium text-brand-dark">
                            {new Date(log.startTime).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                          </td>
-                         <td className="px-4 py-3 text-gray-600">{log.triggeredByUser}</td>
+                         <td className="px-4 py-3 text-brand-gray">{log.triggeredByUser}</td>
                          <td className="px-4 py-3 text-green-600 font-medium">+{log.insertedCount}</td>
                          <td className="px-4 py-3 text-blue-600 font-medium">{log.updatedCount}</td>
                          <td className="px-4 py-3 text-red-600 font-medium">-{log.deactivatedCount}</td>
@@ -106,7 +106,7 @@ export default function PersonnelSyncDashboard() {
                     ))}
                     {(!logsPage?.items || logsPage.items.length === 0) && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={6} className="px-4 py-8 text-center text-brand-gray">
                           Henüz hiç senkronizasyon kaydı bulunmuyor.
                         </td>
                       </tr>
@@ -118,21 +118,21 @@ export default function PersonnelSyncDashboard() {
         </div>
 
         {/* DEPARTMENT CHART / DISTRIBUTION */}
-        <div className="bg-surface-base rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Departman Dağılımı</h2>
+        <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted p-6">
+          <h2 className="text-lg font-semibold text-brand-dark mb-4">Departman Dağılımı</h2>
           {isStatsLoading ? (
-            <div className="h-64 bg-gray-50 animate-pulse rounded-lg flex items-center justify-center">
-               <div className="w-32 h-32 rounded-full border-4 border-gray-200"></div>
+            <div className="h-64 bg-surface-muted/30 animate-pulse rounded-lg flex items-center justify-center">
+               <div className="w-32 h-32 rounded-full border-4 border-surface-muted"></div>
             </div>
           ) : (
             <div className="space-y-4">
                {stats?.departmentDistribution.map(d => (
                  <div key={d.departmentName}>
                    <div className="flex justify-between text-sm mb-1">
-                     <span className="text-gray-700 truncate pr-4" title={d.departmentName}>{d.departmentName}</span>
-                     <span className="font-medium text-gray-900">{d.count}</span>
+                     <span className="text-brand-gray truncate pr-4" title={d.departmentName}>{d.departmentName}</span>
+                     <span className="font-medium text-brand-dark">{d.count}</span>
                    </div>
-                   <div className="w-full bg-gray-100 rounded-full h-2">
+                   <div className="w-full bg-surface-muted rounded-full h-2">
                      <div 
                         className="bg-indigo-500 h-2 rounded-full" 
                         style={{ width: `${Math.min(100, Math.max(5, (d.count / (stats?.totalActivePersonnel || 1)) * 100))}%` }}
@@ -141,7 +141,7 @@ export default function PersonnelSyncDashboard() {
                  </div>
                ))}
                {stats?.departmentDistribution.length === 0 && (
-                 <div className="text-center text-gray-500 py-8">Kayıt Yok</div>
+                 <div className="text-center text-brand-gray py-8">Kayıt Yok</div>
                )}
             </div>
           )}
@@ -153,16 +153,16 @@ export default function PersonnelSyncDashboard() {
 
 function StatCard({ title, value, icon, loading, valueClassName = "text-2xl" }: { title: string, value?: string, icon: React.ReactNode, loading: boolean, valueClassName?: string }) {
   return (
-    <div className="bg-surface-base p-6 rounded-xl shadow-sm border border-gray-100 flex items-start gap-4 transition-all hover:shadow-md">
-      <div className="p-3 bg-gray-50 rounded-lg">
+    <div className="bg-surface-base p-6 rounded-xl shadow-sm border border-surface-muted flex items-start gap-4 transition-all hover:shadow-md">
+      <div className="p-3 bg-surface-muted/50 rounded-lg">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-500">{title}</p>
+        <p className="text-sm font-medium text-brand-gray">{title}</p>
         {loading ? (
-           <div className="h-8 w-24 bg-gray-200 animate-pulse rounded mt-1" />
+           <div className="h-8 w-24 bg-surface-muted animate-pulse rounded mt-1" />
         ) : (
-           <h3 className={`font-bold text-gray-900 mt-1 ${valueClassName}`}>{value || '0'}</h3>
+           <h3 className={`font-bold text-brand-dark mt-1 ${valueClassName}`}>{value || '0'}</h3>
         )}
       </div>
     </div>
