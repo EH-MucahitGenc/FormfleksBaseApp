@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List } from 'lucide-react';
+import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List, Search } from 'lucide-react';
 
 import { systemAdminService, type FormTemplateUpsertDto } from '@/services/system-admin.service';
 import { PageHeader, FfButton, PageContainer, GlassCard, FfModal } from '@/components/ui/index';
@@ -25,6 +25,7 @@ interface SectionState {
 export const FormDesigner: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'list' | 'designer' | 'preview'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Builder State
   const [code, setCode] = useState('');
@@ -90,6 +91,12 @@ export const FormDesigner: React.FC = () => {
     queryFn: systemAdminService.getRolesLookup
   });
 
+  const searchLower = searchTerm.toLocaleLowerCase('tr-TR');
+  const filteredTemplates = templates.filter((t: any) => 
+    t.name?.toLocaleLowerCase('tr-TR').includes(searchLower) || 
+    t.code?.toLocaleLowerCase('tr-TR').includes(searchLower)
+  );
+
   const statusMutation = useMutation({
     mutationFn: ({ formTypeId, active }: { formTypeId: string, active: boolean }) => systemAdminService.setTemplateStatus(formTypeId, active),
     onSuccess: () => {
@@ -109,6 +116,40 @@ export const FormDesigner: React.FC = () => {
       setSaveMessage({ type: 'error', text: 'Kayıt sırasında bir hata oluştu.' });
     }
   });
+
+  const handlePreviewTemplate = async (template: any) => {
+    try {
+      const detailed = await systemAdminService.getTemplateDetailed(template.code);
+      
+      setCode(detailed.code || template.code);
+      setName(detailed.name || template.name);
+      if (detailed.allowedCreateRoleCodes) setAllowedCreateRoleCodes(detailed.allowedCreateRoleCodes);
+      
+      if (detailed.sections && detailed.sections.length > 0) {
+        const mappedSections = detailed.sections.map((sec: any) => ({
+          id: sec.sectionId || crypto.randomUUID(),
+          title: sec.title,
+          fields: sec.fields?.map((f: any) => ({
+            id: f.fieldId || crypto.randomUUID(),
+            fieldKey: f.key || f.fieldKey,
+            label: f.label,
+            fieldType: f.fieldType,
+            isRequired: f.isRequired,
+            optionsJson: f.optionsJson,
+            placeholder: f.placeholder
+          })) || []
+        }));
+        setSections(mappedSections);
+      } else {
+        setSections([{ id: crypto.randomUUID(), title: 'Genel Bilgiler', fields: [] }]);
+      }
+      
+      setActiveTab('preview');
+    } catch (err) {
+      console.error("Önizleme yüklenirken hata:", err);
+      alert("Form detayı yüklenemedi. Lütfen daha sonra tekrar deneyin.");
+    }
+  };
 
   // Actions
   const handleReset = () => {
@@ -388,7 +429,21 @@ export const FormDesigner: React.FC = () => {
                   <h3 className="text-lg font-bold text-brand-dark">Sistemdeki Tasarlanmış Formlar</h3>
                   <p className="text-sm text-brand-gray">Sistemde varolan şablonları buradan yönetebilir, durdurup başlatabilirsiniz.</p>
                </div>
-               <FfButton variant="primary" leftIcon={<Plus className="h-4 w-4"/>} onClick={() => setActiveTab('designer')}>Yeni Tasarım</FfButton>
+               <div className="flex items-center gap-3">
+                 <div className="relative">
+                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                     <Search className="h-4 w-4 text-brand-gray" />
+                   </div>
+                   <input
+                     type="text"
+                     placeholder="Form adı veya kod..."
+                     className="block w-64 pl-10 pr-3 py-2 border border-surface-muted rounded-lg bg-surface-base focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-colors"
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                   />
+                 </div>
+                 <FfButton variant="primary" leftIcon={<Plus className="h-4 w-4"/>} onClick={() => setActiveTab('designer')}>Yeni Tasarım</FfButton>
+               </div>
             </div>
             <div className="bg-surface-base rounded-xl border border-surface-muted overflow-hidden">
                 <table className="w-full text-sm text-left">
@@ -399,20 +454,23 @@ export const FormDesigner: React.FC = () => {
                             <th className="px-4 py-3 text-center">Alan Sayısı</th>
                             <th className="px-4 py-3 text-center">İşlem Onay Adımı</th>
                             <th className="px-4 py-3 text-center">Kullanıma Açık Mı?</th>
+                            <th className="px-4 py-3 text-center">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-muted">
                         {templatesLoading && (
                             <tr>
-                                <td colSpan={5} className="text-center py-8 text-brand-gray">Yükleniyor...</td>
+                                <td colSpan={6} className="text-center py-8 text-brand-gray">Yükleniyor...</td>
                             </tr>
                         )}
-                        {!templatesLoading && templates.length === 0 && (
+                        {!templatesLoading && filteredTemplates.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="text-center py-8 text-brand-gray">Kayıtlı hiçbir form şablonu bulunmuyor.</td>
+                                <td colSpan={6} className="text-center py-8 text-brand-gray">
+                                  {searchTerm ? 'Arama kriterinize uygun form bulunamadı.' : 'Kayıtlı hiçbir form şablonu bulunmuyor.'}
+                                </td>
                             </tr>
                         )}
-                        {templates?.map((t: any) => (
+                        {filteredTemplates?.map((t: any) => (
                             <tr key={t.formTypeId} className="hover:bg-brand-primary/5 transition-colors">
                                 <td className="px-4 py-3 font-medium text-brand-dark">{t.name}</td>
                                 <td className="px-4 py-3 font-mono text-xs">{t.code}</td>
@@ -429,6 +487,15 @@ export const FormDesigner: React.FC = () => {
                                         />
                                         <div className="w-9 h-5 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-status-success"></div>
                                     </label>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <button 
+                                      onClick={() => handlePreviewTemplate(t)}
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-colors"
+                                      title="Formu Önizle ve İncele"
+                                    >
+                                      <Eye className="h-3.5 w-3.5" /> Önizle
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -688,8 +755,8 @@ export const FormDesigner: React.FC = () => {
 
         {/* Canlı Önizleme Alanı */}
         {activeTab === 'preview' && (
-          <div className="flex-1 overflow-y-auto bg-surface-muted p-4 md:p-8 flex justify-center scrollbar-thin">
-            <div className="w-full max-w-3xl bg-surface-base rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="flex-1 overflow-y-auto bg-surface-muted p-4 md:p-8 scrollbar-thin">
+            <div className="w-full max-w-3xl mx-auto bg-surface-base rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 mb-10 h-max">
                 <div className="bg-brand-primary/5 border-b border-brand-primary/10 px-6 py-4">
                     <h2 className="text-xl font-bold text-brand-dark">{name || 'İsimsiz Form'}</h2>
                     <p className="text-sm font-medium text-brand-gray mt-1">Bu alan form doldurucunun göreceği görsel karşılıktır.</p>

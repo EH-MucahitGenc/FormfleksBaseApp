@@ -27,7 +27,9 @@ public sealed class GetTemplatesQueryHandler : IRequestHandler<GetTemplatesQuery
                 t.Active,
                 t.CreatedAt,
                 t.AllowedCreateRoleCodesJson,
-                t.AllowedReportRoleCodesJson
+                t.AllowedReportRoleCodesJson,
+                FieldCount = _db.FormFields.Count(f => f.FormTypeId == t.Id && f.Active),
+                WorkflowStepCount = _db.WorkflowSteps.Count(ws => _db.WorkflowDefinitions.Any(wd => wd.Id == ws.WorkflowDefinitionId && wd.FormTypeId == t.Id && wd.IsActive))
             })
             .ToListAsync(ct);
 
@@ -37,6 +39,8 @@ public sealed class GetTemplatesQueryHandler : IRequestHandler<GetTemplatesQuery
             Code = t.Code,
             Name = t.Name,
             Active = t.Active,
+            FieldCount = t.FieldCount,
+            WorkflowStepCount = t.WorkflowStepCount,
             CreatedAt = t.CreatedAt,
             AllowedCreateRoleCodes = !string.IsNullOrEmpty(t.AllowedCreateRoleCodesJson) 
                 ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(t.AllowedCreateRoleCodesJson) 
