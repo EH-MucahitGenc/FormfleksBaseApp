@@ -102,7 +102,7 @@ api.interceptors.response.use(
             refreshToken,
           });
 
-          const { token: newToken, refreshToken: newRefresh } = rs.data;
+          const { accessToken: newToken, refreshToken: newRefresh } = rs.data;
           useAuthStore.getState().setTokens(newToken, newRefresh);
 
           processQueue(null, newToken);

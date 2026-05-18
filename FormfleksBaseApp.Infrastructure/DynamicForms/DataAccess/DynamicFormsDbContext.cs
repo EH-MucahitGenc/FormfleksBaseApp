@@ -22,6 +22,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestValueEntity> FormRequestValues => Set<FormRequestValueEntity>();
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications => Set<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
     public DbSet<UserDelegationEntity> UserDelegations => Set<UserDelegationEntity>();
@@ -229,6 +230,23 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.DetailJson).HasColumnName("detail_json").HasColumnType("jsonb");
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
             e.HasIndex(x => new { x.EntityType, x.EntityId, x.CreatedAt });
+        });
+
+        modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>(e =>
+        {
+            e.ToTable("app_notifications");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
+            e.Property(x => x.Title).HasColumnName("title").HasColumnType("character varying(200)").HasMaxLength(200);
+            e.Property(x => x.Message).HasColumnName("message").HasColumnType("text");
+            e.Property(x => x.ReferenceId).HasColumnName("reference_id").HasColumnType("uuid");
+            e.Property(x => x.ActionUrl).HasColumnName("action_url").HasColumnType("character varying(500)").HasMaxLength(500);
+            e.Property(x => x.IsRead).HasColumnName("is_read").HasColumnType("boolean");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+            
+            e.HasIndex(x => new { x.UserId, x.IsRead });
+            e.HasIndex(x => x.CreatedAt);
         });
 
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>(e =>

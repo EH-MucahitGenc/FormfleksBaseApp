@@ -68,9 +68,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
     {
-        builder.AllowAnyOrigin()
+        builder.SetIsOriginAllowed(_ => true)
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               .AllowCredentials();
     });
 });
 
@@ -109,6 +110,24 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
 
             ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                // If the request is for our hub...
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    (path.StartsWithSegments("/hubs/notification")))
+                {
+                    // Read the token out of the query string
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -151,6 +170,10 @@ builder.Services.AddHostedService<FormfleksBaseApp.Infrastructure.Services.Appro
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IEmailService, FormfleksBaseApp.Infrastructure.Services.EmailService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IPdfGeneratorService, FormfleksBaseApp.Infrastructure.Services.PdfGeneratorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IFormAttachmentCollectorService, FormfleksBaseApp.Infrastructure.Services.FormAttachmentCollectorService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IAppNotificationService, FormfleksBaseApp.Api.Services.AppNotificationService>();
+
+// SignalR UserId Provider
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, FormfleksBaseApp.Api.Hubs.CustomUserIdProvider>();
 
 // Oracle integration
 builder.Services.AddScoped<IOracleConnectionFactory, OracleConnectionFactory>();
@@ -170,6 +193,9 @@ builder.Services.AddProblemDetails(options =>
             ctx.ProblemDetails.Extensions["correlationId"] = cid.ToString();
     };
 });
+
+// SignalR
+builder.Services.AddSignalR();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -246,6 +272,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.MapControllers();
+app.MapHub<FormfleksBaseApp.Api.Hubs.NotificationHub>("/hubs/notification");
 
 // Execute Database Seeders
 using (var scope = app.Services.CreateScope())

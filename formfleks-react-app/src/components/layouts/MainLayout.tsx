@@ -1,7 +1,8 @@
 import { Outlet } from 'react-router-dom';
-import { Search, Bell, Moon, Sun } from 'lucide-react';
+import { Search, Moon, Sun } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { DynamicSidebar } from './DynamicSidebar';
+import { NotificationBell } from './NotificationBell';
 
 // ----------------------------------------------------------------------
 // Main Application Layout
@@ -66,10 +67,7 @@ export const MainLayout: React.FC = () => {
             >
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <button className="relative p-2 text-brand-gray hover:bg-surface-muted rounded-full transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-status-danger rounded-full ring-2 ring-white"></span>
-            </button>
+            <NotificationBell />
           </div>
         </header>
 

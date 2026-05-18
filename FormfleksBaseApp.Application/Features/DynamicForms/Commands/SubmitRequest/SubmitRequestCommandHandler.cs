@@ -31,6 +31,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
     private readonly IPdfGeneratorService _pdfGenerator;
     private readonly IFormAttachmentCollectorService _attachmentCollector;
     private readonly FormfleksBaseApp.Application.Auth.Interfaces.ITokenService _tokens;
+    private readonly IAppNotificationService _notificationService;
 
     public SubmitRequestCommandHandler(
         IDynamicFormsDbContext db, 
@@ -40,7 +41,8 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         ILogger<SubmitRequestCommandHandler> logger,
         IPdfGeneratorService pdfGenerator,
         IFormAttachmentCollectorService attachmentCollector,
-        FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens)
+        FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens,
+        IAppNotificationService notificationService)
     {
         _db = db;
         _engine = engine;
@@ -50,6 +52,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         _pdfGenerator = pdfGenerator;
         _attachmentCollector = attachmentCollector;
         _tokens = tokens;
+        _notificationService = notificationService;
     }
 
     public async Task<FormRequestResultDto> Handle(SubmitRequestCommand request, CancellationToken ct)
@@ -253,6 +256,16 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 
                 _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
                 await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+
+                // Yeni Eklenti: SignalR İçi-İçi Canlı Bildirim
+                await _notificationService.SendNotificationAsync(
+                    userId: target.UserId,
+                    title: "Yeni Onay Bekliyor",
+                    message: $"{formType.Name} için onayınız bekleniyor. Talep No: {requestNo}",
+                    actionUrl: $"/forms/{requestId}",
+                    referenceId: requestId,
+                    cancellationToken: ct
+                );
             }
         }
     }

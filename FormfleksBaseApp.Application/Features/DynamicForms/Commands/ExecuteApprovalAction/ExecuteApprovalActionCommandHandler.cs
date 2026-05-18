@@ -30,6 +30,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
     private readonly IPdfGeneratorService _pdfGenerator;
     private readonly IFormAttachmentCollectorService _attachmentCollector;
     private readonly FormfleksBaseApp.Application.Auth.Interfaces.ITokenService _tokens;
+    private readonly IAppNotificationService _notificationService;
 
     public ExecuteApprovalActionCommandHandler(
         IDynamicFormsDbContext db, 
@@ -38,7 +39,8 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         IUserRepository userRepository,
         IPdfGeneratorService pdfGenerator,
         IFormAttachmentCollectorService attachmentCollector,
-        FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens)
+        FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens,
+        IAppNotificationService notificationService)
     {
         _db = db;
         _engine = engine;
@@ -47,6 +49,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         _pdfGenerator = pdfGenerator;
         _attachmentCollector = attachmentCollector;
         _tokens = tokens;
+        _notificationService = notificationService;
     }
 
     public async Task<ApprovalActionResponseDto> Handle(ExecuteApprovalActionCommand request, CancellationToken ct)
@@ -296,6 +299,16 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             {
                 var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
                 await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+                
+                // SignalR Notification
+                await _notificationService.SendNotificationAsync(
+                    userId: target.UserId,
+                    title: "Yeni Onay Bekliyor",
+                    message: $"{formType.Name} için onayınız bekleniyor. Talep No: {requestNo}",
+                    actionUrl: $"/forms/{requestId}",
+                    referenceId: requestId,
+                    cancellationToken: ct
+                );
             }
         }
     }
@@ -319,6 +332,19 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
             await _emailService.SendApprovalCompletedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, isApproved, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
+            
+            // SignalR Notification
+            string title = isApproved ? "Talebiniz Onaylandı" : "Talebiniz Reddedildi";
+            string msg = isApproved ? $"{requestNo} numaralı talebiniz başarıyla onaylanmıştır." : $"{requestNo} numaralı talebiniz reddedilmiştir.";
+            
+            await _notificationService.SendNotificationAsync(
+                userId: requestorUserId,
+                title: title,
+                message: msg,
+                actionUrl: $"/forms/{requestId}",
+                referenceId: requestId,
+                cancellationToken: ct
+            );
         }
     }
 
@@ -341,6 +367,16 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
         {
             await _emailService.SendApprovalReturnedEmailAsync(targetEmail, reqName, requestNo, requestId, formType.Name, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
+            
+            // SignalR Notification
+            await _notificationService.SendNotificationAsync(
+                userId: requestorUserId,
+                title: "Talebiniz Revizyona Gönderildi",
+                message: $"{requestNo} numaralı talebiniz için revizyon (düzeltme) istenmiştir.",
+                actionUrl: $"/forms/{requestId}",
+                referenceId: requestId,
+                cancellationToken: ct
+            );
         }
     }
 }

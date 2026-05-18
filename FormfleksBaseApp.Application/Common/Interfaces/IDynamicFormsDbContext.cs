@@ -17,6 +17,7 @@ public interface IDynamicFormsDbContext
     DbSet<FormRequestValueEntity> FormRequestValues { get; }
     DbSet<FormRequestApprovalEntity> FormRequestApprovals { get; }
     DbSet<AuditLogEntity> AuditLogs { get; }
+    DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications { get; }
     
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs { get; }
