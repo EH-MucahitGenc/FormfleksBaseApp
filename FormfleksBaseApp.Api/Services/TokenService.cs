@@ -85,6 +85,12 @@ public sealed class TokenService : ITokenService
         return Convert.ToBase64String(bytes);
     }
 
+    /// <summary>
+    /// Magic Link mimarisi için JWT üretir. 
+    /// Token içerisine ApprovalId ve UserId claim'lerini ekleyerek bu linkin sadece 
+    /// ilgili kişiye ve ilgili onay adımına ait olduğunu kriptografik olarak imzalar.
+    /// Güvenlik sebebiyle kullanım ömrü 2 gün (48 saat) olarak ayarlanmıştır.
+    /// </summary>
     public string CreateQuickActionToken(Guid approvalId, Guid userId)
     {
         var issuer = _config["Jwt:Issuer"];
@@ -113,6 +119,12 @@ public sealed class TokenService : ITokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <summary>
+    /// Parametre olarak gelen Magic Link token'ının imzasını ve geçerlilik süresini kontrol eder.
+    /// Ayrıca bu token'ın gerçekten "QuickAction" amacı için üretildiğinden emin olmak için 
+    /// TokenUsage claim'ini denetler. Güvenlik testini geçerse Claims nesnesini geri döndürür.
+    /// Hata oluşursa, tahrif edilmişse veya süresi geçmişse geriye null döner.
+    /// </summary>
     public ClaimsPrincipal? ValidateQuickActionToken(string token)
     {
         var issuer = _config["Jwt:Issuer"];

@@ -194,6 +194,12 @@ public class EmailService : IEmailService
     // ══════════════════════════════════════════════════════════════════════════
     // 1. ONAY BEKLİYOR — Atanan yöneticiye (Amber/Gold tema)
     // ══════════════════════════════════════════════════════════════════════════
+    /// <summary>
+    /// Onay bekleyen yöneticiye mail gönderir. 
+    /// Eğer token parametresi verilmişse (Magic Link mimarisi aktifse), mail şablonunun
+    /// içerisine Onayla, Reddet ve İade Et butonları yerleştirilir. 
+    /// Kullanıcı bu butonlar vasıtasıyla sisteme giriş yapmadan form aksiyonlarını hızlıca yönetebilir.
+    /// </summary>
     public async Task SendApprovalRequestEmailAsync(
         string toEmail, string assigneeName, string formRequestNo,
         Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null,

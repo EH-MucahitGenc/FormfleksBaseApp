@@ -9,6 +9,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.QuickAction;
 
+/// <summary>
+/// E-posta üzerinden (Magic Link) gelen hızlı aksiyon (Quick Action) isteklerini işleyen handler.
+/// Bu handler şu işlemleri gerçekleştirir:
+/// 1. Token'ı çözerek işlemi yapmaya çalışan UserId ve ApprovalId bilgilerini doğrular.
+/// 2. İlgili onay adımının veritabanında "Bekliyor (Pending)" statüsünde olup olmadığını kontrol eder.
+/// 3. Doğrulamalar başarılı olursa, form sürecinin kendi doğal iş akışını (ExecuteApprovalActionCommand) tetikler.
+/// Bu sayede Magic Link mimarisi, form akış motorunu veya tarihçe kayıt süreçlerini by-pass etmeden,
+/// mevcut iş mantığına (CQRS) %100 sadık kalarak güvenli bir işlem sağlar.
+/// </summary>
 public sealed class QuickActionCommandHandler : IRequestHandler<QuickActionCommand, bool>
 {
     private readonly IDynamicFormsDbContext _db;

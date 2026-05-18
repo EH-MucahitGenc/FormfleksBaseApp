@@ -14,6 +14,13 @@ using FormfleksBaseApp.Application.Auth.Interfaces;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
 
+/// <summary>
+/// Sistemdeki en kritik iş akışı (Approval Engine) yöneticisidir.
+/// Form üzerindeki onay (Approve), red (Reject) ve revizyon (ReturnForRevision) 
+/// taleplerini işler. İş kurallarını (Delegasyon kontrolleri, Concurrency Token kontrolleri) işletir.
+/// Sonuca göre formu bir sonraki adıma geçirir, reddeder veya revizyona gönderir ve ilgili kişilere 
+/// bildirim (e-posta) gönderimini tetikler.
+/// </summary>
 public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<ExecuteApprovalActionCommand, ApprovalActionResponseDto>
 {
     private readonly IDynamicFormsDbContext _db;

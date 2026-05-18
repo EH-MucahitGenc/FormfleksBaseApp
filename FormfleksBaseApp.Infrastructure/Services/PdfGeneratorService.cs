@@ -11,6 +11,11 @@ using System.Text.Json.Nodes;
 
 namespace FormfleksBaseApp.Infrastructure.Services;
 
+/// <summary>
+/// Dinamik olarak doldurulan formların QuestPDF kütüphanesi kullanılarak 
+/// şık ve okunabilir bir PDF formatına dönüştürülmesini sağlayan servis.
+/// Bu PDF'ler e-posta eklerine (Onay bildirimleri) otomatik olarak iliştirilir.
+/// </summary>
 public class PdfGeneratorService : IPdfGeneratorService
 {
     private readonly IDynamicFormsDbContext _db;

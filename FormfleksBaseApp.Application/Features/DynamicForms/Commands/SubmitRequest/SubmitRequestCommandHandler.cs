@@ -16,6 +16,11 @@ using Microsoft.Extensions.Logging;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.SubmitRequest;
 
+/// <summary>
+/// Kullanıcının dinamik olarak doldurduğu form taslağını onaya sunma sürecini yönetir.
+/// Verilen cevapların geçerliliğini kontrol eder, formun iş akışındaki (Workflow) 
+/// ilk adımını hesaplar ve ilgili kişilere e-posta bildirimlerini (ve Magic Link'leri) gönderir.
+/// </summary>
 public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestCommand, FormRequestResultDto>
 {
     private readonly IDynamicFormsDbContext _db;
@@ -242,7 +247,10 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
+                // [MAGIC LINK] Her alıcı için onay adımının ID'sini (approvalId) ve alıcının kendi UserId'sini
+                // içeren eşsiz bir JWT üretilir. Bu sayede sadece bu mailin gittiği kişi formu onaylayabilir.
                 var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
+                
                 _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
                 await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
             }

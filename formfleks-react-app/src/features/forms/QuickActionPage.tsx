@@ -5,6 +5,16 @@ import { SimpleItem } from 'devextreme-react/form';
 import notify from 'devextreme/ui/notify';
 import { apiClient } from '@/lib/axios';
 
+/**
+ * @component QuickActionPage
+ * @description E-posta içerisindeki "Onayla, Reddet, İade Et" butonlarına tıklandığında açılan arayüzdür.
+ * Kullanıcı sisteme giriş yapmamış (login olmamış) olsa dahi URL'deki "token" üzerinden işlem yapmasını sağlar.
+ * 
+ * Güvenlik Önlemleri:
+ * - İşlem sadece JWT token geçerliyse yapılabilir.
+ * - Mükerrer tıklamalarda backend'den gelen uyarıyı ekrana tam ekran bir hata ile yansıtır.
+ * - Kullanıcının istemeden onaylamasını engellemek için önce bu sayfa açılır ve "İşlemi Tamamla" butonuna basması beklenir.
+ */
 export default function QuickActionPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

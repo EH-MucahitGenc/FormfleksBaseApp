@@ -158,6 +158,8 @@ public sealed class DynamicFormsController : ControllerBase
 
     /// <summary>
     /// Magic Link aracılığıyla sisteme giriş yapmadan form onayı, reddi veya iadesi yapar.
+    /// [AllowAnonymous] ile dışarıya açıktır ancak güvenlik, istek gövdesindeki "Token" (JWT) ile sağlanır.
+    /// Yalnızca 2 gün geçerli olan bu token'lar arka planda çözülerek yetkilendirme işlemi gerçekleştirilir.
     /// </summary>
     [AllowAnonymous]
     [HttpPost("quick-action")]
