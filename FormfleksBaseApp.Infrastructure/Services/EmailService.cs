@@ -391,6 +391,117 @@ public class EmailService : IEmailService
         }, cancellationToken);
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 4. İPTAL EDİLDİ — Bekleyen Onaycıya (Gri Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendFormCancelledEmailAsync(
+        string toEmail, string assigneeName, string formRequestNo,
+        Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+
+        var bodyHtml = $"""
+            <p>
+              <strong style="color:#475569;">{requesterName}</strong> tarafından oluşturulan
+              <strong style="color:#475569;">{formTypeName}</strong> formu, formu oluşturan kişi tarafından
+              <strong style="color:#dc2626;">iptal edilmiştir</strong>.
+            </p>
+            <p style="margin-top:16px;">
+              Bu form için onay veya herhangi bir işlem yapmanıza gerek kalmamıştır.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#64748b",
+            accentDark: "#334155",
+            accentTextColor: "#ffffff",
+            accentLabel: "İPTAL EDİLDİ",
+            statusIcon: "🚫",
+            recipientName: assigneeName,
+            subject: $"İptal Edildi: {formRequestNo}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: requesterName,
+            actionUrl: actionUrl,
+            actionLabel: "Form Detaylarını Görüntüle",
+            actionBgColor: "#64748b",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"🚫 İptal Bildirimi: {formRequestNo} — {formTypeName}",
+            HtmlBody = html,
+            Attachments = attachments ?? new List<EmailAttachment>()
+        }, cancellationToken);
+    }
+
+    public async Task SendApprovalReminderEmailAsync(
+        string toEmail, string assigneeName, string formRequestNo,
+        Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, string? token = null,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+
+        var body = $"""
+            <p>
+              <strong style="color:#b45309;">{requesterName}</strong> tarafından oluşturulan
+              <strong style="color:#b45309;">{formTypeName}</strong> formu 24 saatten uzun süredir değerlendirmenizi bekliyor.
+            </p>
+            <p style="margin-top:16px;">
+              Lütfen en kısa sürede formu inceleyip gerekli işlemi yapınız. Ekteki dosyadan veya aşağıdaki butonlardan sisteme girmeden işlem yapabilirsiniz.
+            </p>
+            """;
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            var approveUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=approve";
+            var rejectUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=reject";
+            var returnUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=return";
+
+            var expirationDateStr = DateTime.Now.AddDays(2).ToString("dd.MM.yyyy HH:mm");
+
+            body += $"""
+            <div style="margin-top:24px; margin-bottom:12px;">
+                <a href="{approveUrl}" style="display:inline-block; padding: 12px 24px; background-color: #16a34a; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✓ ONAYLA</a>
+                <a href="{rejectUrl}" style="display:inline-block; padding: 12px 24px; background-color: #dc2626; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✗ REDDET</a>
+                <a href="{returnUrl}" style="display:inline-block; padding: 12px 24px; background-color: #ea580c; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">↩ İADE ET</a>
+            </div>
+            <p style="margin-top:8px; font-size:12px; color:#6b7280;">
+                <em>Hızlı işlem butonlarının son kullanım tarihi: <strong>{expirationDateStr}</strong></em>
+            </p>
+            """;
+        }
+
+        var html = BuildEmail(
+            accentColor: "#d97706",
+            accentDark: "#92400e",
+            accentTextColor: "#ffffff",
+            accentLabel: "GECİKEN ONAY",
+            statusIcon: "⏰",
+            recipientName: assigneeName,
+            subject: $"Hatırlatma: Onay Bekleyen Form",
+            bodyHtml: body,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: requesterName,
+            actionUrl: actionUrl,
+            actionLabel: "Formu İncele ve İşlem Yap",
+            actionBgColor: "#d97706",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"⏰ Hatırlatma: {formRequestNo} — {formTypeName}",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
     public async Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         await _emailQueue.QueueEmailAsync(message, cancellationToken);

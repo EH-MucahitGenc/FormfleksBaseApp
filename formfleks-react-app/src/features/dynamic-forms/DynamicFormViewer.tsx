@@ -2,12 +2,14 @@ import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
-import { Send, ArrowLeft, Save } from 'lucide-react';
+import { Send, ArrowLeft, Save, Trash2 } from 'lucide-react';
 
 import { notify } from '@/lib/notifications';
 import { formService } from '@/services/form.service';
+import { useDeleteDraft } from '@/features/forms/hooks/useForms';
 
 import { PageHeader, FfButton } from '@/components/ui/index';
+import { FfConfirmDialog } from '@/components/ui/FfConfirmDialog';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 import { 
@@ -32,12 +34,15 @@ export const DynamicFormViewer: React.FC = () => {
   const [searchParams] = useSearchParams();
   const draftIdParam = searchParams.get('draftId');
   const [activeDraftId, setActiveDraftId] = React.useState<string | null>(draftIdParam);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const { data: template, isLoading, isError } = useQuery({
     queryKey: ['dynamic-form-schema', formCode],
     queryFn: () => dynamicFormService.getTemplateByCode(formCode || ''),
     enabled: !!formCode,
   });
+
+  const deleteDraftMutation = useDeleteDraft();
 
   const { data: draftData, isError: isDraftError } = useQuery({
     queryKey: ['draft-detail', activeDraftId],
@@ -306,6 +311,19 @@ export const DynamicFormViewer: React.FC = () => {
             })}
 
              <div className="pt-6 border-t border-surface-muted mt-4 flex justify-end gap-3">
+               {activeDraftId && (
+                 <div className="mr-auto">
+                   <FfButton 
+                     variant="danger" 
+                     leftIcon={<Trash2 className="h-4 w-4" />}
+                     onClick={() => setIsDeleteDialogOpen(true)}
+                     isLoading={deleteDraftMutation.isPending}
+                     disabled={submitMutation.isPending || draftMutation.isPending}
+                   >
+                     Taslağı Sil
+                   </FfButton>
+                 </div>
+               )}
                <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
                <FfButton 
                  variant="secondary" 
@@ -330,6 +348,26 @@ export const DynamicFormViewer: React.FC = () => {
           </form>
         </FormProvider>
       </div>
+
+      <FfConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() => {
+          if (activeDraftId) {
+            deleteDraftMutation.mutate(activeDraftId, {
+              onSuccess: () => {
+                setIsDeleteDialogOpen(false);
+                navigate('/forms');
+              }
+            });
+          }
+        }}
+        title="Taslağı Sil"
+        message="Bu taslağı silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        confirmLabel="Evet, Sil"
+        variant="danger"
+        isLoading={deleteDraftMutation.isPending}
+      />
     </div>
   );
 };

@@ -8,7 +8,7 @@ import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
 import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer } from 'lucide-react';
 import { FfButton } from '@/components/ui/index';
 import { PrintableFormDetail } from './components/PrintableFormDetail';
-import { useFormDetail, usePendingApprovals, useApprovalAction } from './hooks/useForms';
+import { useFormDetail, usePendingApprovals, useApprovalAction, useCancelRequest } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 
@@ -28,12 +28,14 @@ export const FormDetail: React.FC = () => {
     documentTitle: data?.requestNo || 'Form_Print'
   });
   
-  const [modalState, setModalState] = useState<{ isOpen: boolean; actionType: 1 | 2 | 3 }>({
+  const [modalState, setModalState] = useState<{ isOpen: boolean; actionType: 1 | 2 | 3 | 4 }>({
     isOpen: false,
     actionType: 1
   });
   const [comment, setComment] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+
+  const cancelMutation = useCancelRequest();
 
   const activeApproval = pendingApprovals?.find(p => p.requestId === id);
 
@@ -63,7 +65,7 @@ export const FormDetail: React.FC = () => {
 
   if (!data) return null;
 
-  const openModal = (actionType: 1 | 2 | 3) => {
+  const openModal = (actionType: 1 | 2 | 3 | 4) => {
     setModalState({ isOpen: true, actionType });
     setComment('');
     setMessage(null);
@@ -75,6 +77,20 @@ export const FormDetail: React.FC = () => {
   };
 
   const handleAction = async () => {
+    if (modalState.actionType === 4) {
+      cancelMutation.mutate(
+        { requestId: id!, reason: comment || undefined },
+        {
+          onSuccess: () => {
+            setMessage('Talep iptal edildi.');
+            queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
+            closeModal();
+          }
+        }
+      );
+      return;
+    }
+
     if (!activeApproval) return;
 
     approvalMutation.mutate(
@@ -83,7 +99,7 @@ export const FormDetail: React.FC = () => {
         approvalId: activeApproval.approvalId,
         actorUserId: user?.id || '',
         approvalConcurrencyToken: activeApproval.approvalConcurrencyToken,
-        actionType: modalState.actionType,
+        actionType: modalState.actionType as 1 | 2 | 3,
         comment: comment || undefined
       },
       {
@@ -145,6 +161,15 @@ export const FormDetail: React.FC = () => {
               onClick={() => navigate(`/forms/d/${data.formTypeCode}?draftId=${data.requestId}`)}
             >
               Düzenlemeye Devam Et
+            </FfButton>
+          )}
+          {(data.status === 2 || data.status === 3) && data.requestorUserId === user?.id && (
+            <FfButton 
+              variant="danger" 
+              leftIcon={<XCircle className="h-4 w-4" />}
+              onClick={() => openModal(4)}
+            >
+              Formu İptal Et
             </FfButton>
           )}
         </div>
@@ -401,21 +426,22 @@ export const FormDetail: React.FC = () => {
           <div className="bg-surface-base rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             <div className={`px-6 py-4 border-b flex items-center gap-3 ${
               modalState.actionType === 1 ? 'bg-status-success/5 border-status-success/20' :
-              modalState.actionType === 2 ? 'bg-status-danger/5 border-status-danger/20' :
+              modalState.actionType === 2 || modalState.actionType === 4 ? 'bg-status-danger/5 border-status-danger/20' :
               'bg-status-warning/5 border-status-warning/20'
             }`}>
               <div className={`p-2 rounded-full ${
                 modalState.actionType === 1 ? 'bg-status-success/20 text-status-success' :
-                modalState.actionType === 2 ? 'bg-status-danger/20 text-status-danger' :
+                modalState.actionType === 2 || modalState.actionType === 4 ? 'bg-status-danger/20 text-status-danger' :
                 'bg-status-warning/20 text-status-warning'
               }`}>
                 {modalState.actionType === 1 && <Check className="h-5 w-5" />}
                 {modalState.actionType === 2 && <X className="h-5 w-5" />}
                 {modalState.actionType === 3 && <CornerUpLeft className="h-5 w-5" />}
+                {modalState.actionType === 4 && <XCircle className="h-5 w-5" />}
               </div>
               <div>
                 <h3 className="text-lg font-bold text-brand-dark">
-                  {modalState.actionType === 1 ? 'Onayla' : modalState.actionType === 2 ? 'Reddet' : 'İade Et'}
+                  {modalState.actionType === 1 ? 'Onayla' : modalState.actionType === 2 ? 'Reddet' : modalState.actionType === 4 ? 'İptal Et' : 'İade Et'}
                 </h3>
                 <p className="text-xs text-brand-gray">{data.requestNo} numaralı talep</p>
               </div>
@@ -425,7 +451,7 @@ export const FormDetail: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-brand-dark flex items-center gap-1.5">
                   Yorum / Açıklama
-                  {modalState.actionType === 1 ? (
+                  {modalState.actionType === 1 || modalState.actionType === 4 ? (
                     <span className="text-xs font-normal text-brand-gray/60">(Opsiyonel)</span>
                   ) : (
                     <span className="text-xs font-medium text-status-danger">* Zorunlu</span>
@@ -444,17 +470,17 @@ export const FormDetail: React.FC = () => {
               <FfButton 
                 variant="outline" 
                 onClick={closeModal}
-                disabled={approvalMutation.isPending}
+                disabled={approvalMutation.isPending || cancelMutation.isPending}
               >
                 Vazgeç
               </FfButton>
               <FfButton 
-                variant={modalState.actionType === 1 ? 'primary' : modalState.actionType === 2 ? 'danger' : 'secondary'}
+                variant={modalState.actionType === 1 ? 'primary' : modalState.actionType === 2 || modalState.actionType === 4 ? 'danger' : 'secondary'}
                 onClick={handleAction}
-                disabled={!isCommentValid() || approvalMutation.isPending}
-                isLoading={approvalMutation.isPending}
+                disabled={!isCommentValid() || approvalMutation.isPending || cancelMutation.isPending}
+                isLoading={approvalMutation.isPending || cancelMutation.isPending}
               >
-                {approvalMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+                {approvalMutation.isPending || cancelMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
               </FfButton>
             </div>
           </div>

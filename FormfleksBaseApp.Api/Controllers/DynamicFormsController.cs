@@ -19,6 +19,7 @@ using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using FormfleksBaseApp.Contracts.Common;
 
 namespace FormfleksBaseApp.DynamicForms.Web.Controllers;
 
@@ -105,6 +106,33 @@ public sealed class DynamicFormsController : ControllerBase
             return NotFound();
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Kullanıcının daha önce onaya gönderdiği formu iptal etmesini sağlar.
+    /// Sadece formu oluşturan kişi iptal edebilir.
+    /// </summary>
+    [HttpPost("requests/{id}/cancel")]
+    public async Task<ActionResult<ApiResponse<bool>>> CancelRequest(Guid id, [FromBody] CancelRequestDto dto, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.DynamicForms.Commands.CancelRequest.CancelRequestCommand(id, userId, dto.Reason), ct);
+        return Ok(ApiResponse<bool>.Success(result, "Form başarıyla iptal edildi."));
+    }
+
+    /// <summary>
+    /// Kullanıcının oluşturduğu ancak henüz göndermediği taslak (Draft) formları silmesini sağlar.
+    /// </summary>
+    [HttpDelete("requests/{id}/draft")]
+    public async Task<ActionResult<ApiResponse<bool>>> DeleteDraftRequest(Guid id, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.DynamicForms.Commands.DeleteRequest.DeleteRequestCommand(id, userId), ct);
+        return Ok(ApiResponse<bool>.Success(result, "Taslak form başarıyla silindi."));
     }
 
     /// <summary>

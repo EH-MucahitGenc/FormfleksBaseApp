@@ -84,6 +84,7 @@ public sealed class FormRequestValueDto
 public sealed class FormRequestDetailedDto
 {
     public Guid RequestId { get; set; }
+    public Guid RequestorUserId { get; set; }
     public string RequestNo { get; set; } = default!;
     public string FormTypeCode { get; set; } = default!;
     public string FormTypeName { get; set; } = default!;

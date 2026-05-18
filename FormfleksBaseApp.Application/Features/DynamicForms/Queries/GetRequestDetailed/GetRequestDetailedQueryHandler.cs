@@ -250,6 +250,7 @@ public sealed class GetRequestDetailedQueryHandler
         return new FormRequestDetailedDto
         {
             RequestId = request.Id,
+            RequestorUserId = request.RequestorUserId,
             RequestNo = request.RequestNo,
             FormTypeCode = formType?.Code ?? "",
             FormTypeName = formType?.Name ?? "",

@@ -9,5 +9,6 @@ public enum ApprovalStatus
     Approved = 2,
     Rejected = 3,
     ReturnedForRevision = 4,
-    Skipped = 5
+    Skipped = 5,
+    Cancelled = 6
 }

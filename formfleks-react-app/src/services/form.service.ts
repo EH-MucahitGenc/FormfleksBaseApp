@@ -62,6 +62,7 @@ export type FormRequestWorkflowStepDto = {
 
 export type FormRequestDetailedDto = {
   requestId: string;
+  requestorUserId: string;
   requestNo: string;
   formTypeCode: string;
   formTypeName: string;
@@ -110,6 +111,16 @@ class FormService {
   async submitForm(payload: any): Promise<{ success: boolean; requestId?: string }> {
     const { data } = await apiClient.post('/dynamic-forms/requests/submit', payload);
     return { success: true, requestId: data.requestId };
+  }
+
+  async cancelRequest(requestId: string, reason?: string): Promise<{ success: boolean }> {
+    await apiClient.post(`/dynamic-forms/requests/${requestId}/cancel`, { reason });
+    return { success: true };
+  }
+
+  async deleteDraft(requestId: string): Promise<{ success: boolean }> {
+    await apiClient.delete(`/dynamic-forms/requests/${requestId}/draft`);
+    return { success: true };
   }
 }
 

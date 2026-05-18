@@ -62,6 +62,40 @@ export const useSaveDraft = () => {
   });
 };
 
+export const useDeleteDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (requestId: string) => formService.deleteDraft(requestId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.forms.myRequests });
+      notify.success('Taslak form başarıyla silindi.');
+    },
+    onError: (error: any) => {
+      notify.error(error?.response?.data?.message || 'Taslak silinirken bir hata oluştu.');
+    },
+  });
+};
+
+export type CancelRequestParams = {
+  requestId: string;
+  reason?: string;
+};
+
+export const useCancelRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId, reason }: CancelRequestParams) => formService.cancelRequest(requestId, reason),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.forms.myRequests });
+      qc.invalidateQueries({ queryKey: queryKeys.forms.detail(variables.requestId) });
+      notify.success('Form başarıyla iptal edildi.');
+    },
+    onError: (error: any) => {
+      notify.error(error?.response?.data?.message || 'Form iptal edilirken bir hata oluştu.');
+    },
+  });
+};
+
 export const useApprovalAction = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -70,6 +104,7 @@ export const useApprovalAction = () => {
       qc.invalidateQueries({ queryKey: queryKeys.forms.pendingApprovals });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard.urgentApprovals });
+      qc.invalidateQueries({ queryKey: queryKeys.forms.detail(variables.requestId) });
 
       if (variables.actionType === 1) notify.approved();
       else if (variables.actionType === 2) notify.rejected();
