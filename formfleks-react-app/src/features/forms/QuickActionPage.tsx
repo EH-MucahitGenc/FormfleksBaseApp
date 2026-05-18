@@ -15,6 +15,7 @@ export default function QuickActionPage() {
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorState, setErrorState] = useState<{ isError: boolean; message: string }>({ isError: false, message: '' });
 
   if (!token || !action) {
     return (
@@ -54,11 +55,33 @@ export default function QuickActionPage() {
       notify('İşleminiz başarıyla gerçekleştirildi.', 'success', 3000);
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || error.response?.data?.detail || 'İşlem sırasında bir hata oluştu.';
-      notify(errorMsg, 'error', 5000);
+      if (errorMsg.includes('daha önce') || errorMsg.includes('süresi dolmuş') || errorMsg.includes('bulunamadı')) {
+         setErrorState({ isError: true, message: errorMsg });
+      } else {
+         notify(errorMsg, 'error', 5000);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (errorState.isError) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-xl">
+          <div className="mb-4 text-6xl text-orange-500">⚠</div>
+          <h1 className="mb-2 text-2xl font-bold text-gray-800">İşlem Yapılamıyor</h1>
+          <p className="mb-6 text-gray-600">{errorState.message}</p>
+          <Button
+            text="Ana Sayfaya Dön"
+            type="normal"
+            stylingMode="outlined"
+            onClick={() => navigate('/')}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess) {
     return (

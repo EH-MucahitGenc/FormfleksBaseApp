@@ -42,7 +42,7 @@ public sealed class QuickActionCommandHandler : IRequestHandler<QuickActionComma
             throw new BusinessException("İlgili onay adımı bulunamadı.");
 
         if (approval.Status != (short)ApprovalStatus.Pending)
-            throw new BusinessException("Bu adım zaten daha önceden işleme alınmış.");
+            throw new BusinessException("Bu adım için daha önce onay, red veya iade işlemi yapılmıştır.");
 
         short actionType = request.ActionType.ToLowerInvariant() switch
         {

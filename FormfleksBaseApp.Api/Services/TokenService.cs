@@ -106,7 +106,7 @@ public sealed class TokenService : ITokenService
             audience: audience,
             claims: claims,
             notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddDays(7), // Magic link valid for 7 days
+            expires: DateTime.UtcNow.AddDays(2), // Magic link valid for 2 days
             signingCredentials: creds
         );
 

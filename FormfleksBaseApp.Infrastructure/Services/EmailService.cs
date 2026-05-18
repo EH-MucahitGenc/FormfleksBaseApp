@@ -218,12 +218,17 @@ public class EmailService : IEmailService
             var rejectUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=reject";
             var returnUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=return";
 
+            var expirationDateStr = DateTime.Now.AddDays(2).ToString("dd.MM.yyyy HH:mm");
+
             body += $"""
             <div style="margin-top:24px; margin-bottom:12px;">
                 <a href="{approveUrl}" style="display:inline-block; padding: 12px 24px; background-color: #16a34a; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✓ ONAYLA</a>
                 <a href="{rejectUrl}" style="display:inline-block; padding: 12px 24px; background-color: #dc2626; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✗ REDDET</a>
                 <a href="{returnUrl}" style="display:inline-block; padding: 12px 24px; background-color: #ea580c; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">↩ İADE ET</a>
             </div>
+            <p style="margin-top:8px; font-size:12px; color:#6b7280;">
+                <em>Hızlı işlem butonlarının son kullanım tarihi: <strong>{expirationDateStr}</strong></em>
+            </p>
             """;
         }
 
