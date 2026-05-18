@@ -69,7 +69,7 @@ export const FfAreaChart: React.FC<FfAreaChartProps> = ({
               color: 'var(--app-brand-dark, #111827)'
             }}
             cursor={{ stroke: 'var(--app-surface-muted, #F3F4F6)', strokeWidth: 1, strokeDasharray: '3 3' }}
-            formatter={(value: number) => [value, 'Talep Sayısı']}
+            formatter={(value: any) => [value, 'Talep Sayısı']}
             labelStyle={{ color: 'var(--app-brand-gray, #6B7280)', marginBottom: '4px' }}
           />
           <Area 

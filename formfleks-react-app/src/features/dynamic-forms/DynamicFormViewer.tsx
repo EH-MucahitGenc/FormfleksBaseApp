@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
-import { Send, ArrowLeft, Save, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Save, Trash2, Loader2, Check, AlertCircle } from 'lucide-react';
 
 import { notify } from '@/lib/notifications';
 import { formService } from '@/services/form.service';
@@ -35,6 +35,10 @@ export const DynamicFormViewer: React.FC = () => {
   const draftIdParam = searchParams.get('draftId');
   const [activeDraftId, setActiveDraftId] = React.useState<string | null>(draftIdParam);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  
+  // Auto-Save States
+  const [autoSaveStatus, setAutoSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedTime, setLastSavedTime] = React.useState<Date | null>(null);
 
   const { data: template, isLoading, isError } = useQuery({
     queryKey: ['dynamic-form-schema', formCode],
@@ -109,10 +113,62 @@ export const DynamicFormViewer: React.FC = () => {
       return await dynamicFormService.saveDraftFormData(template.id, payload, activeDraftId || undefined);
     },
     onSuccess: (res) => {
-      setActiveDraftId(res.requestId);
+      if (!activeDraftId) {
+        setActiveDraftId(res.requestId);
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('draftId', res.requestId);
+        window.history.replaceState({}, '', newUrl);
+      }
       notify.success("Form başarıyla taslak olarak kaydedildi!");
     }
   });
+
+  const autoSaveMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      if (!template?.id) throw new Error("Şablon ID bulunamadı");
+      return await dynamicFormService.saveDraftFormData(template.id, payload, activeDraftId || undefined);
+    },
+    onSuccess: (res) => {
+      if (!activeDraftId) {
+        setActiveDraftId(res.requestId);
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('draftId', res.requestId);
+        window.history.replaceState({}, '', newUrl);
+      }
+      setAutoSaveStatus('saved');
+      setLastSavedTime(new Date());
+    },
+    onError: () => {
+      setAutoSaveStatus('error');
+    }
+  });
+
+  React.useEffect(() => {
+    if (!template?.id) return;
+    
+    // Yalnızca form tamamen yüklendikten ve default değerler oturduktan sonra dinlemeye başla
+    if (isLoading || isDraftError) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const subscription = methods.watch((_value, { type }) => {
+      if (type === 'change') {
+        setAutoSaveStatus('idle');
+        clearTimeout(timeoutId);
+        
+        timeoutId = setTimeout(() => {
+          setAutoSaveStatus('saving');
+          const currentData = methods.getValues();
+          autoSaveMutation.mutate(currentData);
+        }, 2000); // Kullanıcı yazmayı bıraktıktan 2 saniye sonra otomatik kaydet
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
+  }, [methods, template?.id, activeDraftId, isLoading, isDraftError]);
 
   const onSubmit = () => {
     onSendRequest();
@@ -310,39 +366,57 @@ export const DynamicFormViewer: React.FC = () => {
                );
             })}
 
-             <div className="pt-6 border-t border-surface-muted mt-4 flex justify-end gap-3">
-               {activeDraftId && (
-                 <div className="mr-auto">
+             <div className="pt-6 border-t border-surface-muted mt-4 flex items-center justify-between gap-3">
+               
+               {/* Left Side: Auto-Save Status & Delete Button */}
+               <div className="flex items-center gap-4">
+                 {activeDraftId && (
                    <FfButton 
                      variant="danger" 
                      leftIcon={<Trash2 className="h-4 w-4" />}
                      onClick={() => setIsDeleteDialogOpen(true)}
                      isLoading={deleteDraftMutation.isPending}
-                     disabled={submitMutation.isPending || draftMutation.isPending}
+                     disabled={submitMutation.isPending || draftMutation.isPending || autoSaveMutation.isPending}
                    >
                      Taslağı Sil
                    </FfButton>
+                 )}
+                 
+                 <div className="text-sm font-medium">
+                   {autoSaveStatus === 'saving' && (
+                     <span className="flex items-center gap-2 text-brand-gray"><Loader2 className="h-4 w-4 animate-spin"/> Otomatik kaydediliyor...</span>
+                   )}
+                   {autoSaveStatus === 'saved' && (
+                     <span className="flex items-center gap-2 text-status-success"><Check className="h-4 w-4"/> Taslak kaydedildi ({lastSavedTime?.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })})</span>
+                   )}
+                   {autoSaveStatus === 'error' && (
+                     <span className="flex items-center gap-2 text-status-danger"><AlertCircle className="h-4 w-4"/> Kaydedilemedi</span>
+                   )}
                  </div>
-               )}
-               <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
-               <FfButton 
-                 variant="secondary" 
-                 leftIcon={<Save className="h-4 w-4" />}
-                 onClick={onSaveDraft}
-                 isLoading={draftMutation.isPending}
-                 disabled={submitMutation.isPending}
-               >
-                 Taslak Kaydet
-               </FfButton>
-               <FfButton 
-                 variant="primary" 
-                 leftIcon={<Send className="h-4 w-4" />}
-                 onClick={methods.handleSubmit(onSubmit)}
-                 isLoading={submitMutation.isPending}
-                 disabled={draftMutation.isPending}
-               >
-                 Talebi Gönder
-               </FfButton>
+               </div>
+
+               {/* Right Side: Actions */}
+               <div className="flex items-center gap-3">
+                 <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
+                 <FfButton 
+                   variant="secondary" 
+                   leftIcon={<Save className="h-4 w-4" />}
+                   onClick={onSaveDraft}
+                   isLoading={draftMutation.isPending}
+                   disabled={submitMutation.isPending || autoSaveMutation.isPending}
+                 >
+                   Taslak Kaydet
+                 </FfButton>
+                 <FfButton 
+                   variant="primary" 
+                   leftIcon={<Send className="h-4 w-4" />}
+                   onClick={methods.handleSubmit(onSubmit)}
+                   isLoading={submitMutation.isPending}
+                   disabled={draftMutation.isPending || autoSaveMutation.isPending}
+                 >
+                   Talebi Gönder
+                 </FfButton>
+               </div>
              </div>
             
           </form>

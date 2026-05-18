@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Form, Button, TextArea } from 'devextreme-react';
-import { SimpleItem } from 'devextreme-react/form';
+import { Button, TextArea } from 'devextreme-react';
 import notify from 'devextreme/ui/notify';
 import { apiClient } from '@/lib/axios';
 
