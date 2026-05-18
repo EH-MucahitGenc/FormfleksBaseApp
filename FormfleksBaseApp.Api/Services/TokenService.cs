@@ -84,4 +84,67 @@ public sealed class TokenService : ITokenService
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToBase64String(bytes);
     }
+
+    public string CreateQuickActionToken(Guid approvalId, Guid userId)
+    {
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+        var keyStr = _config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new("ApprovalId", approvalId.ToString()),
+            new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new("TokenUsage", "QuickAction")
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddDays(7), // Magic link valid for 7 days
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public ClaimsPrincipal? ValidateQuickActionToken(string token)
+    {
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+        var keyStr = _config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing");
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
+
+        try
+        {
+            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = key,
+                ValidateIssuer = true,
+                ValidIssuer = issuer,
+                ValidateAudience = true,
+                ValidAudience = audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            }, out SecurityToken validatedToken);
+
+            var tokenUsage = principal.Claims.FirstOrDefault(c => c.Type == "TokenUsage")?.Value;
+            if (tokenUsage != "QuickAction")
+                return null;
+
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

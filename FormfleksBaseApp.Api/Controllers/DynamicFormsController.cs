@@ -157,6 +157,16 @@ public sealed class DynamicFormsController : ControllerBase
     }
 
     /// <summary>
+    /// Magic Link aracılığıyla sisteme giriş yapmadan form onayı, reddi veya iadesi yapar.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("quick-action")]
+    public async Task<ActionResult<bool>> QuickAction([FromBody] FormfleksBaseApp.Application.Features.DynamicForms.Commands.QuickAction.QuickActionCommand request, CancellationToken ct)
+    {
+        return Ok(await _mediator.Send(request, ct));
+    }
+
+    /// <summary>
     /// Kullanıcının kendi adına verdiği vekaletleri listeler.
     /// </summary>
     [HttpGet("users/me/delegations")]

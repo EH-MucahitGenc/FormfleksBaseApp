@@ -25,6 +25,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
     private readonly ILogger<SubmitRequestCommandHandler> _logger;
     private readonly IPdfGeneratorService _pdfGenerator;
     private readonly IFormAttachmentCollectorService _attachmentCollector;
+    private readonly FormfleksBaseApp.Application.Auth.Interfaces.ITokenService _tokens;
 
     public SubmitRequestCommandHandler(
         IDynamicFormsDbContext db, 
@@ -33,7 +34,8 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         IUserRepository userRepository, 
         ILogger<SubmitRequestCommandHandler> logger,
         IPdfGeneratorService pdfGenerator,
-        IFormAttachmentCollectorService attachmentCollector)
+        IFormAttachmentCollectorService attachmentCollector,
+        FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens)
     {
         _db = db;
         _engine = engine;
@@ -42,6 +44,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         _logger = logger;
         _pdfGenerator = pdfGenerator;
         _attachmentCollector = attachmentCollector;
+        _tokens = tokens;
     }
 
     public async Task<FormRequestResultDto> Handle(SubmitRequestCommand request, CancellationToken ct)
@@ -77,8 +80,10 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 req.Submit((short)FormRequestStatus.InApproval);
                 req.CurrentStepNo = firstStep.StepNo;
 
+                var approvalId = Guid.NewGuid();
                 _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
                 {
+                    Id = approvalId,
                     RequestId = req.Id,
                     StepNo = firstStep.StepNo,
                     WorkflowStepId = firstStep.Id,
@@ -99,7 +104,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 await _db.SaveChangesAsync(ct);
 
                 // Email Bildirimi (Background Queue'ya atılır)
-                await NotifyNextAssigneeAsync(req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, ct);
+                await NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, ct);
 
                 return new FormRequestResultDto
                 {
@@ -132,9 +137,9 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         };
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, CancellationToken ct)
     {
-        var targetList = new List<(string Email, string Name)>();
+        var targetList = new List<(string Email, string Name, Guid UserId)>();
 
         if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
@@ -153,13 +158,13 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
                 if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
                 {
-                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}"));
+                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
                 }
                 else
                 {
                     var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
                     if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
-                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen İK Sorumlusu"));
+                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen İK Sorumlusu", hrUserId));
                 }
             }
         }
@@ -176,7 +181,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
                     assgnName = baseUser.DisplayName;
             }
-            if (!string.IsNullOrWhiteSpace(targetEmail)) targetList.Add((targetEmail, assgnName));
+            if (!string.IsNullOrWhiteSpace(targetEmail)) targetList.Add((targetEmail, assgnName, assignedUserId.Value));
         }
         else if (assignedRoleId.HasValue)
         {
@@ -185,7 +190,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             
             foreach (var p in qdmsUsers)
             {
-                if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}"));
+                if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}", p.LinkedUserId.Value));
             }
             
             var missingEmailsUserIds = roleUserIds.Except(qdmsUsers.Where(p => !string.IsNullOrWhiteSpace(p.Email)).Select(p => p.LinkedUserId!.Value)).ToList();
@@ -194,7 +199,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 var baseUser = await _userRepository.GetByIdAsync(muid, ct, false);
                 if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
                 {
-                    targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? "Bilinmeyen Sistem Kullanıcısı" : baseUser.DisplayName));
+                    targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? "Bilinmeyen Sistem Kullanıcısı" : baseUser.DisplayName, muid));
                 }
             }
         }
@@ -237,8 +242,9 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
             foreach (var target in targetList.DistinctBy(x => x.Email))
             {
+                var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
                 _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
+                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
             }
         }
     }

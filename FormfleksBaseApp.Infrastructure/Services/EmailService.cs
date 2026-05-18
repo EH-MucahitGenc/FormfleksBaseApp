@@ -197,6 +197,7 @@ public class EmailService : IEmailService
     public async Task SendApprovalRequestEmailAsync(
         string toEmail, string assigneeName, string formRequestNo,
         Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null,
+        string? token = null,
         CancellationToken cancellationToken = default)
     {
         var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
@@ -207,10 +208,24 @@ public class EmailService : IEmailService
               <strong style="color:#92400e;">{formTypeName}</strong> formu değerlendirmenizi bekliyor.
             </p>
             <p style="margin-top:16px;">
-              Form detaylarını inceleyip en kısa sürede <strong>onay veya ret</strong> işlemini
-              gerçekleştirmenizi rica ederiz.
+              Form detaylarını ekteki PDF dosyasından inceleyebilir ve aşağıdaki hızlı işlem butonlarını kullanarak sisteme giriş yapmadan doğrudan mail üzerinden işleminizi gerçekleştirebilirsiniz.
             </p>
             """;
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            var approveUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=approve";
+            var rejectUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=reject";
+            var returnUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=return";
+
+            body += $"""
+            <div style="margin-top:24px; margin-bottom:12px;">
+                <a href="{approveUrl}" style="display:inline-block; padding: 12px 24px; background-color: #16a34a; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✓ ONAYLA</a>
+                <a href="{rejectUrl}" style="display:inline-block; padding: 12px 24px; background-color: #dc2626; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-right: 12px; margin-bottom: 8px;">✗ REDDET</a>
+                <a href="{returnUrl}" style="display:inline-block; padding: 12px 24px; background-color: #ea580c; color: white; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">↩ İADE ET</a>
+            </div>
+            """;
+        }
 
         var html = BuildEmail(
             accentColor: "#b45309",

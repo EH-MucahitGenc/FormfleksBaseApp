@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import('@/features/dashboard/Dashboard').then(m => 
 const MyForms = lazy(() => import('@/features/forms/MyForms').then(m => ({ default: m.MyForms })));
 const NewFormRequest = lazy(() => import('@/features/forms/NewFormRequest').then(m => ({ default: m.NewFormRequest })));
 const FormDetail = lazy(() => import('@/features/forms/FormDetail').then(m => ({ default: m.FormDetail })));
+const QuickActionPage = lazy(() => import('@/features/forms/QuickActionPage'));
 const PendingApprovals = lazy(() => import('@/features/approvals/PendingApprovals').then(m => ({ default: m.PendingApprovals })));
 const ApprovalHistory = lazy(() => import('@/features/approvals/ApprovalHistory').then(m => ({ default: m.ApprovalHistory })));
 const DynamicFormViewer = lazy(() => import('@/features/dynamic-forms/DynamicFormViewer').then(m => ({ default: m.DynamicFormViewer })));
@@ -40,6 +41,16 @@ const PageFallback = () => (
 
 // ─── Route Definition ────────────────────────────────────────────────
 export const router = createBrowserRouter([
+  {
+    path: '/quick-action',
+    element: (
+      <ErrorBoundary>
+        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+          <QuickActionPage />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  },
   {
     path: '/auth',
     element: <AuthLayout />,
