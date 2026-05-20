@@ -28,6 +28,9 @@ public class TerminateUserDelegationCommandHandler : IRequestHandler<TerminateUs
             throw new BusinessException("Sadece kendi vekaletinizi sonlandırabilirsiniz.");
 
         delegation.IsActive = false;
+        delegation.IsDeleted = true;
+        delegation.DeletedAt = DateTime.UtcNow;
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return true;

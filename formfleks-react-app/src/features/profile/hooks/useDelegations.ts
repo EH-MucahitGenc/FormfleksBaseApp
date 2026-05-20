@@ -31,11 +31,11 @@ export const useTerminateDelegation = () => {
   return useMutation({
     mutationFn: (id: string) => delegationService.terminateDelegation(id),
     onSuccess: () => {
-      toast.success('Vekalet başarıyla sonlandırıldı');
+      toast.success('Vekalet başarıyla silindi');
       queryClient.invalidateQueries({ queryKey: ['my-delegations'] });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Vekalet sonlandırılırken bir hata oluştu');
+      toast.error(error?.response?.data?.message || 'Vekalet silinirken bir hata oluştu');
     }
   });
 };

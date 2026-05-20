@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PageContainer, PageHeader, GlassCard, FfButton } from '@/components/ui';
+import { PageContainer, PageHeader, GlassCard, FfButton, FfConfirmDialog } from '@/components/ui';
 import { useTerminateDelegation } from './hooks/useDelegations';
 import { Plus, Clock } from 'lucide-react';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
@@ -9,10 +9,17 @@ import { CreateDelegationModal } from './components/CreateDelegationModal';
 export const Delegations: React.FC = () => {
   const terminateMutation = useTerminateDelegation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const handleTerminate = (id: string) => {
-    if (window.confirm("Bu vekaleti sonlandırmak istediğinize emin misiniz?")) {
-      terminateMutation.mutate(id);
+    setConfirmId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmId) {
+      terminateMutation.mutate(confirmId, {
+        onSuccess: () => setConfirmId(null),
+      });
     }
   };
 
@@ -63,10 +70,9 @@ export const Delegations: React.FC = () => {
       width: 120,
       buttons: [
         {
-          hint: 'Sonlandır',
-          icon: 'close',
+          hint: 'Sil',
+          icon: 'trash',
           cssClass: 'text-status-danger',
-          visible: (e: any) => e.row.data.isActive === true && new Date() <= new Date(e.row.data.endDate),
           onClick: (e: any) => handleTerminate(e.row.data.id),
         }
       ]
@@ -105,6 +111,17 @@ export const Delegations: React.FC = () => {
       {isModalOpen && (
         <CreateDelegationModal onClose={() => setIsModalOpen(false)} />
       )}
+
+      <FfConfirmDialog
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Vekaleti Sil"
+        message="Bu vekaleti sistemden kalıcı olarak gizlemek ve silmek istediğinize emin misiniz?"
+        confirmLabel="Evet, Sil"
+        cancelLabel="İptal"
+        isLoading={terminateMutation.isPending}
+      />
     </PageContainer>
   );
 };

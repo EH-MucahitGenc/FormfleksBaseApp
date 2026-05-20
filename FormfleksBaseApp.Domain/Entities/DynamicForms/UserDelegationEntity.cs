@@ -34,4 +34,11 @@ public class UserDelegationEntity
     public string? Reason { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Soft delete (Mantıksal silme) için kullanılır.
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
 }

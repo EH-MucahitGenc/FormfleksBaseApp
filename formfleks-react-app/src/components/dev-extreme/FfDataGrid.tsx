@@ -142,6 +142,9 @@ export const FfDataGrid: React.FC<FfDataGridProps> = ({
              minWidth={col.minWidth}
              cellRender={col.cellRender}
              alignment={col.alignment}
+             type={col.type}
+             buttons={col.buttons}
+             cssClass={col.cssClass}
              filterValue={col.filterValue !== undefined ? col.filterValue : undefined}
              allowFiltering={col.allowFiltering}
            />

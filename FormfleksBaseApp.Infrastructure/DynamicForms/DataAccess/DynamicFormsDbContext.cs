@@ -51,10 +51,15 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.IsActive).HasColumnName("is_active").HasColumnType("boolean");
             e.Property(x => x.Reason).HasColumnName("reason").HasColumnType("character varying(300)").HasMaxLength(300);
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
+            e.Property(x => x.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamp with time zone");
             
             e.HasIndex(x => x.DelegatorUserId);
             e.HasIndex(x => new { x.DelegatorUserId, x.IsActive });
             e.HasIndex(x => new { x.StartDate, x.EndDate });
+
+            // Global Query Filter for Soft Delete
+            e.HasQueryFilter(x => !x.IsDeleted);
         });
 
         modelBuilder.Entity<RoleEntity>(e =>
