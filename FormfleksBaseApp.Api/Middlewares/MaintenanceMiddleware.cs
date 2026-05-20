@@ -18,8 +18,9 @@ public class MaintenanceMiddleware
 
     public async Task InvokeAsync(HttpContext context, ISystemSettingsService systemSettingsService)
     {
-        // Login işlemlerine her zaman izin ver (Admin'in girip kapatabilmesi için)
-        if (context.Request.Path.StartsWithSegments("/api/auth/login") ||
+        if (context.Request.Method == "OPTIONS" ||
+            context.Request.Path.StartsWithSegments("/api/auth/login") ||
+            context.Request.Path.StartsWithSegments("/api/auth/ad-login") ||
             context.Request.Path.StartsWithSegments("/api/auth/refresh"))
         {
             await _next(context);
@@ -33,8 +34,8 @@ public class MaintenanceMiddleware
             // Eğer kullanıcı Admin ise bakımdan etkilenmesin
             if (context.User.Identity?.IsAuthenticated == true)
             {
-                var roleClaim = context.User.FindFirst(ClaimTypes.Role)?.Value;
-                if (roleClaim == "Admin" || roleClaim == "SystemAdmin")
+                if (context.User.IsInRole("Admin") || context.User.IsInRole("SystemAdmin") || 
+                    context.User.IsInRole("ADMIN") || context.User.IsInRole("admin"))
                 {
                     await _next(context);
                     return;

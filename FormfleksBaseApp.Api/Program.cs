@@ -245,7 +245,6 @@ var app = builder.Build();
 // Pipeline sırası
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
-app.UseMiddleware<MaintenanceMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -260,6 +259,7 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<MaintenanceMiddleware>();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
