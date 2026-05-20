@@ -18,6 +18,7 @@ public interface IDynamicFormsDbContext
     DbSet<FormRequestApprovalEntity> FormRequestApprovals { get; }
     DbSet<AuditLogEntity> AuditLogs { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications { get; }
+    DbSet<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity> SystemSettings { get; }
     
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs { get; }
@@ -25,4 +26,5 @@ public interface IDynamicFormsDbContext
     DbSet<UserLocationRoleEntity> UserLocationRoles { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+    int SaveChanges();
 }

@@ -26,7 +26,7 @@ export const useSignalR = () => {
     }
 
     // Connect to the SignalR Hub
-    const baseUrl = (import.meta.env.VITE_API_URL || 'https://localhost:7127/api').replace(/\/api$/, '');
+    const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : '';
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${baseUrl}/hubs/notification`, {
         accessTokenFactory: () => token,

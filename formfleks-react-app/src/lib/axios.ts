@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 // Create base instance
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7127/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -43,6 +43,15 @@ apiClient.interceptors.response.use(
     // Handle 403 Forbidden
     if (error.response?.status === 403) {
       console.warn('You do not have permission to access this resource.');
+    }
+
+    // Handle 503 Maintenance Mode
+    if (error.response?.status === 503) {
+      const data = error.response.data as any;
+      if (data?.isMaintenance) {
+        window.location.href = '/maintenance';
+        return new Promise(() => {}); // Stop further execution
+      }
     }
 
     return Promise.reject(error);

@@ -247,7 +247,7 @@ export const FormDetail: React.FC = () => {
                     const isImage = f.valueText.match(/\.(jpeg|jpg|gif|png)$/i) != null;
                     const isPdf = f.valueText.match(/\.(pdf)$/i) != null;
                     const fileName = f.valueText.split('/').pop() || 'Dosya';
-                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : `https://localhost:7127${f.valueText}`;
+                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : f.valueText;
                     
                     return (
                       <div key={i} className="group col-span-full md:col-span-1">

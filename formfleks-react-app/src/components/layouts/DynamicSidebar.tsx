@@ -193,7 +193,6 @@ export const DynamicSidebar = ({
         )}
         
         <div className="mt-auto pt-4 border-t border-surface-muted">
-          <NavItem to="/settings/profile" icon={User} label="Profilim" isCollapsed={!isSidebarOpen} />
           <NavItem to="/settings/delegations" icon={UserCheck} label="Vekalet Devri" isCollapsed={!isSidebarOpen} />
           {canSeeSysSettings && <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />}
         </div>
@@ -217,9 +216,9 @@ export const DynamicSidebar = ({
           )}
           {isSidebarOpen && (
             <button 
-              onClick={() => navigate('/settings/profile')}
+              onClick={() => navigate('/settings/delegations')}
               className="p-1.5 text-brand-gray hover:text-brand-primary hover:bg-brand-primary/10 rounded-md transition-colors"
-              title="Profilim"
+              title="Vekalet Devri"
             >
               <User className="h-4 w-4" />
             </button>

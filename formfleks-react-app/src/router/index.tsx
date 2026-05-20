@@ -27,9 +27,9 @@ const FormDesigner = lazy(() => import('@/features/admin/form-designer/FormDesig
 const HrReportingDashboard = lazy(() => import('@/features/reports/HrReportingDashboard').then(m => ({ default: m.HrReportingDashboard })));
 const WorkflowDesigner = lazy(() => import('@/features/admin/workflow-designer/WorkflowDesigner').then(m => ({ default: m.WorkflowDesigner })));
 const ApplicationSettings = lazy(() => import('@/features/settings/ApplicationSettings').then(m => ({ default: m.ApplicationSettings })));
-const UserProfile = lazy(() => import('@/features/settings/UserProfile').then(m => ({ default: m.UserProfile })));
 const Delegations = lazy(() => import('@/features/profile/Delegations').then(m => ({ default: m.Delegations })));
 const PersonnelSync = lazy(() => import('@/features/admin/personnel-sync/PersonnelSyncDashboard'));
+const Maintenance = lazy(() => import('@/app/Maintenance'));
 
 // ─── Suspense Fallback ───────────────────────────────────────────────
 const PageFallback = () => (
@@ -58,6 +58,16 @@ export const router = createBrowserRouter([
       { path: 'login', element: <Suspense fallback={<div />}><Login /></Suspense> },
       { path: '', element: <Navigate to="/auth/login" replace /> }
     ]
+  },
+  {
+    path: '/maintenance',
+    element: (
+      <ErrorBoundary>
+        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Maintenance />
+        </Suspense>
+      </ErrorBoundary>
+    )
   },
   {
     path: '/',
@@ -142,7 +152,6 @@ export const router = createBrowserRouter([
           {
             path: 'settings',
             children: [
-              { path: 'profile', element: <Suspense fallback={<PageFallback />}><UserProfile /></Suspense> },
               { path: 'delegations', element: <Suspense fallback={<PageFallback />}><Delegations /></Suspense> }
             ]
           },

@@ -12,5 +12,23 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'https://localhost:7127',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/hubs': {
+        target: 'https://localhost:7127',
+        ws: true,
+        secure: false,
+      },
+      '/Uploads': {
+        target: 'https://localhost:7127',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 })

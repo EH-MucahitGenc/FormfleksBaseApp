@@ -16,19 +16,18 @@ public class EmailSenderBackgroundWorker : BackgroundService
     private readonly IEmailBackgroundQueue _emailQueue;
     private readonly ILogger<EmailSenderBackgroundWorker> _logger;
     private readonly IOptionsMonitor<EmailSettings> _emailOptions;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService _systemSettingsService;
     private AsyncPolicyWrap _resiliencePolicy = default!;
 
-    public EmailSenderBackgroundWorker(IEmailBackgroundQueue emailQueue, ILogger<EmailSenderBackgroundWorker> logger, IOptionsMonitor<EmailSettings> emailOptions)
+    public EmailSenderBackgroundWorker(IEmailBackgroundQueue emailQueue, ILogger<EmailSenderBackgroundWorker> logger, IOptionsMonitor<EmailSettings> emailOptions, FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService systemSettingsService)
     {
         _emailQueue = emailQueue;
         _logger = logger;
         _emailOptions = emailOptions;
+        _systemSettingsService = systemSettingsService;
 
-        // Configure Polly Policies initially based on current appsettings
-        ConfigurePolicies(_emailOptions.CurrentValue);
-
-        // Re-configure if file changes
-        _emailOptions.OnChange(settings => ConfigurePolicies(settings));
+        var currentSettings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
+        ConfigurePolicies(currentSettings);
     }
 
     private void ConfigurePolicies(EmailSettings settings)
@@ -77,7 +76,10 @@ public class EmailSenderBackgroundWorker : BackgroundService
             try
             {
                 var emailMessage = await _emailQueue.DequeueEmailAsync(stoppingToken);
-                var currentSettings = _emailOptions.CurrentValue;
+                var currentSettings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
+                
+                // Poliçeyi her seferinde güncel ayarlara göre kurmak (performans etkisi çok düşüktür)
+                ConfigurePolicies(currentSettings);
 
                 if (currentSettings.Enabled)
                 {
