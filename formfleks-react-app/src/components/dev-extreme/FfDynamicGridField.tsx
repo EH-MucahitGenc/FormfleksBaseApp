@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import DataGrid, { Column, Editing, RequiredRule } from 'devextreme-react/data-grid';
 import { cn } from '../ui';
+import { DownloadCloud } from 'lucide-react';
+import { ExcelImportModal } from './ExcelImportModal';
 
 export interface FfDynamicGridFieldProps {
   name: string;
@@ -33,12 +35,27 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
     })) || [];
   }, [columnsSchema]);
 
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label className="text-sm font-medium text-brand-dark flex items-center gap-1">
-        {label}
-        {required && <span className="text-status-danger">*</span>}
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-brand-dark flex items-center gap-1">
+          {label}
+          {required && <span className="text-status-danger">*</span>}
+        </label>
+        
+        {!disabled && (
+          <button
+            type="button"
+            onClick={() => setIsExcelModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 px-3 py-1.5 rounded-full transition-colors"
+          >
+            <DownloadCloud className="h-3.5 w-3.5" />
+            Excel'den Aktar
+          </button>
+        )}
+      </div>
       <Controller
         name={name}
         control={control}
@@ -92,6 +109,17 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                 ))}
               </DataGrid>
               {error && <span className="text-xs text-status-danger mt-1 px-3 pb-2 block bg-surface-base">{error.message}</span>}
+              <ExcelImportModal
+                isOpen={isExcelModalOpen}
+                onClose={() => setIsExcelModalOpen(false)}
+                columns={columns}
+                onImport={(newData) => {
+                  const currentData = [...gridData];
+                  const mergedData = [...currentData, ...newData];
+                  onChange(mergedData); // Hook form state update
+                  setIsExcelModalOpen(false);
+                }}
+              />
             </div>
           );
         }}
