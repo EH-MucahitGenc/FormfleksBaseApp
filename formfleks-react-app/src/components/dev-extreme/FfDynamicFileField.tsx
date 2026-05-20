@@ -106,7 +106,7 @@ export const FfDynamicFileField = ({
           </div>
           <div className="flex flex-col flex-1 min-w-0">
             <a 
-              href={value.startsWith('http') ? value : value} 
+              href={value.startsWith('http') ? value : `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : ''}${value.startsWith('/') ? '' : '/'}${value}`} 
               target="_blank" 
               rel="noreferrer"
               className="text-sm font-bold text-brand-dark truncate hover:text-brand-primary transition-colors"

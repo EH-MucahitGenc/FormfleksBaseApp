@@ -247,7 +247,8 @@ export const FormDetail: React.FC = () => {
                     const isImage = f.valueText.match(/\.(jpeg|jpg|gif|png)$/i) != null;
                     const isPdf = f.valueText.match(/\.(pdf)$/i) != null;
                     const fileName = f.valueText.split('/').pop() || 'Dosya';
-                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : f.valueText;
+                    const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : '';
+                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : `${apiBase}${f.valueText.startsWith('/') ? '' : '/'}${f.valueText}`;
                     
                     return (
                       <div key={i} className="group col-span-full md:col-span-1">

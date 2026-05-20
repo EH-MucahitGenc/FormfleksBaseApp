@@ -23,26 +23,30 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
     public async Task<FormTemplateSummaryDto> Handle(UpsertTemplateCommand request, CancellationToken ct)
     {
         var dto = request.Request;
-        FormTypeEntity formType;
+        FormTypeEntity? formType = null;
 
         if (dto.FormTypeId.HasValue && dto.FormTypeId.Value != Guid.Empty)
         {
-            formType = await _db.FormTypes
-                .FirstOrDefaultAsync(t => t.Id == dto.FormTypeId.Value, ct)
-                ?? throw new BusinessException("Şablon bulunamadı.");
+            formType = await _db.FormTypes.FirstOrDefaultAsync(t => t.Id == dto.FormTypeId.Value, ct);
+        }
 
+        if (formType == null && !string.IsNullOrWhiteSpace(dto.Code))
+        {
+            formType = await _db.FormTypes.FirstOrDefaultAsync(t => t.Code == dto.Code, ct);
+        }
+
+        if (formType != null)
+        {
             formType.Code = dto.Code;
             formType.Name = dto.Name;
             formType.Active = dto.Active;
             formType.AllowedCreateRoleCodesJson = dto.AllowedCreateRoleCodes != null && dto.AllowedCreateRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedCreateRoleCodes) : null;
             formType.AllowedReportRoleCodesJson = dto.AllowedReportRoleCodes != null && dto.AllowedReportRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedReportRoleCodes) : null;
 
-            // Eski section ve field'ları geçici olarak silmek yerine güncelleyeceğiz.
-            // Bu sayede Foreign Key kilitlenmelerini (form_request_values -> form_fields) engelliyoruz.
             var oldFields = await _db.FormFields.Where(f => f.FormTypeId == formType.Id).ToListAsync(ct);
             foreach(var field in oldFields)
             {
-                field.Active = false; // Soft delete by default, will reactivate if matched
+                field.Active = false;
             }
         }
         else

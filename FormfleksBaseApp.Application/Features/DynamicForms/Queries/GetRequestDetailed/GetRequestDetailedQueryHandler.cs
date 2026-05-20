@@ -80,6 +80,11 @@ public sealed class GetRequestDetailedQueryHandler
             .Where(x => x.FormTypeId == request.FormTypeId)
             .ToListAsync(ct);
 
+        var formSections = await _db.FormSections
+            .AsNoTracking()
+            .Where(x => x.FormTypeId == request.FormTypeId)
+            .ToListAsync(ct);
+
         var approvals = await _db.FormRequestApprovals
             .AsNoTracking()
             .Where(x => x.RequestId == query.RequestId)
@@ -258,7 +263,8 @@ public sealed class GetRequestDetailedQueryHandler
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
             Values = formFields
-                .OrderBy(f => f.SortOrder)
+                .OrderBy(f => formSections.FirstOrDefault(s => s.Id == f.SectionId)?.SortOrder ?? 9999)
+                .ThenBy(f => f.SortOrder)
                 .Select(f => {
                     var v = values.FirstOrDefault(val => string.Equals(val.FieldKey, f.FieldKey, StringComparison.OrdinalIgnoreCase));
                     string? computedValue = v?.ValueText
