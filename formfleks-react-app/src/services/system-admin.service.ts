@@ -112,6 +112,25 @@ export const systemAdminService = {
     return { success: true, data: data?.stepCount || steps.length };
   },
 
+  // --------- 4. SYSTEM SETTINGS ---------
+  getSystemSetting: async <T = any>(key: string): Promise<T | null> => {
+    try {
+      const { data } = await apiClient.get<T>(`/admin/settings/${key}`);
+      return data;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  updateSystemSetting: async (key: string, value: any): Promise<boolean> => {
+    try {
+      await apiClient.put(`/admin/settings/${key}`, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
   // Helpers that hook into existing mock service for dropdowns
   getRolesLookup: async (): Promise<AdminRoleDto[]> => {
      const { data } = await apiClient.get<any[]>('/dynamic-forms/admin/roles');

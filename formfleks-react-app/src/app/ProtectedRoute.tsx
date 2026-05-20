@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 export interface ProtectedRouteProps {
   requiredPermission?: string;
@@ -8,7 +10,12 @@ export interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ requiredPermission, children }: ProtectedRouteProps) => {
   const { isAuthenticated, token, user } = useAuthStore();
+  const { fetchSettings } = useSettingsStore();
   const location = useLocation();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   if (!isAuthenticated || !token) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;

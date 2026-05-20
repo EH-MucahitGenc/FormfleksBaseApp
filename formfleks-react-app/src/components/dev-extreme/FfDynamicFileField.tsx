@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, File, X, AlertCircle, Loader2 } from 'lucide-react';
 import { fileService } from '@/services/file.service';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 interface FfDynamicFileFieldProps {
   fieldKey: string;
@@ -25,9 +26,11 @@ export const FfDynamicFileField = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { appSettings } = useSettingsStore();
+
   // Ayarları parse et
-  let maxSizeMB = 10;
-  let allowedExts = '.pdf,.png,.jpg,.jpeg';
+  let maxSizeMB = appSettings?.maxUploadSizeMb || 10;
+  let allowedExts = appSettings?.allowedFileTypes || '.pdf,.png,.jpg,.jpeg';
   if (optionsJson) {
     try {
       const parsed = JSON.parse(optionsJson);
@@ -103,7 +106,7 @@ export const FfDynamicFileField = ({
           </div>
           <div className="flex flex-col flex-1 min-w-0">
             <a 
-              href={value.startsWith('http') ? value : `https://localhost:7127${value}`} 
+              href={value.startsWith('http') ? value : value} 
               target="_blank" 
               rel="noreferrer"
               className="text-sm font-bold text-brand-dark truncate hover:text-brand-primary transition-colors"

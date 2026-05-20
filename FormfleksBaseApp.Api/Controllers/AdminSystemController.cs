@@ -96,4 +96,34 @@ public class AdminSystemController : ControllerBase
     }
 
     #endregion
+
+    #region System Settings
+
+    /// <summary>
+    /// Sistem ayarlarına ait JSON konfigürasyonunu getirir (Jwt, EmailSettings vb.)
+    /// </summary>
+    [HttpGet("settings/{key}")]
+    public async Task<ActionResult<string>> GetSystemSetting(string key)
+    {
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.AdminSystem.Queries.GetSystemSetting.GetSystemSettingQuery { Key = key });
+        // Content() kullanarak JSON string'ini escape edilmemiş halde dönüyoruz.
+        return Content(result, "application/json");
+    }
+
+    /// <summary>
+    /// Sistem ayarlarına ait JSON konfigürasyonunu günceller.
+    /// </summary>
+    [HttpPut("settings/{key}")]
+    public async Task<IActionResult> UpdateSystemSetting(string key, [FromBody] System.Text.Json.JsonElement jsonValue)
+    {
+        var command = new FormfleksBaseApp.Application.Features.AdminSystem.Commands.UpdateSystemSetting.UpdateSystemSettingCommand
+        {
+            Key = key,
+            JsonValue = jsonValue.GetRawText()
+        };
+        await _mediator.Send(command);
+        return NoContent();
+    }
+
+    #endregion
 }

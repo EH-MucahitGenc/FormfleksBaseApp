@@ -4,21 +4,24 @@ using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common;
 using FormfleksBaseApp.Api.Options;
 using Microsoft.Extensions.Options;
+using FormfleksBaseApp.Application.Common.Interfaces;
 
 namespace FormfleksBaseApp.Api.Services;
 
 public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthenticator
 {
-    private readonly LdapOptions _opt;
+    private readonly ISystemSettingsService _systemSettingsService;
 
-    public LdapActiveDirectoryAuthenticator(IOptions<LdapOptions> options)
+    public LdapActiveDirectoryAuthenticator(ISystemSettingsService systemSettingsService)
     {
-        _opt = options.Value;
+        _systemSettingsService = systemSettingsService;
     }
 
     public Task<AdUserInfo> AuthenticateAsync(string username, string password, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+
+        var _opt = _systemSettingsService.GetSetting<LdapOptions>("LdapSettings") ?? new LdapOptions();
 
         if (!_opt.IsActive)
             throw new BusinessException("LDAP is not active.");
@@ -48,10 +51,12 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
 
     private LdapFoundUser FindUserByServiceAccount(string userInput)
     {
+        var _opt = _systemSettingsService.GetSetting<LdapOptions>("LdapSettings") ?? new LdapOptions();
+
         if (string.IsNullOrWhiteSpace(_opt.ServiceUserName) || string.IsNullOrWhiteSpace(_opt.ServicePassword))
             throw new BusinessException("LDAP service account credentials are not configured.");
 
-        using var conn = CreateConnection();
+        using var conn = CreateConnection(_opt);
 
         // Service bind
         var serviceUpn = _opt.ServiceUserName!.Contains("@")
@@ -122,7 +127,9 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
         if (string.IsNullOrWhiteSpace(password))
             throw new UnauthorizedAccessException("Active Directory credentials are invalid.");
 
-        using var conn = CreateConnection();
+        var _opt = _systemSettingsService.GetSetting<LdapOptions>("LdapSettings") ?? new LdapOptions();
+
+        using var conn = CreateConnection(_opt);
 
         try
         {
@@ -135,7 +142,7 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
             else
             {
                 // SSL kapalıyken sunucu basic bind'i reddedebilir; Negotiate tercih et.
-                var userName = NormalizeLoginName(userInput, user.UserPrincipalName);
+                var userName = NormalizeLoginName(userInput, user.UserPrincipalName, _opt);
                 conn.AuthType = AuthType.Negotiate;
 
                 if (userName.Contains('\\'))
@@ -153,12 +160,12 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
         }
         catch (LdapException ex)
         {
-            var usedName = NormalizeLoginName(userInput, user.UserPrincipalName);
+            var usedName = NormalizeLoginName(userInput, user.UserPrincipalName, _opt);
             throw MapLdapException(ex, $"LDAP user bind failed for user '{usedName}'.");
         }
     }
 
-    private LdapConnection CreateConnection()
+    private LdapConnection CreateConnection(LdapOptions _opt)
     {
         var identifier = new LdapDirectoryIdentifier(_opt.Host, _opt.Port);
         var conn = new LdapConnection(identifier);
@@ -210,7 +217,7 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
         };
     }
 
-    private string NormalizeLoginName(string userInput, string? userPrincipalName)
+    private string NormalizeLoginName(string userInput, string? userPrincipalName, LdapOptions _opt)
     {
         if (userInput.Contains('@') || userInput.Contains('\\'))
             return userInput;

@@ -23,6 +23,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications => Set<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>();
+    public DbSet<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity> SystemSettings => Set<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
     public DbSet<UserDelegationEntity> UserDelegations => Set<UserDelegationEntity>();
@@ -30,6 +31,14 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity>(e =>
+        {
+            e.ToTable("system_settings");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.Value).HasColumnName("value").HasColumnType("jsonb");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
+        });
         modelBuilder.Entity<UserDelegationEntity>(e =>
         {
             e.ToTable("user_delegations");

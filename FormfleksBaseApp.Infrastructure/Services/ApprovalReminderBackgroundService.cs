@@ -19,8 +19,6 @@ public class ApprovalReminderBackgroundService : BackgroundService
 {
     private readonly ILogger<ApprovalReminderBackgroundService> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly TimeSpan _checkInterval = TimeSpan.FromHours(12);
-
     public ApprovalReminderBackgroundService(ILogger<ApprovalReminderBackgroundService> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
@@ -42,7 +40,12 @@ public class ApprovalReminderBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error occurred executing ProcessRemindersAsync.");
             }
 
-            await Task.Delay(_checkInterval, stoppingToken);
+            // Dinamik ayarı her turda çek
+            var systemSettings = _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService>();
+            var wfSettings = systemSettings.GetSetting("WorkflowRules", new FormfleksBaseApp.Application.Common.Models.WorkflowSettings());
+            var checkInterval = TimeSpan.FromHours(wfSettings?.ReminderCheckIntervalHours > 0 ? wfSettings.ReminderCheckIntervalHours : 12);
+
+            await Task.Delay(checkInterval, stoppingToken);
         }
 
         _logger.LogInformation("Approval Reminder Background Service is stopping.");
@@ -56,13 +59,17 @@ public class ApprovalReminderBackgroundService : BackgroundService
         var userRepository = scope.ServiceProvider.GetRequiredService<FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository>();
         var tokenService = scope.ServiceProvider.GetRequiredService<FormfleksBaseApp.Application.Auth.Interfaces.ITokenService>();
 
-        var twentyFourHoursAgo = DateTime.UtcNow.AddHours(-24);
+        var systemSettings = scope.ServiceProvider.GetRequiredService<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService>();
+        var wfSettings = systemSettings.GetSetting("WorkflowRules", new FormfleksBaseApp.Application.Common.Models.WorkflowSettings());
+        int thresholdHours = wfSettings?.PendingApprovalThresholdHours > 0 ? wfSettings.PendingApprovalThresholdHours : 24;
 
-        // Fetch pending approvals older than 24 hours
+        var thresholdDate = DateTime.UtcNow.AddHours(-thresholdHours);
+
+        // Fetch pending approvals older than threshold
         var pendingApprovals = await db.FormRequestApprovals
             .Where(a => a.Status == (short)ApprovalStatus.Pending && a.ActionAt == null)
             .Join(db.FormRequests, a => a.RequestId, r => r.Id, (a, r) => new { Approval = a, Request = r })
-            .Where(x => x.Request.SubmittedAt <= twentyFourHoursAgo)
+            .Where(x => x.Request.SubmittedAt <= thresholdDate)
             .ToListAsync(stoppingToken);
 
         if (!pendingApprovals.Any())

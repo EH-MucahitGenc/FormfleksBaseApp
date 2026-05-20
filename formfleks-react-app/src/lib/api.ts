@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 // Create Formfleks Base API instance
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://localhost:7127/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -55,8 +55,17 @@ api.interceptors.response.use(
     if (error.response) {
       const status = error.response.status;
       
+      // Handle 503 Maintenance Mode
+      if (status === 503) {
+        const data = error.response.data as any;
+        if (data?.isMaintenance) {
+          window.location.href = '/maintenance';
+          return new Promise(() => {}); // Stop further execution
+        }
+      }
+      
       // Handle 500 Server Error
-      if (status >= 500) {
+      else if (status >= 500) {
         import('./notifications').then(({ notify }) => {
           notify.error('Sunucu tarafında beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
         });
@@ -98,7 +107,7 @@ api.interceptors.response.use(
           const refreshToken = useAuthStore.getState().refreshToken;
           if (!refreshToken) throw new Error("No refresh token");
 
-          const rs = await axios.post(`${import.meta.env.VITE_API_URL || 'https://localhost:7127/api'}/auth/refresh`, {
+          const rs = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`, {
             refreshToken,
           });
 

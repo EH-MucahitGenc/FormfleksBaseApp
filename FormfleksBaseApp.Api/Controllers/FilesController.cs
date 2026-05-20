@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 
+using FormfleksBaseApp.Application.Common.Interfaces;
+using FormfleksBaseApp.Application.Common.Models;
+
 namespace FormfleksBaseApp.Api.Controllers;
 
 [Route("api/[controller]")]
@@ -15,10 +18,12 @@ namespace FormfleksBaseApp.Api.Controllers;
 public class FilesController : ControllerBase
 {
     private readonly IWebHostEnvironment _env;
+    private readonly ISystemSettingsService _systemSettingsService;
 
-    public FilesController(IWebHostEnvironment env)
+    public FilesController(IWebHostEnvironment env, ISystemSettingsService systemSettingsService)
     {
         _env = env;
+        _systemSettingsService = systemSettingsService;
     }
 
     /// <summary>
@@ -38,7 +43,21 @@ public class FilesController : ControllerBase
             Directory.CreateDirectory(uploadPath);
 
         // Rastgele isim ve orijinal uzantı
-        var extension = Path.GetExtension(file.FileName);
+        var extension = Path.GetExtension(file.FileName).ToLower();
+        
+        var appSettings = _systemSettingsService.GetSetting<AppSettings>("AppSettings") ?? new AppSettings();
+        
+        var maxSizeBytes = appSettings.MaxUploadSizeMb * 1024 * 1024;
+        if (file.Length > maxSizeBytes)
+            return BadRequest(new { Message = $"Dosya boyutu çok büyük. Maksimum {appSettings.MaxUploadSizeMb} MB yüklenebilir." });
+
+        if (!string.IsNullOrEmpty(appSettings.AllowedFileTypes) && appSettings.AllowedFileTypes != "*")
+        {
+            var allowedExtensions = appSettings.AllowedFileTypes.Split(',').Select(x => x.Trim().ToLower()).ToList();
+            if (!allowedExtensions.Contains(extension))
+                return BadRequest(new { Message = $"Sadece şu dosya tiplerine izin verilmektedir: {appSettings.AllowedFileTypes}" });
+        }
+
         var randomFileName = $"{Guid.NewGuid():N}{extension}";
         var fullPath = Path.Combine(uploadPath, randomFileName);
 

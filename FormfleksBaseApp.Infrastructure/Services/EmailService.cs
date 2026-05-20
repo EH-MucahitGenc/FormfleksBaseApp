@@ -8,6 +8,7 @@ public class EmailService : IEmailService
 {
     private readonly IEmailBackgroundQueue _emailQueue;
     private readonly IConfiguration _config;
+    private readonly ISystemSettingsService _systemSettingsService;
 
     // ──────────────────────────────────────────────────────────────────────────
     // CORE BUILDER — Tüm mailler bu fonksiyondan üretilir.
@@ -182,14 +183,22 @@ public class EmailService : IEmailService
     }
 
 
-    public EmailService(IEmailBackgroundQueue emailQueue, IConfiguration config)
+    public EmailService(IEmailBackgroundQueue emailQueue, IConfiguration config, ISystemSettingsService systemSettingsService)
     {
         _emailQueue = emailQueue;
         _config = config;
+        _systemSettingsService = systemSettingsService;
     }
 
-
-    private string GetBaseUrl() => (_config["FrontendBaseUrl"] ?? "http://localhost:3001").TrimEnd('/');
+    private string GetBaseUrl()
+    {
+        var appSettings = _systemSettingsService.GetSetting<AppSettings>("AppSettings", new AppSettings 
+        { 
+            SiteUrl = _config["FrontendBaseUrl"] ?? "http://localhost:3001" 
+        });
+        
+        return (appSettings?.SiteUrl ?? "http://localhost:3001").TrimEnd('/');
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     // 1. ONAY BEKLİYOR — Atanan yöneticiye (Amber/Gold tema)

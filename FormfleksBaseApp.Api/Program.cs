@@ -76,7 +76,6 @@ builder.Services.AddCors(options =>
 });
 
 // Options
-builder.Services.Configure<LdapOptions>(builder.Configuration.GetSection("LDAP"));
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<FormfleksBaseApp.Application.Common.Models.EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
@@ -171,6 +170,8 @@ builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IEmail
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IPdfGeneratorService, FormfleksBaseApp.Infrastructure.Services.PdfGeneratorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IFormAttachmentCollectorService, FormfleksBaseApp.Infrastructure.Services.FormAttachmentCollectorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IAppNotificationService, FormfleksBaseApp.Api.Services.AppNotificationService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService, FormfleksBaseApp.Infrastructure.Services.SystemSettingsService>();
 
 // SignalR UserId Provider
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, FormfleksBaseApp.Api.Hubs.CustomUserIdProvider>();
@@ -244,6 +245,7 @@ var app = builder.Build();
 // Pipeline sırası
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<MaintenanceMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

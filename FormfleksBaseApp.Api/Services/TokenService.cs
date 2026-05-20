@@ -11,17 +11,19 @@ namespace FormfleksBaseApp.Api.Services;
 public sealed class TokenService : ITokenService
 {
     private readonly IConfiguration _config;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService _systemSettingsService;
 
-    public TokenService(IConfiguration config)
+    public TokenService(IConfiguration config, FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService systemSettingsService)
     {
         _config = config;
+        _systemSettingsService = systemSettingsService;
     }
 
     public int RefreshTokenDays
     {
         get
         {
-            var days = _config.GetValue<int>("Jwt:RefreshTokenDays");
+            var days = _systemSettingsService.GetSetting<int>("Jwt:RefreshTokenDays", _config.GetValue<int>("Jwt:RefreshTokenDays"));
             if (days <= 0)
                 throw new InvalidOperationException("Jwt:RefreshTokenDays must be greater than 0.");
 
@@ -38,7 +40,7 @@ public sealed class TokenService : ITokenService
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyStr));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var minutes = _config.GetValue<int>("Jwt:AccessTokenMinutes");
+        var minutes = _systemSettingsService.GetSetting<int>("Jwt:AccessTokenMinutes", _config.GetValue<int>("Jwt:AccessTokenMinutes"));
         if (minutes <= 0)
             throw new InvalidOperationException("Jwt:AccessTokenMinutes must be greater than 0.");
 
