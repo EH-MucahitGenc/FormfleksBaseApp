@@ -87,13 +87,23 @@ export const DynamicSidebar = ({
     >
       {/* Sidebar Header / Logo */}
       <div className="h-16 flex items-center justify-center border-b border-surface-muted px-4 shrink-0">
-        <div className="flex items-center justify-center w-full h-full py-4 text-brand-dark overflow-hidden whitespace-nowrap">
+        <NavLink to="/dashboard" className="flex items-center justify-center w-full h-full py-4 text-brand-dark overflow-hidden whitespace-nowrap gap-2 hover:opacity-80 transition-opacity">
+          {isSidebarOpen && (
+            <>
+              <img 
+                src="/erkurtlogo.svg" 
+                alt="Erkurt Holding" 
+                className="object-contain h-6 w-auto transition-all duration-300" 
+              />
+              <div className="h-5 w-px bg-surface-muted shrink-0 mx-1"></div>
+            </>
+          )}
           <img 
             src="/logo.svg" 
             alt="Formfleks Logo" 
-            className={cn("object-contain transition-all duration-300", isSidebarOpen ? "h-8 w-auto px-2" : "h-6 w-auto")} 
+            className={cn("object-contain transition-all duration-300", isSidebarOpen ? "h-5 w-auto" : "h-6 w-auto")} 
           />
-        </div>
+        </NavLink>
       </div>
 
       {/* Sidebar Navigation */}

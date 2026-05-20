@@ -96,8 +96,7 @@ public class EmailService : IEmailService
 
                 <!-- HERO -->
                 <tr>
-                  <td style="background-color:#0f172a;padding:40px 20px;text-align:center;">
-                    <div style="font-size:48px;line-height:1;margin-bottom:16px;">{{statusIcon}}</div>
+                  <td style="background-color:#0f172a;padding:30px 20px;text-align:center;">
                     <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">{{statusIcon}} {{accentLabelTitleCase}}</h1>
                     <p style="margin:0;font-size:12px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">{{platformLabel}} Kurumsal Form ve Onay Platformu</p>
                   </td>
