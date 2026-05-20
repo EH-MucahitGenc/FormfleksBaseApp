@@ -240,6 +240,9 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(builder.Configuration.GetConnectionString("Default")!, name: "postgres", tags: new[] { "ready" })
     .AddCheck<OracleHealthCheck>("oracle", tags: new[] { "ready" });
 
+// Background Jobs (Cron)
+builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.PersonnelSyncBackgroundJob>();
+
 var app = builder.Build();
 
 // Pipeline sırası
