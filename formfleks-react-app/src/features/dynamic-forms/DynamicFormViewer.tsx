@@ -21,11 +21,13 @@ import {
 } from '@/components/dev-extreme/FfFormLayout';
 import {
   FfSelectBox,
-  FfField
+  FfField,
+  FfCheckBox
 } from '@/components/dev-extreme/index';
 import { FfDynamicGridField } from '@/components/dev-extreme/FfDynamicGridField';
 import { FfDynamicFileField } from '@/components/dev-extreme/FfDynamicFileField';
 import NumberBox from 'devextreme-react/number-box';
+import TextArea from 'devextreme-react/text-area';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
 
 export const DynamicFormViewer: React.FC = () => {
@@ -79,6 +81,12 @@ export const DynamicFormViewer: React.FC = () => {
         }
         else if (v.valueDateTime !== null && v.valueDateTime !== undefined) {
           val = v.valueDateTime;
+        }
+
+        // Fix boolean values stored as strings in older drafts
+        if (v.fieldType === 3) {
+          if (val === 'true') val = true;
+          else if (val === 'false') val = false;
         }
 
         // Fix decimal strings coming back as "0,000000" or similar
@@ -304,6 +312,33 @@ export const DynamicFormViewer: React.FC = () => {
             componentProps={{
               required: field.isRequired,
               stylingMode: "outlined"
+            }}
+            className={field.colSpan === 2 ? 'col-span-full' : ''}
+          />
+        );
+      case 'boolean':
+        return (
+          <FfField
+            key={field.dataField}
+            control={control}
+            component={FfCheckBox}
+            name={field.dataField}
+            label={field.label}
+            className={field.colSpan === 2 ? 'col-span-full' : ''}
+          />
+        );
+      case 'textarea':
+        return (
+          <FfField
+            key={field.dataField}
+            control={control}
+            component={TextArea as any}
+            name={field.dataField}
+            label={field.label}
+            componentProps={{
+              required: field.isRequired,
+              stylingMode: "outlined",
+              minHeight: 100
             }}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
           />

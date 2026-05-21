@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import DataGrid, { Column, Editing, RequiredRule } from 'devextreme-react/data-grid';
+import DataGrid, { Column, Editing, RequiredRule, Lookup } from 'devextreme-react/data-grid';
 import { cn } from '../ui';
 import { DownloadCloud } from 'lucide-react';
 import { ExcelImportModal } from './ExcelImportModal';
@@ -31,7 +31,8 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
        caption: col.label,
        dataType: col.editorType === 'number' ? 'number' : col.editorType === 'date' ? 'date' : 'string',
        isRequired: col.isRequired,
-       // Geliştirme notu: İleride select (dropdown) için lookup özelliği eklenebilir.
+       editorType: col.editorType,
+       options: col.options,
     })) || [];
   }, [columnsSchema]);
 
@@ -105,6 +106,9 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                     dataType={col.dataType as any}
                   >
                     {col.isRequired && <RequiredRule message={`${col.caption} zorunludur`} />}
+                    {col.editorType === 'select' && col.options && (
+                      <Lookup dataSource={col.options.split(',').map((x: string) => x.trim())} />
+                    )}
                   </Column>
                 ))}
               </DataGrid>

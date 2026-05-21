@@ -268,6 +268,15 @@ export const FormDetail: React.FC = () => {
                                           // Boolean vs check for UI
                                           if (val === true) val = "Evet";
                                           if (val === false) val = "Hayır";
+                                          // Format ISO date strings
+                                          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+                                            try {
+                                              const d = new Date(val);
+                                              if (!isNaN(d.getTime())) {
+                                                val = d.toLocaleDateString('tr-TR') + (c.editorType === 'datetime' ? ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '');
+                                              }
+                                            } catch (e) {}
+                                          }
                                           return (
                                             <td key={c.dataField} className="px-4 py-3 text-brand-dark font-medium">{val ?? '-'}</td>
                                           );
@@ -318,7 +327,11 @@ export const FormDetail: React.FC = () => {
                         {f.label || f.fieldKey}
                       </span>
                       <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10 break-words">
-                        {formatFieldValue(f.valueText) || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+                        {f.fieldType === 3 
+                          ? (f.valueBool === true || f.valueText === 'true' ? 'Evet' : 'Hayır')
+                          : typeof f.valueNumber === 'number' 
+                            ? f.valueNumber 
+                            : formatFieldValue(f.valueText) || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
                       </div>
                     </div>
                   );
