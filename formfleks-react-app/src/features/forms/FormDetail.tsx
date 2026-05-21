@@ -12,6 +12,48 @@ import { useFormDetail, usePendingApprovals, useApprovalAction, useCancelRequest
 import { useAuthStore } from '@/store/useAuthStore';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 
+const formatFieldValue = (val: any): string => {
+  if (!val) return '';
+  if (typeof val !== 'string') return String(val);
+  
+  try {
+    if (val.startsWith('{') || val.startsWith('[')) {
+      let parsed = JSON.parse(val);
+      
+      let safety = 0;
+      while (typeof parsed === 'string' && (parsed.startsWith('{') || parsed.startsWith('[')) && safety < 10) {
+        parsed = JSON.parse(parsed);
+        safety++;
+      }
+      
+      safety = 0;
+      while (parsed && typeof parsed === 'object' && parsed.Value && typeof parsed.Value === 'string' && safety < 10) {
+        try { parsed = JSON.parse(parsed.Value); } catch { break; }
+        safety++;
+      }
+      
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => {
+          if (item && typeof item === 'object') {
+            return item.Text || item.Value || item.label || item.value || JSON.stringify(item);
+          }
+          return String(item);
+        }).join(', ');
+      }
+      
+      if (parsed && typeof parsed === 'object') {
+        return parsed.Text || parsed.Value || parsed.label || parsed.value || JSON.stringify(parsed);
+      }
+      
+      return String(parsed);
+    }
+  } catch(e) {
+    // Ignore JSON parse errors
+  }
+  
+  return val;
+};
+
 export const FormDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -275,8 +317,8 @@ export const FormDetail: React.FC = () => {
                       <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
                         {f.label || f.fieldKey}
                       </span>
-                      <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10">
-                        {f.valueText || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+                      <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10 break-words">
+                        {formatFieldValue(f.valueText) || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
                       </div>
                     </div>
                   );

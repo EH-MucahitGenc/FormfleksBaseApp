@@ -11,6 +11,7 @@ using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplateWorkflow;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetAuditLogs;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.VerifyQuickAction;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.CreateUserDelegation;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.TerminateUserDelegation;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetUserDelegations;
@@ -194,6 +195,16 @@ public sealed class DynamicFormsController : ControllerBase
     public async Task<ActionResult<bool>> QuickAction([FromBody] FormfleksBaseApp.Application.Features.DynamicForms.Commands.QuickAction.QuickActionCommand request, CancellationToken ct)
     {
         return Ok(await _mediator.Send(request, ct));
+    }
+
+    /// <summary>
+    /// Magic Link aracılığıyla işlem yapmadan önce bağlantının ve işlemin geçerliliğini kontrol eder.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("quick-action/verify")]
+    public async Task<ActionResult<bool>> VerifyQuickAction([FromQuery] string token, CancellationToken ct)
+    {
+        return Ok(await _mediator.Send(new VerifyQuickActionQuery(token), ct));
     }
 
     /// <summary>

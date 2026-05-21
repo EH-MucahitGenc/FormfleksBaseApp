@@ -22,6 +22,40 @@ interface SectionState {
   fields: FieldState[];
 }
 
+const formatOptionsToCsv = (val: any): string => {
+  if (!val) return '';
+  if (typeof val !== 'string') return String(val);
+  
+  try {
+    if (val.startsWith('{') || val.startsWith('[')) {
+      let parsed = JSON.parse(val);
+      let safety = 0;
+      while (typeof parsed === 'string' && (parsed.startsWith('{') || parsed.startsWith('[')) && safety < 10) {
+        parsed = JSON.parse(parsed);
+        safety++;
+      }
+      safety = 0;
+      while (parsed && typeof parsed === 'object' && parsed.Value && typeof parsed.Value === 'string' && safety < 10) {
+        try { parsed = JSON.parse(parsed.Value); } catch { break; }
+        safety++;
+      }
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => {
+          if (item && typeof item === 'object') {
+            return item.Text || item.Value || item.label || item.value || JSON.stringify(item);
+          }
+          return String(item);
+        }).join(',');
+      }
+      if (parsed && typeof parsed === 'object') {
+        return parsed.Text || parsed.Value || parsed.label || parsed.value || JSON.stringify(parsed);
+      }
+      return String(parsed);
+    }
+  } catch(e) { }
+  return val;
+};
+
 export const FormDesigner: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'list' | 'designer' | 'preview'>('list');
@@ -135,7 +169,7 @@ export const FormDesigner: React.FC = () => {
             label: f.label,
             fieldType: f.fieldType,
             isRequired: f.isRequired,
-            optionsJson: f.optionsJson,
+            optionsJson: f.fieldType === 4 ? formatOptionsToCsv(f.optionsJson) : f.optionsJson,
             placeholder: f.placeholder
           })) || []
         }));

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button, TextArea } from 'devextreme-react';
 import notify from 'devextreme/ui/notify';
@@ -25,6 +25,38 @@ export default function QuickActionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorState, setErrorState] = useState<{ isError: boolean; message: string }>({ isError: false, message: '' });
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  useEffect(() => {
+    if (!token || !action) {
+      setIsVerifying(false);
+      return;
+    }
+
+    const verifyToken = async () => {
+      try {
+        await apiClient.get(`/dynamic-forms/quick-action/verify?token=${token}`);
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.message || error.response?.data?.detail || 'İşlem bağlantısı doğrulanamadı.';
+        setErrorState({ isError: true, message: errorMsg });
+      } finally {
+        setIsVerifying(false);
+      }
+    };
+
+    verifyToken();
+  }, [token, action]);
+
+  if (isVerifying) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-xl flex flex-col items-center">
+           <div className="w-12 h-12 rounded-full border-4 border-[#16a34a]/30 border-t-[#16a34a] animate-spin mb-4"></div>
+           <p className="text-gray-500 font-medium">Bağlantı kontrol ediliyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!token || !action) {
     return (

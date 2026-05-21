@@ -2,38 +2,26 @@ using System.Security.Claims;
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common;
 using FormfleksBaseApp.Application.Common.Interfaces;
-using FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.QuickAction;
+namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.VerifyQuickAction;
 
-/// <summary>
-/// E-posta üzerinden (Magic Link) gelen hızlı aksiyon (Quick Action) isteklerini işleyen handler.
-/// Bu handler şu işlemleri gerçekleştirir:
-/// 1. Token'ı çözerek işlemi yapmaya çalışan UserId ve ApprovalId bilgilerini doğrular.
-/// 2. İlgili onay adımının veritabanında "Bekliyor (Pending)" statüsünde olup olmadığını kontrol eder.
-/// 3. Doğrulamalar başarılı olursa, form sürecinin kendi doğal iş akışını (ExecuteApprovalActionCommand) tetikler.
-/// Bu sayede Magic Link mimarisi, form akış motorunu veya tarihçe kayıt süreçlerini by-pass etmeden,
-/// mevcut iş mantığına (CQRS) %100 sadık kalarak güvenli bir işlem sağlar.
-/// </summary>
-public sealed class QuickActionCommandHandler : IRequestHandler<QuickActionCommand, bool>
+public sealed class VerifyQuickActionQueryHandler : IRequestHandler<VerifyQuickActionQuery, bool>
 {
     private readonly IDynamicFormsDbContext _db;
     private readonly ITokenService _tokenService;
-    private readonly ISender _sender;
     private readonly IUserRepository _userRepo;
 
-    public QuickActionCommandHandler(IDynamicFormsDbContext db, ITokenService tokenService, ISender sender, IUserRepository userRepo)
+    public VerifyQuickActionQueryHandler(IDynamicFormsDbContext db, ITokenService tokenService, IUserRepository userRepo)
     {
         _db = db;
         _tokenService = tokenService;
-        _sender = sender;
         _userRepo = userRepo;
     }
 
-    public async Task<bool> Handle(QuickActionCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(VerifyQuickActionQuery request, CancellationToken cancellationToken)
     {
         var principal = _tokenService.ValidateQuickActionToken(request.Token);
         if (principal == null)
@@ -85,29 +73,6 @@ public sealed class QuickActionCommandHandler : IRequestHandler<QuickActionComma
             throw new BusinessException($"Bu adım daha önce {actorName} tarafından '{actionText}' işlemi ile tamamlanmıştır.");
         }
 
-        short actionType = request.ActionType.ToLowerInvariant() switch
-        {
-            "approve" => 1,
-            "reject" => 2,
-            "return" => 3,
-            _ => throw new BusinessException("Geçersiz işlem türü.")
-        };
-
-        if (actionType != 1 && string.IsNullOrWhiteSpace(request.Comment))
-            throw new BusinessException("Red veya İade işlemlerinde açıklama girmek zorunludur.");
-
-        var executeCmd = new ExecuteApprovalActionCommand(new FormfleksBaseApp.DynamicForms.Business.Contracts.ApprovalActionRequestDto
-        {
-            RequestId = approval.RequestId,
-            ApprovalId = approval.Id,
-            ActorUserId = userId,
-            ApprovalConcurrencyToken = approval.ConcurrencyToken,
-            ActionType = (ApprovalActionType)actionType,
-            Comment = request.Comment
-        });
-
-        var result = await _sender.Send(executeCmd, cancellationToken);
-        
-        return result.Success;
+        return true;
     }
 }
