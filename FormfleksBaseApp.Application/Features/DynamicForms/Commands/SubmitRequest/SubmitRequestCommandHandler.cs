@@ -77,7 +77,22 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         }
         else
         {
-            var (firstStep, assignedUser, assignedRole) = await _engine.ResolveNextValidStepAsync(wfDef.Id, 0, req.RequestorUserId, ct);
+            var (firstStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(wfDef.Id, 0, req.RequestorUserId, ct);
+
+            // Kaydedilecek Atlanan Adımlar (Skipped Steps)
+            foreach (var skip in skippedSteps)
+            {
+                _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
+                {
+                    Id = Guid.NewGuid(),
+                    RequestId = req.Id,
+                    StepNo = skip.Step.StepNo,
+                    WorkflowStepId = skip.Step.Id,
+                    Status = (short)ApprovalStatus.Skipped,
+                    ActionComment = skip.Reason,
+                    ActionAt = DateTime.UtcNow
+                });
+            }
 
             if (firstStep is null)
             {

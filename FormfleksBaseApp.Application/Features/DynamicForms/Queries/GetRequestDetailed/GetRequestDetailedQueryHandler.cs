@@ -214,6 +214,11 @@ public sealed class GetRequestDetailedQueryHandler
                 var roleObj = roles.FirstOrDefault(r => r.Id == app.AssigneeRoleId.Value);
                 actorName = roleObj != null ? $"Rol: {roleObj.Name}" : $"Rol ID: {app.AssigneeRoleId.Value}";
             }
+            else if (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue) // 15 is LocationBasedRole
+            {
+                var roleObj = roles.FirstOrDefault(r => r.Id == ws.TargetLocationRoleId.Value);
+                actorName = roleObj != null ? $"Lokasyon/Global Rol: {roleObj.Name}" : "Lokasyon Bazlı Rol";
+            }
 
             timeline.Add(new FormRequestWorkflowStepDto
             {

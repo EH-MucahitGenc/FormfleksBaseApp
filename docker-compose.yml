@@ -4,6 +4,7 @@ services:
   api:
     image: mucahitgenc1/formfleks-api:v1.0.0
     container_name: formfleks-api
+    restart: always
     ports:
       - "0808:8080"
     environment:
@@ -13,5 +14,6 @@ services:
   ui:
     image: mucahitgenc1/formfleks-base-app-ui:v1.0.0
     container_name: formfleks-ui
+    restart: always
     ports:
       - "1608:80"

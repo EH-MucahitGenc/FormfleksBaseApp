@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
-import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer, FastForward } from 'lucide-react';
 import { FfButton } from '@/components/ui/index';
 import { PrintableFormDetail } from './components/PrintableFormDetail';
 import { useFormDetail, usePendingApprovals, useApprovalAction, useCancelRequest } from './hooks/useForms';
@@ -396,6 +396,11 @@ export const FormDetail: React.FC = () => {
                     statusColor = 'border-status-warning text-status-warning';
                     Icon = CornerUpLeft;
                     statusText = 'İade Edildi';
+                  } else if (w.status === 'Skipped') {
+                    statusColor = 'border-surface-muted text-brand-gray';
+                    bgIcon = 'bg-surface-base';
+                    Icon = FastForward;
+                    statusText = 'Atlandı';
                   }
 
                   return (

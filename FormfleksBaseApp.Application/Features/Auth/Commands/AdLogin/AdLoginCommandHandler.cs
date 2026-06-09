@@ -69,6 +69,15 @@ public sealed class AdLoginCommandHandler : IRequestHandler<AdLoginCommand, Auth
 
             // Auto-link to QdmsPersoneller by Email
             var personnel = await _db.QdmsPersoneller.FirstOrDefaultAsync(p => p.IsActive && p.Email != null && p.Email.ToLower() == adUser.Email.ToLower(), ct);
+            
+            // Auto-link fallback by Name/Surname (if QDMS email is empty)
+            if (personnel == null && !string.IsNullOrWhiteSpace(adUser.DisplayName))
+            {
+                var adNameLower = adUser.DisplayName.ToLower().Trim();
+                personnel = await _db.QdmsPersoneller
+                    .FirstOrDefaultAsync(p => p.IsActive && p.LinkedUserId == null && (p.Adi + " " + p.Soyadi).ToLower() == adNameLower, ct);
+            }
+
             if (personnel != null)
             {
                 personnel.LinkedUserId = user.Id;
@@ -89,6 +98,14 @@ public sealed class AdLoginCommandHandler : IRequestHandler<AdLoginCommand, Auth
 
             // Try to link to QdmsPersoneller even if user already exists (in case QDMS sync happened later)
             var personnel = await _db.QdmsPersoneller.FirstOrDefaultAsync(p => p.IsActive && p.Email != null && p.Email.ToLower() == adUser.Email.ToLower(), ct);
+            
+            if (personnel == null && !string.IsNullOrWhiteSpace(adUser.DisplayName))
+            {
+                var adNameLower = adUser.DisplayName.ToLower().Trim();
+                personnel = await _db.QdmsPersoneller
+                    .FirstOrDefaultAsync(p => p.IsActive && p.LinkedUserId == null && (p.Adi + " " + p.Soyadi).ToLower() == adNameLower, ct);
+            }
+
             if (personnel != null && personnel.LinkedUserId != user.Id)
             {
                 personnel.LinkedUserId = user.Id;

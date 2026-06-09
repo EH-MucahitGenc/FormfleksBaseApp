@@ -146,11 +146,26 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 approval.Status = (short)ApprovalStatus.Approved;
 
             // Sonraki adımı bul (Auto-skip özelliği ile hiyerarşiyi atlar)
-            var (nextStep, assignedUser, assignedRole) = await _engine.ResolveNextValidStepAsync(
+            var (nextStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(
                 wfDef.Id, 
                 req.CurrentStepNo ?? 0, 
                 req.RequestorUserId, 
                 ct);
+
+            // Kaydedilecek Atlanan Adımlar (Skipped Steps)
+            foreach (var skip in skippedSteps)
+            {
+                _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
+                {
+                    Id = Guid.NewGuid(),
+                    RequestId = req.Id,
+                    StepNo = skip.Step.StepNo,
+                    WorkflowStepId = skip.Step.Id,
+                    Status = (short)ApprovalStatus.Skipped,
+                    ActionComment = skip.Reason,
+                    ActionAt = DateTime.UtcNow
+                });
+            }
 
             if (nextStep is null)
             {

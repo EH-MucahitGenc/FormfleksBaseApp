@@ -22,12 +22,13 @@ public class ApprovalEngineService : IApprovalEngineService
         _logger = logger;
     }
 
-    public async Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId)> ResolveNextValidStepAsync(
+    public async Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, List<(WorkflowStepEntity Step, string Reason)> SkippedSteps)> ResolveNextValidStepAsync(
         Guid workflowDefinitionId, 
         int currentStepNo, 
         Guid requestorUserId, 
         CancellationToken ct)
     {
+        var skippedSteps = new List<(WorkflowStepEntity Step, string Reason)>();
         int checkStepNo = currentStepNo;
 
         while (true)
@@ -42,7 +43,7 @@ public class ApprovalEngineService : IApprovalEngineService
             if (nextStep == null)
             {
                 // No more steps -> Fully Approved
-                return (null, null, null);
+                return (null, null, null, skippedSteps);
             }
 
             // 1) Is it a FIXED assignment?
@@ -60,12 +61,21 @@ public class ApprovalEngineService : IApprovalEngineService
                 {
                     finalUserId = await ResolveDelegationAsync(finalUserId.Value, ct);
                 }
-                return (nextStep, finalUserId, nextStep.AssigneeRoleId);
+                return (nextStep, finalUserId, nextStep.AssigneeRoleId, skippedSteps);
             }
 
             // 2) Is it an ENTERPRISE OGRANIZATIONAL ROLE?
             if (nextStep.AssigneeType >= 10 && nextStep.AssigneeType <= 20)
             {
+                if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole)
+                {
+                    // LocationBasedRole (Lokasyon Bazlı Rol) çalışma zamanında (runtime) dinamik olarak
+                    // GetPendingApprovalsQuery içerisinde filtrelenir.
+                    // Bu nedenle tek bir statik AssigneeUserId veya RoleId'ye bağlanmaz.
+                    // Adımı olduğu gibi (null, null) olarak döndürüp, formun bu adımda beklemesini sağlıyoruz.
+                    return (nextStep, null, null, skippedSteps);
+                }
+
                 var requestorPersonnel = await _db.QdmsPersoneller
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
@@ -73,7 +83,17 @@ public class ApprovalEngineService : IApprovalEngineService
                 if (requestorPersonnel == null) 
                 {
                     _logger.LogWarning("DIAGNOSTICS: Engine cannot find QdmsPersonel record for RequestorUserId: {RequestorId}. Fallbacking.", requestorUserId);
-                    return await HandleFallbackAsync(nextStep, requestorUserId, checkStepNo);
+                    var fallbackRes = await HandleFallbackActionAsync(nextStep);
+                    if (fallbackRes.ShouldSkip)
+                    {
+                        skippedSteps.Add((nextStep, "Talep sahibinin organizasyon kaydı bulunamadığı için adım otomatik atlandı."));
+                        checkStepNo = nextStep.StepNo;
+                        continue;
+                    }
+                    else
+                    {
+                        return (nextStep, fallbackRes.FallbackUserId, null, skippedSteps);
+                    }
                 }
 
                 _logger.LogWarning("DIAGNOSTICS: Found QdmsPersonel for Requestor {RequestorId}. Pozisyon_Kodu: {Pozisyon}, Ust_Pozisyon_Kodu: {UstPozisyon}", requestorUserId, requestorPersonnel.Pozisyon_Kodu, requestorPersonnel.Ust_Pozisyon_Kodu);
@@ -90,23 +110,24 @@ public class ApprovalEngineService : IApprovalEngineService
                     resolvedUserId = await ResolveUpperManagerAsync(requestorPersonnel, ct);
                 }
 
-                else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole)
-                {
-                    // LocationBasedRole (Lokasyon Bazlı Rol) çalışma zamanında (runtime) dinamik olarak
-                    // GetPendingApprovalsQuery içerisinde filtrelenir.
-                    // Bu nedenle tek bir statik AssigneeUserId veya RoleId'ye bağlanmaz.
-                    // Adımı olduğu gibi (null, null) olarak döndürüp, formun bu adımda beklemesini sağlıyoruz.
-                    return (nextStep, null, null);
-                }
-
                 if (resolvedUserId.HasValue && resolvedUserId.Value != requestorUserId)
                 {
                     var finalDelegatedUserId = await ResolveDelegationAsync(resolvedUserId.Value, ct);
-                    return (nextStep, finalDelegatedUserId, null);
+                    return (nextStep, finalDelegatedUserId, null, skippedSteps);
                 }
 
                 // If not resolved, execute fallback!
-                return await HandleFallbackAsync(nextStep, requestorUserId, checkStepNo);
+                var finalFallback = await HandleFallbackActionAsync(nextStep);
+                if (finalFallback.ShouldSkip)
+                {
+                    skippedSteps.Add((nextStep, "Organizasyon yapısında geçerli bir yönetici/sorumlu bulunamadığı için adım otomatik atlandı."));
+                    checkStepNo = nextStep.StepNo;
+                    continue;
+                }
+                else
+                {
+                    return (nextStep, finalFallback.FallbackUserId, null, skippedSteps);
+                }
             }
 
             // 3) Is it a Legacy JSON Rule? 
@@ -122,22 +143,20 @@ public class ApprovalEngineService : IApprovalEngineService
         }
     }
 
-    private async Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId)> HandleFallbackAsync(WorkflowStepEntity failedStep, Guid requestorUserId, int currentCheckStepNo)
+    private async Task<(bool ShouldSkip, Guid? FallbackUserId)> HandleFallbackActionAsync(WorkflowStepEntity failedStep)
     {
         if (failedStep.FallbackAction == (short)WorkflowFallbackAction.Skip)
         {
-            // Will force outer loop to continue from this step (actually I can't easily recurse from here, 
-            // so we should just call ResolveNextValidStepAsync recursively looking for next step)
-            return await ResolveNextValidStepAsync(failedStep.WorkflowDefinitionId, failedStep.StepNo, requestorUserId, CancellationToken.None);
+            return (true, null);
         }
         else if (failedStep.FallbackAction == (short)WorkflowFallbackAction.FallToFixedUser && failedStep.FallbackUserId.HasValue)
         {
             var finalFallbackId = await ResolveDelegationAsync(failedStep.FallbackUserId.Value, CancellationToken.None);
-            return (failedStep, finalFallbackId, null);
+            return (false, finalFallbackId);
         }
         
         // Default Skip
-        return await ResolveNextValidStepAsync(failedStep.WorkflowDefinitionId, failedStep.StepNo, requestorUserId, CancellationToken.None);
+        return (true, null);
     }
 
     private async Task<Guid?> ResolveDirectManagerAsync(FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim requestor, CancellationToken ct)
