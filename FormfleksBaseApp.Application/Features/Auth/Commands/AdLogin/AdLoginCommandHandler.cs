@@ -86,6 +86,15 @@ public sealed class AdLoginCommandHandler : IRequestHandler<AdLoginCommand, Auth
             user.DisplayName = adUser.DisplayName ?? user.DisplayName;
 
             await _users.SaveChangesAsync(ct);
+
+            // Try to link to QdmsPersoneller even if user already exists (in case QDMS sync happened later)
+            var personnel = await _db.QdmsPersoneller.FirstOrDefaultAsync(p => p.IsActive && p.Email != null && p.Email.ToLower() == adUser.Email.ToLower(), ct);
+            if (personnel != null && personnel.LinkedUserId != user.Id)
+            {
+                personnel.LinkedUserId = user.Id;
+                _db.QdmsPersoneller.Update(personnel);
+                await _db.SaveChangesAsync(ct);
+            }
         }
 
         return await _issuer.IssueAsync(user, ct);

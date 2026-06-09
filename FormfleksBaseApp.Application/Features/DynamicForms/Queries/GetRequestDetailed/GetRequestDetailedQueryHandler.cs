@@ -251,6 +251,16 @@ public sealed class GetRequestDetailedQueryHandler
                 });
             }
         }
+        else if (request.Status == (short)FormRequestStatus.Approved)
+        {
+            timeline.Add(new FormRequestWorkflowStepDto
+            {
+                Step = "Süreç Tamamlandı",
+                Status = "Approved",
+                Actor = "Sistem (Otomatik Onay)",
+                Date = request.CompletedAt ?? DateTime.UtcNow
+            });
+        }
 
         return new FormRequestDetailedDto
         {

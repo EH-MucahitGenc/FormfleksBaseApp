@@ -1,35 +1,17 @@
-﻿services:
+version: '3.8'
+
+services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: formfleksbaseapp-api:latest
-    container_name: formfleksbaseapp-api
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
+    image: mucahitgenc1/formfleks-api:v1.0.0
+    container_name: formfleks-api
     ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgres:
-    image: postgres:16
-    container_name: formfleksbaseapp-postgres
+      - "0808:8080"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: FormfleksBaseAppTest
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d FormfleksBaseAppTest"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
 
-volumes:
-  pgdata:
+  ui:
+    image: mucahitgenc1/formfleks-base-app-ui:v1.0.0
+    container_name: formfleks-ui
+    ports:
+      - "1608:80"

@@ -232,7 +232,19 @@ public class PdfGeneratorService : IPdfGeneratorService
                                                                 {
                                                                     if (valNode.GetValueKind() == JsonValueKind.True) val = "Evet";
                                                                     else if (valNode.GetValueKind() == JsonValueKind.False) val = "Hayır";
-                                                                    else val = valNode.ToString();
+                                                                    else 
+                                                                    {
+                                                                        string rawStr = valNode.ToString();
+                                                                        if (rawStr.Length >= 10 && rawStr.Length <= 30 && rawStr.Contains("T") && DateTime.TryParse(rawStr, out DateTime dt))
+                                                                        {
+                                                                            // DevExtreme usually sends UTC time, convert to local and print date
+                                                                            val = dt.ToLocalTime().ToString("dd.MM.yyyy");
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            val = rawStr;
+                                                                        }
+                                                                    }
                                                                 }
                                                                 
                                                                 innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(val).FontSize(8);

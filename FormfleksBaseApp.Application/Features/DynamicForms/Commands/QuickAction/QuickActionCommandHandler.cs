@@ -54,6 +54,9 @@ public sealed class QuickActionCommandHandler : IRequestHandler<QuickActionComma
 
         if (approval.Status != (short)ApprovalStatus.Pending)
         {
+            if (approval.Status == (short)ApprovalStatus.Cancelled)
+                throw new BusinessException("Bu form talep sahibi tarafından iptal edilmiştir.");
+
             string actionText = approval.Status switch
             {
                 (short)ApprovalStatus.Approved => "Onay",

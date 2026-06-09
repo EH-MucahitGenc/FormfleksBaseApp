@@ -1,4 +1,4 @@
-﻿# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -15,6 +15,9 @@ RUN dotnet publish FormfleksBaseApp.Api/FormfleksBaseApp.Api.csproj -c Release -
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
+
+# Install LDAP libraries required for Active Directory authentication on Linux
+RUN apt-get update && apt-get install -y libldap-2.5-0 && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Development

@@ -65,7 +65,15 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
 
         try
         {
-            conn.AuthType = AuthType.Negotiate;
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+            {
+                conn.AuthType = AuthType.Negotiate;
+            }
+            else
+            {
+                conn.AuthType = AuthType.Basic;
+            }
+            
             conn.Credential = new NetworkCredential(serviceUpn, _opt.ServicePassword);
             conn.Bind();
         }
@@ -133,15 +141,8 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
 
         try
         {
-            if (_opt.UseSsl)
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
             {
-                // LDAPS'te simple bind en net yöntemdir.
-                conn.AuthType = AuthType.Basic;
-                conn.Credential = new NetworkCredential(user.DistinguishedName, password);
-            }
-            else
-            {
-                // SSL kapalıyken sunucu basic bind'i reddedebilir; Negotiate tercih et.
                 var userName = NormalizeLoginName(userInput, user.UserPrincipalName, _opt);
                 conn.AuthType = AuthType.Negotiate;
 
@@ -155,7 +156,12 @@ public sealed class LdapActiveDirectoryAuthenticator : IActiveDirectoryAuthentic
                     conn.Credential = new NetworkCredential(userName, password);
                 }
             }
-
+            else
+            {
+                // On Linux, Negotiate requires complex Kerberos setup. We must use Basic Auth.
+                conn.AuthType = AuthType.Basic;
+                conn.Credential = new NetworkCredential(user.UserPrincipalName ?? user.DistinguishedName, password);
+            }
             conn.Bind();
         }
         catch (LdapException ex)

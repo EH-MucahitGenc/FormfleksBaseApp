@@ -4,6 +4,7 @@ import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, P
 
 import { systemAdminService, type FormTemplateUpsertDto } from '@/services/system-admin.service';
 import { PageHeader, FfButton, PageContainer, GlassCard, FfModal } from '@/components/ui/index';
+import { generateUUID } from '@/lib/uuid';
 
 // Form Builder Types (Local State overrides)
 interface FieldState {
@@ -161,10 +162,10 @@ export const FormDesigner: React.FC = () => {
       
       if (detailed.sections && detailed.sections.length > 0) {
         const mappedSections = detailed.sections.map((sec: any) => ({
-          id: sec.sectionId || crypto.randomUUID(),
+          id: sec.sectionId || generateUUID(),
           title: sec.title,
           fields: sec.fields?.map((f: any) => ({
-            id: f.fieldId || crypto.randomUUID(),
+            id: f.fieldId || generateUUID(),
             fieldKey: f.key || f.fieldKey,
             label: f.label,
             fieldType: f.fieldType,
@@ -175,7 +176,7 @@ export const FormDesigner: React.FC = () => {
         }));
         setSections(mappedSections);
       } else {
-        setSections([{ id: crypto.randomUUID(), title: 'Genel Bilgiler', fields: [] }]);
+        setSections([{ id: generateUUID(), title: 'Genel Bilgiler', fields: [] }]);
       }
       
       setActiveTab('preview');
@@ -192,7 +193,7 @@ export const FormDesigner: React.FC = () => {
     setIsActive(true);
     setAllowedCreateRoleCodes([]);
     setAllowedReportRoleCodes([]);
-    setSections([{ id: crypto.randomUUID(), title: 'Genel Bilgiler', fields: [] }]);
+    setSections([{ id: generateUUID(), title: 'Genel Bilgiler', fields: [] }]);
   };
 
   const loadPreset = () => {
@@ -203,25 +204,25 @@ export const FormDesigner: React.FC = () => {
     setAllowedReportRoleCodes(['HR', 'IK', 'Admin']);
     setSections([
       {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         title: 'Temel İzin Bilgileri',
         fields: [
-          { id: crypto.randomUUID(), fieldKey: 'leave_type', label: 'İzin Türü', fieldType: 4, isRequired: true, optionsJson: 'Yıllık İzin,Mazeret İzni,Hastalık İzni' },
-          { id: crypto.randomUUID(), fieldKey: 'start_date', label: 'Başlangıç Tarihi', fieldType: 5, isRequired: true }
+          { id: generateUUID(), fieldKey: 'leave_type', label: 'İzin Türü', fieldType: 4, isRequired: true, optionsJson: 'Yıllık İzin,Mazeret İzni,Hastalık İzni' },
+          { id: generateUUID(), fieldKey: 'start_date', label: 'Başlangıç Tarihi', fieldType: 5, isRequired: true }
         ]
       },
       {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         title: 'Ek Detaylar',
         fields: [
-          { id: crypto.randomUUID(), fieldKey: 'reason', label: 'Açıklama / Mazeret', fieldType: 2, isRequired: false, placeholder: 'Eklemek istedikleriniz...' }
+          { id: generateUUID(), fieldKey: 'reason', label: 'Açıklama / Mazeret', fieldType: 2, isRequired: false, placeholder: 'Eklemek istedikleriniz...' }
         ]
       }
     ]);
   };
 
   const addSection = () => {
-    setSections([...sections, { id: crypto.randomUUID(), title: `Yeni Bölüm ${sections.length + 1}`, fields: [] }]);
+    setSections([...sections, { id: generateUUID(), title: `Yeni Bölüm ${sections.length + 1}`, fields: [] }]);
   };
 
   const updateSectionTitle = (secId: string, val: string) => {
@@ -238,7 +239,7 @@ export const FormDesigner: React.FC = () => {
         return {
           ...s,
           fields: [...s.fields, { 
-            id: crypto.randomUUID(), 
+            id: generateUUID(), 
             fieldKey: `field_${Math.floor(Math.random() * 1000)}`, 
             label: `Yeni Alan`, 
             fieldType: 1, 

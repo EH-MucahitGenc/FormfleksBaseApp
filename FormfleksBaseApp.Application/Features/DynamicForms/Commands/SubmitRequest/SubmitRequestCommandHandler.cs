@@ -105,7 +105,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                     EntityId = req.Id,
                     ActionType = "FormSubmitted",
                     ActorUserId = req.RequestorUserId,
-                    DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {req.CurrentStepNo}}}",
+                    DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {(req.CurrentStepNo.HasValue ? req.CurrentStepNo.ToString() : "null")}}}",
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -130,7 +130,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             EntityId = req.Id,
             ActionType = "FormSubmitted",
             ActorUserId = req.RequestorUserId,
-            DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {req.CurrentStepNo}}}",
+            DetailJson = $"{{\"Status\": \"{req.Status}\", \"StepNo\": {(req.CurrentStepNo.HasValue ? req.CurrentStepNo.ToString() : "null")}}}",
             CreatedAt = DateTime.UtcNow
         });
 

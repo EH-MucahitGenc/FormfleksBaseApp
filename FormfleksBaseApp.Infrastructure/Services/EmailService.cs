@@ -74,11 +74,8 @@ public class EmailService : IEmailService
                   <td style="background-color:{{accentColor}};padding:16px 24px;">
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
                       <tr>
-                        <td valign="middle" style="width:120px;">
-                          <img src="{{baseUrl}}/{{logoFile}}" alt="{{logoAlt}}" style="max-height:24px;display:block;border-radius:4px;" />
-                        </td>
-                        <td valign="middle" style="padding-left:12px;">
-                          <span style="font-size:11px;font-weight:700;color:#ffffff;letter-spacing:0.5px;text-transform:uppercase;">KURUMSAL FORM VE ONAY PLATFORMU</span>
+                        <td valign="middle" style="padding-left:4px;">
+                          <span style="font-size:12px;font-weight:800;color:#ffffff;letter-spacing:0.5px;text-transform:uppercase;">ERKURT HOLDING - FORMFLEKS ONAY PLATFORMU</span>
                         </td>
                         <td align="right" valign="middle">
                           <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="right">
