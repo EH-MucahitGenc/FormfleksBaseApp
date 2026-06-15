@@ -40,6 +40,17 @@ public class PdfGeneratorService : IPdfGeneratorService
         // çekebilmek için uygulamanın kendi Query'sini çağırıyoruz.
         var dto = await _sender.Send(new GetRequestDetailedQuery(formRequestId, request.RequestorUserId), cancellationToken);
 
+        TimeZoneInfo turkeyZone;
+        try
+        {
+            turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        }
+        var nowTurkey = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, turkeyZone);
+
         if (dto == null)
             throw new Exception("Form request detailed could not be loaded.");
 
@@ -109,7 +120,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                         {
                             col.Item().Text(text => { text.Span("DOKÜMAN TİPİ: ").Bold(); text.Span("GENEL"); });
                             col.Item().Text(text => { text.Span("KAYIT NO: ").Bold(); text.Span(dto.RequestNo); });
-                            col.Item().Text(text => { text.Span("ÇIKTI TARİHİ: ").Bold(); text.Span(DateTime.Now.ToString("dd.MM.yyyy")); });
+                            col.Item().Text(text => { text.Span("ÇIKTI TARİHİ: ").Bold(); text.Span(nowTurkey.ToString("dd.MM.yyyy")); });
                         });
                     });
                 });
@@ -234,11 +245,15 @@ public class PdfGeneratorService : IPdfGeneratorService
                                                                     else if (valNode.GetValueKind() == JsonValueKind.False) val = "Hayır";
                                                                     else 
                                                                     {
-                                                                        string rawStr = valNode.ToString();
-                                                                        if (rawStr.Length >= 10 && rawStr.Length <= 30 && rawStr.Contains("T") && DateTime.TryParse(rawStr, out DateTime dt))
+                                                                        string rawStr = valNode.ToString().Trim('\"');
+                                                                        if (rawStr.Length >= 10 && rawStr.Length <= 35 && rawStr.Contains("T") && DateTimeOffset.TryParse(rawStr, out var dtoff))
                                                                         {
-                                                                            // DevExtreme usually sends UTC time, convert to local and print date
-                                                                            val = dt.ToLocalTime().ToString("dd.MM.yyyy");
+                                                                            if (!rawStr.EndsWith("Z") && !rawStr.Contains("+") && !rawStr.Contains("-"))
+                                                                            {
+                                                                                dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
+                                                                            }
+                                                                            var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
+                                                                            val = turkeyTime.ToString("dd.MM.yyyy");
                                                                         }
                                                                         else
                                                                         {
@@ -304,7 +319,15 @@ public class PdfGeneratorService : IPdfGeneratorService
                             foreach (var app in dto.Workflow)
                             {
                                 bool isFuture = app.Status == "Future";
-                                string dateStr = app.Date?.ToString("dd.MM.yyyy HH:mm") ?? "-";
+                                string dateStr = "-";
+                                if (app.Date.HasValue)
+                                {
+                                    DateTimeOffset dateOffset = app.Date.Value.Kind == DateTimeKind.Utc
+                                        ? new DateTimeOffset(app.Date.Value, TimeSpan.Zero)
+                                        : new DateTimeOffset(app.Date.Value, TimeZoneInfo.Local.GetUtcOffset(app.Date.Value));
+                                    var turkeyDate = TimeZoneInfo.ConvertTime(dateOffset, turkeyZone);
+                                    dateStr = turkeyDate.ToString("dd.MM.yyyy HH:mm");
+                                }
                                 string statusStr = getWorkflowStatusText(app.Status);
                                 string comment = string.IsNullOrWhiteSpace(app.Comment) ? "-" : $"\"{app.Comment}\"";
 
@@ -330,7 +353,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                         row.RelativeItem().Column(c => 
                         {
                             c.Item().Text("KVKK AYDINLATMA VE GİZLİLİK BEYANI").FontSize(8).Bold();
-                            c.Item().Text($"6698 Sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca, bu belgede yer alan veriler Erkurt Holding Aydınlatma Metni'ne uygun olarak, yalnızca Formfleks İş Akış Sistemi çerçevesinde ve belgenin tahsis amacına yönelik hukuki/operasyonel gereklilikler sebebiyle işlenmektedir. Bu belgede yer alan kişisel veriler, yetkisiz üçüncü şahıslarla paylaşılamaz, kopyalanamaz veya amacı dışında kullanılamaz. Elektronik onay takip sistemi (Formfleks) üzerinden {DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss")} tarihinde otomatik olarak üretilmiştir. Tüm dijital izler ve kimlik doğrulama logları 5651 sayılı kanun gereği sunucu veri tabanlarında kriptolanmış olarak tutulmaktadır.").FontSize(7);
+                            c.Item().Text($"6698 Sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca, bu belgede yer alan veriler Erkurt Holding Aydınlatma Metni'ne uygun olarak, yalnızca Formfleks İş Akış Sistemi çerçevesinde ve belgenin tahsis amacına yönelik hukuki/operasyonel gereklilikler sebebiyle işlenmektedir. Bu belgede yer alan kişisel veriler, yetkisiz üçüncü şahıslarla paylaşılamaz, kopyalanamaz veya amacı dışında kullanılamaz. Elektronik onay takip sistemi (Formfleks) üzerinden {nowTurkey.ToString("dd.MM.yyyy HH:mm:ss")} tarihinde otomatik olarak üretilmiştir. Tüm dijital izler ve kimlik doğrulama logları 5651 sayılı kanun gereği sunucu veri tabanlarında kriptolanmış olarak tutulmaktadır.").FontSize(7);
                             c.Item().PaddingTop(4).Text($"Belge Doğrulama Referansı: {formRequestId}").FontSize(6).FontColor(Colors.Grey.Medium);
                         });
                     });

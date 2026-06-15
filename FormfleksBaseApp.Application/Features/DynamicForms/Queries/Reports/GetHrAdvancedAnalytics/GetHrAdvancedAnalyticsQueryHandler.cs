@@ -23,7 +23,9 @@ public sealed class GetHrAdvancedAnalyticsQueryHandler : IRequestHandler<GetHrAd
     {
         var result = new HrAdvancedAnalyticsDto();
 
-        var query = _db.FormRequests.AsNoTracking();
+        var query = _db.FormRequests
+            .AsNoTracking()
+            .Where(r => r.Status != (short)FormfleksBaseApp.DynamicForms.Domain.Enums.FormRequestStatus.Draft);
 
         if (request.StartDate.HasValue)
             query = query.Where(r => r.CreatedAt >= request.StartDate.Value);

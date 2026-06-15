@@ -291,7 +291,6 @@ export const HrReportingDashboard = () => {
                   <Column dataField="totalForms" caption="Toplam" alignment="center" dataType="number" cssClass="font-bold"/>
                   <Column dataField="totalApproved" caption="✅ Onaylanan" alignment="center" dataType="number" cssClass="text-emerald-600 font-medium"/>
                   <Column dataField="totalRejected" caption="❌ Reddedilen" alignment="center" dataType="number" cssClass="text-red-500 font-medium"/>
-                  <Column dataField="totalDraft" caption="📝 Taslak" alignment="center" dataType="number" cssClass="text-slate-500 font-medium"/>
                   <Summary>
                     <TotalItem column="totalForms" summaryType="sum" displayFormat="Toplam: {0}"/>
                     <TotalItem column="totalApproved" summaryType="sum" displayFormat="✅ {0}"/>

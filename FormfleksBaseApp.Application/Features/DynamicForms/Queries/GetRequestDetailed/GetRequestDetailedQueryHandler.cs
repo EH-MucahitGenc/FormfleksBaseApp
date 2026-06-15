@@ -346,9 +346,9 @@ public sealed class GetRequestDetailedQueryHandler
                                 try 
                                 {
                                     var fallbackParts = f.OptionsJson.Split(',').Select(s => s.Trim()).ToList();
-                                    string searchVal = computedValue;
+                                    string? searchVal = computedValue;
                                     int? searchIdx = null;
-                                    if (decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
+                                    if (computedValue != null && decimal.TryParse(computedValue.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var decVal))
                                     {
                                         if (decVal % 1 == 0) 
                                         {
@@ -370,14 +370,32 @@ public sealed class GetRequestDetailedQueryHandler
                             }
                         }
                         
-                        if (!string.IsNullOrWhiteSpace(computedValue) && computedValue.Contains("T") && DateTime.TryParse(computedValue, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+                        string? cleanedValue = computedValue?.Trim('\"');
+                        if (!string.IsNullOrWhiteSpace(cleanedValue) && cleanedValue.Contains("T") && DateTimeOffset.TryParse(cleanedValue, out var dtoff))
                         {
+                            if (!cleanedValue.EndsWith("Z") && !cleanedValue.Contains("+") && !cleanedValue.Contains("-"))
+                            {
+                                // Gelen değerde saat dilimi yoksa (Z veya +03:00 gibi), yerel yerine UTC kabul et.
+                                dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
+                            }
+                            
+                            TimeZoneInfo turkeyZone;
+                            try
+                            {
+                                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+                            }
+                            catch (TimeZoneNotFoundException)
+                            {
+                                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+                            }
+                            
+                            var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
                             if (f.FieldType == 4 || f.FieldType == 5)
-                                computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy");
+                                computedValue = turkeyTime.ToString("dd.MM.yyyy");
                             else if (f.FieldType == 6)
-                                computedValue = dt.ToLocalTime().ToString("HH:mm");
+                                computedValue = turkeyTime.ToString("HH:mm");
                             else 
-                                computedValue = dt.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+                                computedValue = turkeyTime.ToString("dd.MM.yyyy HH:mm");
                         }
 
                     return new FormRequestValueDto

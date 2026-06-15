@@ -16,9 +16,21 @@ public class PersonnelSyncBackgroundJob : CronJobService
         IServiceProvider serviceProvider, 
         ILogger<PersonnelSyncBackgroundJob> logger) 
         // 0 2 * * * = Her gün gece 02:00'da çalıştır.
-        : base("0 2 * * *", TimeZoneInfo.Local, logger)
+        : base("0 2 * * *", GetTurkeyTimeZone(), logger)
     {
         _serviceProvider = serviceProvider;
+    }
+
+    private static TimeZoneInfo GetTurkeyTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        }
     }
 
     protected override async Task DoWork(CancellationToken cancellationToken)

@@ -36,7 +36,6 @@ export const HrPrintDocument = React.forwardRef<HTMLDivElement, Props>(
     const totalForms    = summaryData.reduce((s,c) => s + c.totalForms, 0);
     const totalApproved = summaryData.reduce((s,c) => s + c.totalApproved, 0);
     const totalRejected = summaryData.reduce((s,c) => s + c.totalRejected, 0);
-    const totalDraft    = summaryData.reduce((s,c) => s + c.totalDraft, 0);
     const approvalRate  = totalForms > 0 ? Math.round((totalApproved / totalForms) * 100) : 0;
     const uniquePersons = new Set(summaryData.map(d => d.requestorUserId)).size;
 
@@ -105,7 +104,6 @@ export const HrPrintDocument = React.forwardRef<HTMLDivElement, Props>(
               <KpiCard label="Aktif Personel"  value={uniquePersons}  bgColor={BLUE}      color="#fff" />
               <KpiCard label="✅ Onaylanan"    value={totalApproved}  bgColor="#D4EDDA"   color="#155724" />
               <KpiCard label="❌ Reddedilen"   value={totalRejected}  bgColor="#F8D7DA"   color="#721C24" />
-              <KpiCard label="📝 Taslak"       value={totalDraft}     bgColor="#E2E3E5"   color="#383D41" />
               <KpiCard label="📊 Onay Oranı"   value={`%${approvalRate}`} bgColor={approvalRate>=80?'#D4EDDA':approvalRate>=50?'#FFF3CD':'#F8D7DA'} color={approvalRate>=80?'#155724':approvalRate>=50?'#856404':'#721C24'} />
             </div>
           </div>
@@ -162,7 +160,7 @@ export const HrPrintDocument = React.forwardRef<HTMLDivElement, Props>(
             <table className="print-table" style={{ width:'100%', borderCollapse:'collapse', fontSize:8.5 }}>
               <thead>
                 <tr>
-                  {['#','Personel','Departman','Şube','Form Tipi','Toplam','✅ Onaylanan','❌ Reddedilen','📝 Taslak','📊 Onay Oranı'].map(h=>(
+                  {['#','Personel','Departman','Şube','Form Tipi','Toplam','✅ Onaylanan','❌ Reddedilen','📊 Onay Oranı'].map(h=>(
                     <th key={h} style={{ background:NAVY, color:'#fff', padding:'7px 6px', textAlign:'center', fontWeight:700, border:`1px solid ${BLUE}`, WebkitPrintColorAdjust:'exact', printColorAdjust:'exact' as any }}>{h}</th>
                   ))}
                 </tr>
@@ -181,7 +179,6 @@ export const HrPrintDocument = React.forwardRef<HTMLDivElement, Props>(
                       <td style={{ textAlign:'center', padding:'4px 5px', border:'1px solid #e2e8f0', fontWeight:700, fontSize:9 }}>{item.totalForms}</td>
                       <td style={{ textAlign:'center', padding:'4px 5px', border:'1px solid #e2e8f0', color:'#155724', background:'#D4EDDA', fontWeight:600, WebkitPrintColorAdjust:'exact', printColorAdjust:'exact' as any }}>{item.totalApproved}</td>
                       <td style={{ textAlign:'center', padding:'4px 5px', border:'1px solid #e2e8f0', color:'#721C24', background:'#F8D7DA', fontWeight:600, WebkitPrintColorAdjust:'exact', printColorAdjust:'exact' as any }}>{item.totalRejected}</td>
-                      <td style={{ textAlign:'center', padding:'4px 5px', border:'1px solid #e2e8f0', color:'#383D41', background:'#E2E3E5', WebkitPrintColorAdjust:'exact', printColorAdjust:'exact' as any }}>{item.totalDraft}</td>
                       <td style={{ textAlign:'center', padding:'4px 5px', border:'1px solid #e2e8f0', background:bg, color:fg, fontWeight:700, WebkitPrintColorAdjust:'exact', printColorAdjust:'exact' as any }}>%{rate}</td>
                     </tr>
                   );

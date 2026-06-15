@@ -229,7 +229,17 @@ public class EmailService : IEmailService
             var rejectUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=reject";
             var returnUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=return";
 
-            var expirationDateStr = DateTime.Now.AddDays(2).ToString("dd.MM.yyyy HH:mm");
+            TimeZoneInfo turkeyZone;
+            try
+            {
+                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+            }
+            var turkeyTime = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, turkeyZone);
+            var expirationDateStr = turkeyTime.AddDays(2).ToString("dd.MM.yyyy HH:mm");
 
             body += $"""
             <div style="margin-top:24px; margin-bottom:12px;">
@@ -467,7 +477,17 @@ public class EmailService : IEmailService
             var rejectUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=reject";
             var returnUrl = $"{GetBaseUrl()}/quick-action?token={token}&action=return";
 
-            var expirationDateStr = DateTime.Now.AddDays(2).ToString("dd.MM.yyyy HH:mm");
+            TimeZoneInfo turkeyZone;
+            try
+            {
+                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                turkeyZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+            }
+            var turkeyTime = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, turkeyZone);
+            var expirationDateStr = turkeyTime.AddDays(2).ToString("dd.MM.yyyy HH:mm");
 
             body += $"""
             <div style="margin-top:24px; margin-bottom:12px;">

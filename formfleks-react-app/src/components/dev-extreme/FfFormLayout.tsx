@@ -139,10 +139,33 @@ export const FfDateBoxRHF: React.FC<FfFieldProps> = ({ name, label, required, pl
       control={control}
       rules={{ required: required ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
-        // DateBox crashes randomly on strings if they aren't fully formatted or parsed securely
-        const dateValue = value && typeof value === 'string' 
-          ? (!isNaN(new Date(value).getTime()) ? new Date(value) : null) 
-          : (value instanceof Date && !isNaN(value.getTime()) ? value : null);
+        let parsedDate: Date | null = null;
+        if (value instanceof Date && !isNaN(value.getTime())) {
+            parsedDate = value;
+        } else if (typeof value === 'string') {
+            if (value.includes('.') && value.split('.')[0].length <= 2) {
+                const parts = value.split(' ');
+                const dateParts = parts[0].split('.');
+                if (dateParts.length === 3) {
+                    const year = parseInt(dateParts[2], 10);
+                    const month = parseInt(dateParts[1], 10) - 1;
+                    const day = parseInt(dateParts[0], 10);
+                    let hours = 0, minutes = 0;
+                    if (parts.length > 1) {
+                        const timeParts = parts[1].split(':');
+                        if (timeParts.length >= 2) {
+                            hours = parseInt(timeParts[0], 10);
+                            minutes = parseInt(timeParts[1], 10);
+                        }
+                    }
+                    parsedDate = new Date(year, month, day, hours, minutes);
+                }
+            } else {
+                const dt = new Date(value);
+                if (!isNaN(dt.getTime())) parsedDate = dt;
+            }
+        }
+        const dateValue = parsedDate;
 
         return (
           <FieldWrapper label={label} required={required} error={error?.message} className={className}>
@@ -183,9 +206,33 @@ export const FfDateTimeBoxRHF: React.FC<FfFieldProps> = ({ name, label, required
       control={control}
       rules={{ required: required ? "Bu alan zorunludur" : false }}
       render={({ field: { onChange, value, ...restField }, fieldState: { error } }) => {
-        const dateValue = value && typeof value === 'string' 
-          ? (!isNaN(new Date(value).getTime()) ? new Date(value) : null) 
-          : (value instanceof Date && !isNaN(value.getTime()) ? value : null);
+        let parsedDate: Date | null = null;
+        if (value instanceof Date && !isNaN(value.getTime())) {
+            parsedDate = value;
+        } else if (typeof value === 'string') {
+            if (value.includes('.') && value.split('.')[0].length <= 2) {
+                const parts = value.split(' ');
+                const dateParts = parts[0].split('.');
+                if (dateParts.length === 3) {
+                    const year = parseInt(dateParts[2], 10);
+                    const month = parseInt(dateParts[1], 10) - 1;
+                    const day = parseInt(dateParts[0], 10);
+                    let hours = 0, minutes = 0;
+                    if (parts.length > 1) {
+                        const timeParts = parts[1].split(':');
+                        if (timeParts.length >= 2) {
+                            hours = parseInt(timeParts[0], 10);
+                            minutes = parseInt(timeParts[1], 10);
+                        }
+                    }
+                    parsedDate = new Date(year, month, day, hours, minutes);
+                }
+            } else {
+                const dt = new Date(value);
+                if (!isNaN(dt.getTime())) parsedDate = dt;
+            }
+        }
+        const dateValue = parsedDate;
           
         return (
           <FieldWrapper label={label} required={required} error={error?.message} className={className}>

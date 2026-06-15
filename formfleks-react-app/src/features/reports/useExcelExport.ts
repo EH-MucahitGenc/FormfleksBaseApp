@@ -109,7 +109,6 @@ function buildSummarySheet(wb: ExcelJS.Workbook, data: HrSummaryReportDto[], fil
   const totalForms    = data.reduce((s,c) => s + c.totalForms, 0);
   const totalApproved = data.reduce((s,c) => s + c.totalApproved, 0);
   const totalRejected = data.reduce((s,c) => s + c.totalRejected, 0);
-  const totalDraft    = data.reduce((s,c) => s + c.totalDraft, 0);
   const approvalRate  = totalForms > 0 ? Math.round((totalApproved / totalForms) * 100) : 0;
   const uniquePersons = new Set(data.map(d => d.requestorUserId)).size;
 
@@ -163,7 +162,6 @@ function buildSummarySheet(wb: ExcelJS.Workbook, data: HrSummaryReportDto[], fil
     { label: '👥 Aktif Personel', value: uniquePersons, bg: '10855E', fg: BRAND.white },
     { label: '✅ Onaylanan', value: totalApproved, bg: BRAND.approved.bg, fg: BRAND.approved.fg },
     { label: '❌ Reddedilen', value: totalRejected, bg: BRAND.rejected.bg, fg: BRAND.rejected.fg },
-    { label: '📝 Taslak', value: totalDraft, bg: BRAND.draft.bg, fg: BRAND.draft.fg },
     { label: '📊 Onay Oranı', value: `%${approvalRate}`, bg: approvalRate>=80?BRAND.approved.bg:approvalRate>=50?'FFF3CD':BRAND.rejected.bg, fg: approvalRate>=80?BRAND.approved.fg:approvalRate>=50?'856404':BRAND.rejected.fg },
   ];
 
@@ -204,7 +202,6 @@ function buildPersonnelSheet(wb: ExcelJS.Workbook, data: HrSummaryReportDto[]) {
     { header: 'Toplam', key: 'total', width: 10 },
     { header: '✅ Onaylanan', key: 'appr', width: 13 },
     { header: '❌ Reddedilen', key: 'rej', width: 13 },
-    { header: '📝 Taslak', key: 'draft', width: 12 },
     { header: '📊 Onay Oranı', key: 'rate', width: 14 },
   ];
   colHeader(ws, 1, cols);
@@ -213,15 +210,15 @@ function buildPersonnelSheet(wb: ExcelJS.Workbook, data: HrSummaryReportDto[]) {
   data.forEach((item, i) => {
     const rate = item.totalForms > 0 ? Math.round((item.totalApproved / item.totalForms) * 100) : 0;
     const isZebra = i % 2 === 0;
-    dataRow(ws, rowIdx, [i+1, item.fullName, item.department, item.location, item.formTypeName, item.totalForms, item.totalApproved, item.totalRejected, item.totalDraft, ''], isZebra);
-    approvalRateCell(ws.getRow(rowIdx).getCell(10), rate);
+    dataRow(ws, rowIdx, [i+1, item.fullName, item.department, item.location, item.formTypeName, item.totalForms, item.totalApproved, item.totalRejected, ''], isZebra);
+    approvalRateCell(ws.getRow(rowIdx).getCell(9), rate);
     rowIdx++;
   });
 
   // Total row
-  const tot = { forms: data.reduce((s,c)=>s+c.totalForms,0), appr: data.reduce((s,c)=>s+c.totalApproved,0), rej: data.reduce((s,c)=>s+c.totalRejected,0), draft: data.reduce((s,c)=>s+c.totalDraft,0) };
+  const tot = { forms: data.reduce((s,c)=>s+c.totalForms,0), appr: data.reduce((s,c)=>s+c.totalApproved,0), rej: data.reduce((s,c)=>s+c.totalRejected,0) };
   const totalRate = tot.forms > 0 ? Math.round((tot.appr/tot.forms)*100) : 0;
-  totalRow(ws, rowIdx, ['', 'GENEL TOPLAM', '', '', '', tot.forms, tot.appr, tot.rej, tot.draft, `%${totalRate}`], 10);
+  totalRow(ws, rowIdx, ['', 'GENEL TOPLAM', '', '', '', tot.forms, tot.appr, tot.rej, `%${totalRate}`], 9);
 }
 
 function buildDepartmentSheet(wb: ExcelJS.Workbook, data: HrSummaryReportDto[]) {

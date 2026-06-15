@@ -22,7 +22,7 @@ public sealed class GetHrFormDetailsQueryHandler : IRequestHandler<GetHrFormDeta
     {
         var query = _db.FormRequests
             .AsNoTracking()
-            .Where(r => r.RequestorUserId == request.RequestorUserId && r.FormTypeId == request.FormTypeId);
+            .Where(r => r.RequestorUserId == request.RequestorUserId && r.FormTypeId == request.FormTypeId && r.Status != (short)FormfleksBaseApp.DynamicForms.Domain.Enums.FormRequestStatus.Draft);
 
         if (request.StartDate.HasValue)
         {

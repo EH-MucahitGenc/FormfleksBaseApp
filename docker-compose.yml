@@ -10,6 +10,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
 
   ui:
     image: mucahitgenc1/formfleks-base-app-ui:v1.0.0

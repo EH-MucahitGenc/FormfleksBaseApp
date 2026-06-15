@@ -22,7 +22,9 @@ public sealed class GetHrSummaryReportQueryHandler : IRequestHandler<GetHrSummar
 
     public async Task<List<HrSummaryReportDto>> Handle(GetHrSummaryReportQuery request, CancellationToken ct)
     {
-        var query = _db.FormRequests.AsNoTracking().AsQueryable();
+        var query = _db.FormRequests
+            .AsNoTracking()
+            .Where(r => r.Status != (short)FormRequestStatus.Draft);
 
         if (request.StartDate.HasValue)
         {
