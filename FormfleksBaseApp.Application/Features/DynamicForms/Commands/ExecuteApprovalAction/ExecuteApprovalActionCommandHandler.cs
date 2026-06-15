@@ -170,7 +170,11 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (nextStep is null)
             {
                 req.Approve((short)FormRequestStatus.Approved);
-                sendNotificationTask = (atts) => NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, atts, ct);
+                sendNotificationTask = async (atts) => 
+                {
+                    await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, atts, ct);
+                    await NotifyGlobalManagersCompletedAsync(req.Id, req.FormTypeId, req.RequestorUserId, req.RequestNo, atts, ct);
+                };
             }
             else
             {
@@ -237,7 +241,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
             var authorizedLocationUserIds = await _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && (x.IsGlobalManager || x.LocationName == reqLocation))
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.LocationName == reqLocation)
                 .Select(x => x.UserId)
                 .Distinct()
                 .ToListAsync(ct);
@@ -392,6 +396,63 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 referenceId: requestId,
                 cancellationToken: ct
             );
+        }
+    }
+
+    private async Task NotifyGlobalManagersCompletedAsync(Guid requestId, Guid formTypeId, Guid requestorUserId, string requestNo, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
+    {
+        var wfDef = await _db.WorkflowDefinitions.AsNoTracking().FirstOrDefaultAsync(w => w.FormTypeId == formTypeId && w.IsActive, ct);
+        if (wfDef == null) return;
+
+        var locationRoleIds = await _db.WorkflowSteps
+            .AsNoTracking()
+            .Where(s => s.WorkflowDefinitionId == wfDef.Id && s.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && s.TargetLocationRoleId.HasValue)
+            .Select(s => s.TargetLocationRoleId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (!locationRoleIds.Any()) return;
+
+        var globalManagerUserIds = await _db.UserLocationRoles
+            .AsNoTracking()
+            .Where(x => x.IsActive && x.IsGlobalManager && locationRoleIds.Contains(x.RoleId))
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (!globalManagerUserIds.Any()) return;
+
+        var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
+        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
+        string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+        
+        if (reqPers == null || string.IsNullOrWhiteSpace(reqPers.Email))
+        {
+            var baseReqUser = await _userRepository.GetByIdAsync(requestorUserId, ct, false);
+            if (baseReqUser != null && !string.IsNullOrWhiteSpace(baseReqUser.DisplayName))
+                reqName = baseReqUser.DisplayName;
+        }
+
+        foreach (var gmId in globalManagerUserIds)
+        {
+            if (gmId == requestorUserId) continue; // Requester already got an email
+
+            var gmPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == gmId && p.IsActive, ct);
+            string? targetEmail = gmPers?.Email;
+            string gmName = gmPers != null ? $"{gmPers.Adi} {gmPers.Soyadi}" : "Sayın Yönetici";
+
+            if (string.IsNullOrWhiteSpace(targetEmail))
+            {
+                var baseUser = await _userRepository.GetByIdAsync(gmId, ct, false);
+                targetEmail = baseUser?.Email;
+                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
+                    gmName = baseUser.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetEmail) && formType != null)
+            {
+                await _emailService.SendGlobalManagerInfoEmailAsync(targetEmail, gmName, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, ct);
+            }
         }
     }
 }

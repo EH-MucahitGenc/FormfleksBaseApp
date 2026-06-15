@@ -407,7 +407,54 @@ public class EmailService : IEmailService
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // 4. İPTAL EDİLDİ — Bekleyen Onaycıya (Gri Tema)
+    // 4. BİLGİLENDİRME — Global Yöneticilere (Mor Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendGlobalManagerInfoEmailAsync(
+        string toEmail, string assigneeName, string formRequestNo,
+        Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+
+        var bodyHtml = $"""
+            <p>
+              Bilgilendirme: <strong style="color:#7e22ce;">{requesterName}</strong> tarafından oluşturulan
+              <strong style="color:#7e22ce;">{formTypeName}</strong> formu tüm onay aşamalarını başarıyla tamamlamıştır.
+            </p>
+            <p style="margin-top:16px;">
+              Bu e-posta tamamen bilgilendirme amaçlıdır; herhangi bir işlem yapmanız gerekmemektedir.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#9333ea",
+            accentDark: "#6b21a8",
+            accentTextColor: "#ffffff",
+            accentLabel: "BİLGİLENDİRME",
+            statusIcon: "ℹ️",
+            recipientName: assigneeName,
+            subject: $"Bilgilendirme: Form Onaylandı ({formRequestNo})",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: requesterName,
+            actionUrl: actionUrl,
+            actionLabel: "Form Detaylarını İncele",
+            actionBgColor: "#9333ea",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"ℹ️ Bilgilendirme: {formTypeName} Onaylandı ({formRequestNo})",
+            HtmlBody = html,
+            Attachments = attachments ?? new List<EmailAttachment>()
+        }, cancellationToken);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 5. İPTAL EDİLDİ — Bekleyen Onaycıya (Gri Tema)
     // ══════════════════════════════════════════════════════════════════════════
     public async Task SendFormCancelledEmailAsync(
         string toEmail, string assigneeName, string formRequestNo,

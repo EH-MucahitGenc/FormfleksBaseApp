@@ -171,7 +171,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
             var authorizedLocationUserIds = await _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && (x.IsGlobalManager || x.LocationName == reqLocation))
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.LocationName == reqLocation)
                 .Select(x => x.UserId)
                 .Distinct()
                 .ToListAsync(ct);
