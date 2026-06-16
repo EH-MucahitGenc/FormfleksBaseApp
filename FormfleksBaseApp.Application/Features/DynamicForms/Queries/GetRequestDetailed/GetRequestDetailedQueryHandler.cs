@@ -139,7 +139,7 @@ public sealed class GetRequestDetailedQueryHandler
 
         string requestorName = "Bilinmeyen Kullanıcı";
         var reqActorObj = actors.FirstOrDefault(p => p.LinkedUserId == request.RequestorUserId);
-        if (reqActorObj != null)
+        if (reqActorObj != null && !string.IsNullOrWhiteSpace($"{reqActorObj.Adi} {reqActorObj.Soyadi}".Trim()))
         {
             requestorName = $"{reqActorObj.Adi} {reqActorObj.Soyadi}";
         }
@@ -196,7 +196,7 @@ public sealed class GetRequestDetailedQueryHandler
                 var targetUserId = app.ActionByUserId ?? app.AssigneeUserId;
                 var actorObj = targetUserId.HasValue ? actors.FirstOrDefault(p => p.LinkedUserId == targetUserId.Value) : null;
                 
-                if (actorObj != null)
+                if (actorObj != null && !string.IsNullOrWhiteSpace($"{actorObj.Adi} {actorObj.Soyadi}".Trim()))
                 {
                     actorName = $"{actorObj.Adi} {actorObj.Soyadi}";
                 }

@@ -14,10 +14,12 @@ namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.Get
 public sealed class GetHrSummaryReportQueryHandler : IRequestHandler<GetHrSummaryReportQuery, List<HrSummaryReportDto>>
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository _userRepository;
 
-    public GetHrSummaryReportQueryHandler(IDynamicFormsDbContext db)
+    public GetHrSummaryReportQueryHandler(IDynamicFormsDbContext db, FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository userRepository)
     {
         _db = db;
+        _userRepository = userRepository;
     }
 
     public async Task<List<HrSummaryReportDto>> Handle(GetHrSummaryReportQuery request, CancellationToken ct)
@@ -83,10 +85,22 @@ public sealed class GetHrSummaryReportQueryHandler : IRequestHandler<GetHrSummar
             var user = users.FirstOrDefault(u => u.LinkedUserId == item.RequestorUserId);
             var formType = formTypes.FirstOrDefault(f => f.Id == item.FormTypeId);
 
+            string fullName = "Bilinmeyen Kullanıcı";
+            if (user != null && !string.IsNullOrWhiteSpace($"{user.Adi} {user.Soyadi}".Trim()))
+            {
+                fullName = $"{user.Adi} {user.Soyadi}";
+            }
+            else
+            {
+                var baseUser = await _userRepository.GetByIdAsync(item.RequestorUserId, ct, false);
+                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
+                    fullName = baseUser.DisplayName;
+            }
+
             result.Add(new HrSummaryReportDto
             {
                 RequestorUserId = item.RequestorUserId,
-                FullName = user != null ? $"{user.Adi} {user.Soyadi}" : "Bilinmeyen Kullanıcı",
+                FullName = fullName,
                 Department = user?.Departman_Adi ?? "-",
                 Location = user?.Isyeri_Tanimi ?? "-",
                 FormTypeId = item.FormTypeId,

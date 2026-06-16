@@ -232,6 +232,15 @@ public class ApprovalReminderBackgroundJob : CronJobService
         var reqPers = await db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
 
         string reqName = reqPers != null ? $"{reqPers.Adi} {reqPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+        if (reqPers == null || string.IsNullOrWhiteSpace(reqName) || reqName.Trim() == "")
+        {
+            var reqBaseUser = await userRepository.GetByIdAsync(requestorUserId, ct, false);
+            if (reqBaseUser != null && !string.IsNullOrWhiteSpace(reqBaseUser.DisplayName))
+            {
+                reqName = reqBaseUser.DisplayName;
+            }
+        }
+        
         string formTypeName = formType?.Name ?? formTypeId.ToString();
 
         foreach (var target in targetList.DistinctBy(x => x.Email))

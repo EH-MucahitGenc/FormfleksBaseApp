@@ -44,7 +44,7 @@ public class GetUserDelegationsQueryHandler : IRequestHandler<GetUserDelegations
         {
             string finalName = "Bilinmeyen Kullanıcı";
             
-            if (personeller.TryGetValue(d.DelegateeUserId, out var name))
+            if (personeller.TryGetValue(d.DelegateeUserId, out var name) && !string.IsNullOrWhiteSpace(name.Trim()))
             {
                 finalName = name;
             }

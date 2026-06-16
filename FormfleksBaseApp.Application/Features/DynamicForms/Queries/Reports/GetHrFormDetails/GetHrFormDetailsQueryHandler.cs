@@ -12,10 +12,12 @@ namespace FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.Get
 public sealed class GetHrFormDetailsQueryHandler : IRequestHandler<GetHrFormDetailsQuery, List<HrFormDetailItemDto>>
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository _userRepository;
 
-    public GetHrFormDetailsQueryHandler(IDynamicFormsDbContext db)
+    public GetHrFormDetailsQueryHandler(IDynamicFormsDbContext db, FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository userRepository)
     {
         _db = db;
+        _userRepository = userRepository;
     }
 
     public async Task<List<HrFormDetailItemDto>> Handle(GetHrFormDetailsQuery request, CancellationToken ct)
@@ -55,7 +57,17 @@ public sealed class GetHrFormDetailsQueryHandler : IRequestHandler<GetHrFormDeta
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId, ct);
 
-        var fullName = userInfo != null ? $"{userInfo.Adi} {userInfo.Soyadi}" : "Bilinmeyen Kullanıcı";
+        var fullName = "Bilinmeyen Kullanıcı";
+        if (userInfo != null && !string.IsNullOrWhiteSpace($"{userInfo.Adi} {userInfo.Soyadi}".Trim()))
+        {
+            fullName = $"{userInfo.Adi} {userInfo.Soyadi}";
+        }
+        else
+        {
+            var baseUser = await _userRepository.GetByIdAsync(request.RequestorUserId, ct, false);
+            if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
+                fullName = baseUser.DisplayName;
+        }
 
         var formType = await _db.FormTypes
             .AsNoTracking()
