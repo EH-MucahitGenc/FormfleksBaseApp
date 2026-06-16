@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using FormfleksBaseApp.Application.Common.Exceptions;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
@@ -26,7 +27,9 @@ public class ApprovalEngineService : IApprovalEngineService
         Guid workflowDefinitionId, 
         int currentStepNo, 
         Guid requestorUserId, 
-        CancellationToken ct)
+        Guid formRequestId,
+        List<FormfleksBaseApp.DynamicForms.Business.Contracts.ManualWorkflowAssignmentDto>? manualAssignments = null,
+        CancellationToken ct = default)
     {
         var skippedSteps = new List<(WorkflowStepEntity Step, string Reason)>();
         int checkStepNo = currentStepNo;
@@ -44,6 +47,49 @@ public class ApprovalEngineService : IApprovalEngineService
             {
                 // No more steps -> Fully Approved
                 return (null, null, null, skippedSteps);
+            }
+
+            // 0) CHECK FOR MANUAL ASSIGNMENTS FIRST
+            bool hasManualAssignment = false;
+            Guid? manualUserId = null;
+
+            if (manualAssignments != null)
+            {
+                var ma = manualAssignments.FirstOrDefault(m => m.StepNo == nextStep.StepNo);
+                if (ma != null)
+                {
+                    hasManualAssignment = true;
+                    manualUserId = ma.AssigneeUserId;
+                }
+            }
+            else if (formRequestId != Guid.Empty)
+            {
+                var dbMa = await _db.FormRequestManualAssignments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.FormRequestId == formRequestId && m.StepNo == nextStep.StepNo, ct);
+                
+                if (dbMa != null)
+                {
+                    hasManualAssignment = true;
+                    manualUserId = dbMa.AssigneeUserId;
+                }
+            }
+
+            if (hasManualAssignment)
+            {
+                if (manualUserId.HasValue)
+                {
+                    // User manually selected someone
+                    var finalUserId = await ResolveDelegationAsync(manualUserId.Value, ct);
+                    return (nextStep, finalUserId, null, skippedSteps);
+                }
+                else
+                {
+                    // User explicitly chose to skip this step
+                    skippedSteps.Add((nextStep, "Kullanıcı tarafından manuel olarak atlanması seçildi."));
+                    checkStepNo = nextStep.StepNo;
+                    continue;
+                }
             }
 
             // 1) Is it a FIXED assignment?
@@ -86,9 +132,7 @@ public class ApprovalEngineService : IApprovalEngineService
                     var fallbackRes = await HandleFallbackActionAsync(nextStep);
                     if (fallbackRes.ShouldSkip)
                     {
-                        skippedSteps.Add((nextStep, "Talep sahibinin organizasyon kaydı bulunamadığı için adım otomatik atlandı."));
-                        checkStepNo = nextStep.StepNo;
-                        continue;
+                        throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Talep sahibinin organizasyon kaydı (QDMS Personel) bulunamadı.");
                     }
                     else
                     {
@@ -120,9 +164,7 @@ public class ApprovalEngineService : IApprovalEngineService
                 var finalFallback = await HandleFallbackActionAsync(nextStep);
                 if (finalFallback.ShouldSkip)
                 {
-                    skippedSteps.Add((nextStep, "Organizasyon yapısında geçerli bir yönetici/sorumlu bulunamadığı için adım otomatik atlandı."));
-                    checkStepNo = nextStep.StepNo;
-                    continue;
+                    throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Organizasyon yapısında geçerli bir yönetici/sorumlu bulunamadı.");
                 }
                 else
                 {

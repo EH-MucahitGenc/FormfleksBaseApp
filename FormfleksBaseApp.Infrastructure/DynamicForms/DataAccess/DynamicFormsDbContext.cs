@@ -21,6 +21,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestEntity> FormRequests => Set<FormRequestEntity>();
     public DbSet<FormRequestValueEntity> FormRequestValues => Set<FormRequestValueEntity>();
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
+    public DbSet<FormRequestManualAssignmentEntity> FormRequestManualAssignments => Set<FormRequestManualAssignmentEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications => Set<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity> SystemSettings => Set<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity>();
@@ -215,6 +216,17 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint");
             e.HasIndex(x => new { x.RequestId, x.StepNo });
             e.HasIndex(x => new { x.Status, x.AssigneeRoleId, x.AssigneeUserId });
+        });
+
+        modelBuilder.Entity<FormRequestManualAssignmentEntity>(e =>
+        {
+            e.ToTable("form_request_manual_assignments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.FormRequestId).HasColumnName("form_request_id").HasColumnType("uuid");
+            e.Property(x => x.StepNo).HasColumnName("step_no").HasColumnType("integer");
+            e.Property(x => x.AssigneeUserId).HasColumnName("assignee_user_id").HasColumnType("uuid");
+            e.HasIndex(x => new { x.FormRequestId, x.StepNo }).IsUnique();
         });
 
         modelBuilder.Entity<UserLocationRoleEntity>(e =>

@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FormfleksBaseApp.Application.Auth.Interfaces;
+using FormfleksBaseApp.Application.Common.Models;
 
 using Microsoft.Extensions.Logging;
 
@@ -62,6 +63,30 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             .FirstOrDefaultAsync(r => r.Id == dto.RequestId, ct)
             ?? throw new BusinessException("Kayıt bulunamadı.");
 
+        // PRE-VALIDATION: Check and save manual assignments if they exist
+        if (dto.ManualAssignments != null && dto.ManualAssignments.Any())
+        {
+            foreach (var ma in dto.ManualAssignments)
+            {
+                var existingMa = await _db.FormRequestManualAssignments.FirstOrDefaultAsync(x => x.FormRequestId == req.Id && x.StepNo == ma.StepNo, ct);
+                if (existingMa != null)
+                {
+                    existingMa.AssigneeUserId = ma.AssigneeUserId;
+                }
+                else
+                {
+                    _db.FormRequestManualAssignments.Add(new FormRequestManualAssignmentEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        FormRequestId = req.Id,
+                        StepNo = ma.StepNo,
+                        AssigneeUserId = ma.AssigneeUserId
+                    });
+                }
+            }
+            await _db.SaveChangesAsync(ct);
+        }
+
         if (req.Status != (short)FormRequestStatus.Draft && req.Status != (short)FormRequestStatus.ReturnedForRevision)
             throw new BusinessException("Sadece taslak (Draft) veya iade edilmiş (ReturnedForRevision) durumundaki formlar onaya gönderilebilir.");
 
@@ -77,7 +102,79 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         }
         else
         {
-            var (firstStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(wfDef.Id, 0, req.RequestorUserId, ct);
+            // --- FULL WORKFLOW SIMULATION FOR MANUAL ASSIGNMENTS ---
+            int simStepNo = 0;
+            while (true)
+            {
+                try
+                {
+                    var simResult = await _engine.ResolveNextValidStepAsync(
+                        wfDef.Id, 
+                        simStepNo, 
+                        req.RequestorUserId, 
+                        req.Id, 
+                        dto.ManualAssignments?.ToList(), 
+                        ct);
+                    
+                    if (simResult.Step == null) break;
+                    simStepNo = simResult.Step.StepNo;
+                }
+                catch (FormfleksBaseApp.Application.Common.Exceptions.WorkflowManualAssignmentRequiredException ex)
+                {
+                    // Send email to admins
+                    var workflowSettings = await _db.SystemSettings
+                        .Where(s => s.Id == "WorkflowRules")
+                        .Select(s => s.Value)
+                        .FirstOrDefaultAsync(ct);
+
+                    string toEmails = "";
+                    if (workflowSettings != null)
+                    {
+                        try
+                        {
+                            var settingsObj = System.Text.Json.JsonSerializer.Deserialize<WorkflowSettings>(workflowSettings);
+                            if (settingsObj != null && !string.IsNullOrWhiteSpace(settingsObj.WorkflowErrorNotificationEmails))
+                            {
+                                toEmails = settingsObj.WorkflowErrorNotificationEmails;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(toEmails))
+                    {
+                        string requesterInfo = "Bilinmiyor";
+                        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == req.RequestorUserId && p.IsActive, ct);
+                        if (reqPers != null) requesterInfo = $"{reqPers.Adi} {reqPers.Soyadi} ({reqPers.Sicil_No})";
+
+                        await _emailService.SendWorkflowFailureEmailAsync(
+                            toEmails, 
+                            $"Talep No: {req.RequestNo}, Talep Eden: {requesterInfo}", 
+                            $"{ex.StepNo}. {ex.StepName}", 
+                            ex.Reason, 
+                            ct);
+                    }
+
+                    // Throw BusinessException with a specific JSON payload so frontend can show the popup
+                    var errPayload = new
+                    {
+                        ErrorCode = "REQUIRES_MANUAL_ASSIGNMENT",
+                        StepNo = ex.StepNo,
+                        StepName = ex.StepName,
+                        Message = ex.Reason
+                    };
+                    throw new BusinessException(System.Text.Json.JsonSerializer.Serialize(errPayload));
+                }
+            }
+            // --- END SIMULATION ---
+
+            var (firstStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(
+                wfDef.Id, 
+                0, 
+                req.RequestorUserId, 
+                req.Id, 
+                dto.ManualAssignments?.ToList(), 
+                ct);
 
             // Kaydedilecek Atlanan Adımlar (Skipped Steps)
             foreach (var skip in skippedSteps)

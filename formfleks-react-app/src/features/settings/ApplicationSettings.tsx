@@ -381,6 +381,24 @@ const WorkflowForm = ({ data, mutation }: { data: WorkflowSettingsDto, mutation:
             <Controller name="pendingApprovalThresholdHours" control={control} rules={{ required: 'Zorunlu alan', min: 1 }} render={({ field, fieldState }) => <PremiumInput label="Onay Gecikme Eşiği (Saat)" type="number" helperText="Bir onayın 'gecikmiş' sayılması için beklemesi gereken saat (Örn: 24)." error={fieldState.error?.message} {...field} />} />
             
             <div className="pt-4 mt-2 border-t border-surface-muted">
+              <h4 className="text-sm font-bold text-brand-dark mb-4">Hata Bildirimleri</h4>
+              <Controller 
+                name="workflowErrorNotificationEmails" 
+                control={control} 
+                render={({ field, fieldState }) => (
+                  <PremiumInput 
+                    label="Onay Hataları Bildirim E-Postası" 
+                    type="text" 
+                    placeholder="ornek1@sirket.com, ornek2@sirket.com" 
+                    helperText="Formlarda akış hatası (hiyerarşik kopukluk vb.) oluştuğunda bildirilecek yetkili adresleri." 
+                    error={fieldState.error?.message} 
+                    {...field} 
+                  />
+                )} 
+              />
+            </div>
+            
+            <div className="pt-4 mt-2 border-t border-surface-muted">
               <h4 className="text-sm font-bold text-brand-dark mb-4">Taslak Form Yönetimi</h4>
               <div className="grid grid-cols-1 gap-6">
                 <Controller 

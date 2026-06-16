@@ -18,5 +18,7 @@ public interface IApprovalEngineService
         Guid workflowDefinitionId, 
         int currentStepNo, 
         Guid requestorUserId, 
-        CancellationToken ct);
+        Guid formRequestId,
+        List<FormfleksBaseApp.DynamicForms.Business.Contracts.ManualWorkflowAssignmentDto>? manualAssignments = null,
+        CancellationToken ct = default);
 }

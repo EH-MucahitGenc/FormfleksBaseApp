@@ -21,4 +21,9 @@ public class WorkflowSettings
     /// Taslak formların oluşturulduğu tarihten itibaren kaç gün sonra otomatik olarak silineceği (Örn: 7)
     /// </summary>
     public int DraftAutoDeleteThresholdDays { get; set; } = 7;
+
+    /// <summary>
+    /// Akışta yaşanan hatalar ve manuel atama zorunluluğunda bildirim gidecek e-posta adresleri (virgülle ayırarak)
+    /// </summary>
+    public string WorkflowErrorNotificationEmails { get; set; } = string.Empty;
 }

@@ -34,6 +34,7 @@ export interface WorkflowSettingsDto {
   pendingApprovalThresholdHours: number;
   draftReminderTime: string;
   draftAutoDeleteThresholdDays: number;
+  workflowErrorNotificationEmails: string;
 }
 
 export interface LdapSettingsDto {
@@ -171,7 +172,8 @@ class SettingsService {
         approvalReminderTime: data.ApprovalReminderTime || '10:00,15:00',
         pendingApprovalThresholdHours: data.PendingApprovalThresholdHours || 24,
         draftReminderTime: data.DraftReminderTime || '09:00',
-        draftAutoDeleteThresholdDays: data.DraftAutoDeleteThresholdDays || 7
+        draftAutoDeleteThresholdDays: data.DraftAutoDeleteThresholdDays || 7,
+        workflowErrorNotificationEmails: data.WorkflowErrorNotificationEmails || ''
       };
     }
     
@@ -179,7 +181,8 @@ class SettingsService {
       approvalReminderTime: '10:00,15:00',
       pendingApprovalThresholdHours: 24,
       draftReminderTime: '09:00',
-      draftAutoDeleteThresholdDays: 7
+      draftAutoDeleteThresholdDays: 7,
+      workflowErrorNotificationEmails: ''
     };
   }
 
@@ -188,7 +191,8 @@ class SettingsService {
       ApprovalReminderTime: data.approvalReminderTime,
       PendingApprovalThresholdHours: Number(data.pendingApprovalThresholdHours),
       DraftReminderTime: data.draftReminderTime,
-      DraftAutoDeleteThresholdDays: Number(data.draftAutoDeleteThresholdDays)
+      DraftAutoDeleteThresholdDays: Number(data.draftAutoDeleteThresholdDays),
+      WorkflowErrorNotificationEmails: data.workflowErrorNotificationEmails
     };
     return systemAdminService.updateSystemSetting('WorkflowRules', payload);
   }

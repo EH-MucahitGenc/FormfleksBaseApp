@@ -6,10 +6,12 @@ import { Send, ArrowLeft, Save, Trash2, Loader2, Check, AlertCircle } from 'luci
 
 import { notify } from '@/lib/notifications';
 import { formService } from '@/services/form.service';
+import { adminService } from '@/services/admin.service';
 import { useDeleteDraft } from '@/features/forms/hooks/useForms';
 
 import { PageHeader, FfButton } from '@/components/ui/index';
 import { FfConfirmDialog } from '@/components/ui/FfConfirmDialog';
+import { FfModal } from '@/components/ui/FfModal';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 import { 
@@ -41,6 +43,16 @@ export const DynamicFormViewer: React.FC = () => {
   // Auto-Save States
   const [autoSaveStatus, setAutoSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedTime, setLastSavedTime] = React.useState<Date | null>(null);
+
+  // Manual Assignment States
+  const [manualAssignments, setManualAssignments] = React.useState<any[]>([]);
+  const [manualAssignmentError, setManualAssignmentError] = React.useState<{stepNo: number, stepName: string, message: string} | null>(null);
+  const [selectedManagerId, setSelectedManagerId] = React.useState<string | null>(null);
+
+  const { data: adminUsers } = useQuery({
+    queryKey: ['admin-users-list'],
+    queryFn: () => adminService.getUsers(),
+  });
 
   const { data: template, isLoading, isError } = useQuery({
     queryKey: ['dynamic-form-schema', formCode],
@@ -107,11 +119,32 @@ export const DynamicFormViewer: React.FC = () => {
       // Formun son güncel değerlerini al ve payload olarak kullan
       const payload = methods.getValues();
       const res = await dynamicFormService.saveDraftFormData(template.id, payload, targetDraftId);
-      await dynamicFormService.submitDraft(res.requestId);
+      
+      // Use latest manualAssignments state by accessing the closure or a ref, but since we recreate useMutation on render, it should be fine.
+      // However, to be safe, we'll pass manualAssignments directly
+      return await dynamicFormService.submitDraft(res.requestId, manualAssignments);
     },
     onSuccess: () => {
       notify.success("Talebiniz başarıyla onay döngüsüne gönderildi!");
       navigate('/forms');
+    },
+    onError: (err: any) => {
+      if (err.response?.data?.detail) {
+        try {
+          const parsed = JSON.parse(err.response.data.detail);
+          if (parsed.ErrorCode === 'REQUIRES_MANUAL_ASSIGNMENT') {
+             setManualAssignmentError({
+                stepNo: parsed.StepNo,
+                stepName: parsed.StepName,
+                message: parsed.Message
+             });
+             return;
+          }
+        } catch {
+          // not json
+        }
+      }
+      notify.error("Gönderim sırasında bir hata oluştu: " + (err.response?.data?.detail || err.message));
     }
   });
 
@@ -180,6 +213,28 @@ export const DynamicFormViewer: React.FC = () => {
 
   const onSubmit = () => {
     onSendRequest();
+  };
+
+  const handleManualAssignmentSubmit = () => {
+    if (manualAssignmentError) {
+      const newAssignment = {
+        stepNo: manualAssignmentError.stepNo,
+        assigneeUserId: selectedManagerId || null
+      };
+      
+      // We must use functional state update and then trigger submit in useEffect or timeout to ensure the state is fresh
+      setManualAssignments(prev => {
+        const next = [...prev.filter(x => x.stepNo !== newAssignment.stepNo), newAssignment];
+        return next;
+      });
+      
+      setManualAssignmentError(null);
+      setSelectedManagerId(null);
+      
+      setTimeout(() => {
+        onSendRequest();
+      }, 50);
+    }
   };
 
   const onSendRequest = async () => {
@@ -477,6 +532,41 @@ export const DynamicFormViewer: React.FC = () => {
         variant="danger"
         isLoading={deleteDraftMutation.isPending}
       />
+
+      <FfModal
+        isOpen={!!manualAssignmentError}
+        onClose={() => setManualAssignmentError(null)}
+        title="Yönetici Ataması Gerekiyor"
+        size="md"
+      >
+        <div className="flex flex-col gap-4">
+           <div className="bg-amber-50 text-amber-800 p-4 rounded-md border border-amber-200 text-sm">
+             <div className="font-semibold mb-1">Onay adımı: {manualAssignmentError?.stepNo}. {manualAssignmentError?.stepName}</div>
+             <div>{manualAssignmentError?.message}</div>
+             <div className="mt-2 text-xs">Lütfen bu adımın gitmesini istediğiniz kişiyi listeden seçiniz. Boş bırakırsanız adım atlanacaktır.</div>
+           </div>
+           
+           <div className="flex flex-col gap-2">
+             <label className="text-sm font-medium text-surface-text">Yönetici / Onaycı Seçin</label>
+             <FfSelectBox
+                dataSource={adminUsers || []}
+                displayExpr="name"
+                valueExpr="id"
+                value={selectedManagerId}
+                onValueChanged={(e: any) => setSelectedManagerId(e.value)}
+                searchEnabled={true}
+                placeholder="Listeden bir kullanıcı seçiniz..."
+             />
+           </div>
+
+           <div className="flex justify-end gap-3 mt-4">
+             <FfButton variant="ghost" onClick={() => setManualAssignmentError(null)}>İptal</FfButton>
+             <FfButton variant="primary" onClick={handleManualAssignmentSubmit} leftIcon={<Check className="w-4 h-4" />}>
+               Devam Et
+             </FfButton>
+           </div>
+        </div>
+      </FfModal>
     </div>
   );
 };

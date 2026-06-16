@@ -93,9 +93,10 @@ class DynamicFormService {
     return data;
   }
 
-  async submitDraft(requestId: string): Promise<void> {
+  async submitDraft(requestId: string, manualAssignments?: any[]): Promise<void> {
     await apiClient.post(`/dynamic-forms/requests/submit`, {
-       requestId: requestId
+       requestId: requestId,
+       manualAssignments: manualAssignments
     });
   }
 

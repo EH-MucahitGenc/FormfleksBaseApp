@@ -145,15 +145,69 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.Approved;
 
-            // Sonraki adımı bul (Auto-skip özelliği ile hiyerarşiyi atlar)
-            var (nextStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(
-                wfDef.Id, 
-                req.CurrentStepNo ?? 0, 
-                req.RequestorUserId, 
-                ct);
+            (FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, System.Collections.Generic.List<(FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity Step, string Reason)> SkippedSteps) simResult;
+            try
+            {
+                // Sonraki adımı bul (Auto-skip özelliği ile hiyerarşiyi atlar)
+                simResult = await _engine.ResolveNextValidStepAsync(
+                    wfDef.Id, 
+                    req.CurrentStepNo ?? 0, 
+                    req.RequestorUserId, 
+                    req.Id, 
+                    reqDto.ManualAssignments?.ToList(),
+                    ct);
+            }
+            catch (FormfleksBaseApp.Application.Common.Exceptions.WorkflowManualAssignmentRequiredException ex)
+            {
+                // Send email to workflow admins
+                var workflowSettings = await _db.SystemSettings
+                    .Where(s => s.Id == "WorkflowRules")
+                    .Select(s => s.Value)
+                    .FirstOrDefaultAsync(ct);
+
+                string toEmails = "";
+                if (workflowSettings != null)
+                {
+                    try
+                    {
+                        var settingsObj = System.Text.Json.JsonSerializer.Deserialize<FormfleksBaseApp.Application.Common.Models.WorkflowSettings>(workflowSettings);
+                        if (settingsObj != null && !string.IsNullOrWhiteSpace(settingsObj.WorkflowErrorNotificationEmails))
+                        {
+                            toEmails = settingsObj.WorkflowErrorNotificationEmails;
+                        }
+                    }
+                    catch { }
+                }
+
+                // E-postayı gönder. Sadece akış hatası uyarısı:
+                if (!string.IsNullOrWhiteSpace(toEmails))
+                {
+                    try
+                    {
+                        string requesterInfo = "Bilinmiyor";
+                        var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == req.RequestorUserId && p.IsActive, ct);
+                        if (reqPers != null) requesterInfo = $"{reqPers.Adi} {reqPers.Soyadi} ({reqPers.Sicil_No})";
+
+                        await _emailService.SendWorkflowFailureEmailAsync(
+                            toEmails, 
+                            $"Talep No: {req.RequestNo}, Talep Eden: {requesterInfo}", 
+                            $"{ex.StepNo}. {ex.StepName}", 
+                            ex.Reason, 
+                            ct);
+                    }
+                    catch { }
+                }
+
+                throw new BusinessException(System.Text.Json.JsonSerializer.Serialize(new {
+                    ErrorCode = "REQUIRES_MANUAL_ASSIGNMENT",
+                    StepNo = ex.StepNo,
+                    StepName = ex.StepName,
+                    Reason = ex.Reason
+                }));
+            }
 
             // Kaydedilecek Atlanan Adımlar (Skipped Steps)
-            foreach (var skip in skippedSteps)
+            foreach (var skip in simResult.SkippedSteps)
             {
                 _db.FormRequestApprovals.Add(new FormRequestApprovalEntity
                 {
@@ -167,7 +221,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 });
             }
 
-            if (nextStep is null)
+            if (simResult.Step is null)
             {
                 req.Approve((short)FormRequestStatus.Approved);
                 sendNotificationTask = async (atts) => 
@@ -178,7 +232,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             }
             else
             {
-                req.CurrentStepNo = nextStep.StepNo;
+                req.CurrentStepNo = simResult.Step.StepNo;
 
                 var approvalId = Guid.NewGuid();
                 // Yeni adim icin approval kaydi
@@ -186,14 +240,14 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 {
                     Id = approvalId,
                     RequestId = req.Id,
-                    StepNo = nextStep.StepNo,
-                    WorkflowStepId = nextStep.Id,
+                    StepNo = simResult.Step.StepNo,
+                    WorkflowStepId = simResult.Step.Id,
                     Status = (short)ApprovalStatus.Pending,
-                    AssigneeRoleId = assignedRole,
-                    AssigneeUserId = assignedUser
+                    AssigneeRoleId = simResult.AssigneeRoleId,
+                    AssigneeUserId = simResult.AssigneeUserId
                 });
                 
-                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, nextStep.IsGlobalManagerInfoOnly, atts, ct);
+                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, simResult.AssigneeUserId, simResult.AssigneeRoleId, req.RequestorUserId, req.RequestNo, req.FormTypeId, simResult.Step.AssigneeType, simResult.Step.TargetLocationRoleId, simResult.Step.IsGlobalManagerInfoOnly, atts, ct);
             }
         }
 

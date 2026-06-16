@@ -718,6 +718,58 @@ public class EmailService : IEmailService
         await QueueEmailAsync(message, cancellationToken);
     }
 
+    public async Task SendWorkflowFailureEmailAsync(string toEmails, string formRequestDetails, string stepName, string failureReason, CancellationToken cancellationToken = default)
+    {
+        var subject = $"[Sistem Uyarısı] Onay Akışı Yönlendirme Hatası";
+
+        var bodyHtml = $@"
+            <p style='margin:0 0 16px 0;'>Merhaba,</p>
+            <p style='margin:0 0 16px 0;'>Bir form onay akışında adım otomatik olarak çözümlenemediği için kullanıcıya manuel seçim hakkı tanınmıştır.</p>
+            <div style='background-color:#fffbeb; border:1px solid #fde68a; padding:15px; border-radius:6px; color:#92400e; font-family:monospace; margin-bottom:16px;'>
+                <strong>Talep Detayları:</strong> {formRequestDetails}<br/><br/>
+                <strong>Hatalı Adım:</strong> {stepName}<br/>
+                <strong>Hata Sebebi:</strong> {failureReason}
+            </div>
+            <p style='margin:0 0 16px 0; font-size:13px; color:#6b7280;'>Lütfen İK sistemi (IFS) üzerindeki organizasyon şemasını veya akış kurgusunu kontrol ediniz.</p>
+        ";
+
+        var appSettings = await _systemSettingsService.GetSettingAsync<AppSettings>("AppSettings", new AppSettings { SiteUrl = "http://localhost:3000" }, cancellationToken);
+        var baseAppUrl = appSettings?.SiteUrl?.TrimEnd('/') ?? "http://localhost:3000";
+
+        var htmlContent = BuildEmail(
+            accentColor: "#f59e0b",       // Amber
+            accentDark: "#d97706",
+            accentTextColor: "#ffffff",
+            accentLabel: "AKIŞ HATASI",
+            statusIcon: "⚠️",
+            recipientName: "Sistem Yöneticisi",
+            subject: subject,
+            bodyHtml: bodyHtml,
+            formRequestNo: "BİLDİRİM",
+            formTypeName: "Akış Uyarısı",
+            requesterName: "Sistem",
+            actionUrl: baseAppUrl,
+            actionLabel: "Platforma Git",
+            actionBgColor: "#f59e0b",
+            baseUrl: baseAppUrl,
+            requesterCompany: "Erkurt",
+            actionTextColor: "#ffffff"
+        );
+
+        var toEmailList = toEmails.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(e => e.Trim())
+                                  .ToList();
+
+        var message = new EmailMessage
+        {
+            ToAddresses = toEmailList,
+            Subject = subject,
+            HtmlBody = htmlContent
+        };
+
+        await QueueEmailAsync(message, cancellationToken);
+    }
+
     public async Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         await _emailQueue.QueueEmailAsync(message, cancellationToken);

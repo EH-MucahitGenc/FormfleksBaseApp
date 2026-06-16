@@ -21,11 +21,18 @@ public sealed class SaveDraftRequestDto
     public IReadOnlyList<UpsertFormRequestItemDto> Values { get; set; } = [];
 }
 
+public sealed class ManualWorkflowAssignmentDto
+{
+    public int StepNo { get; set; }
+    public Guid? AssigneeUserId { get; set; }
+}
+
 public sealed class SubmitRequestDto
 {
     public Guid RequestId { get; set; }
     public Guid ActorUserId { get; set; }
     public long ConcurrencyToken { get; set; }
+    public IReadOnlyList<ManualWorkflowAssignmentDto>? ManualAssignments { get; set; }
 }
 
 public sealed class ApprovalActionRequestDto
@@ -36,6 +43,7 @@ public sealed class ApprovalActionRequestDto
     public long ApprovalConcurrencyToken { get; set; }
     public ApprovalActionType ActionType { get; set; }
     public string? Comment { get; set; }
+    public IReadOnlyList<ManualWorkflowAssignmentDto>? ManualAssignments { get; set; }
 }
 
 public sealed class FormRequestResultDto

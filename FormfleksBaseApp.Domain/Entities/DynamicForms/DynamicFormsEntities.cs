@@ -188,6 +188,17 @@ public sealed class FormRequestApprovalEntity
 
 
 /// <summary>
+/// Sistem tarafından otomatik bulunamayan adımlar için kullanıcının manuel olarak yaptığı atamaları tutan varlık.
+/// </summary>
+public sealed class FormRequestManualAssignmentEntity
+{
+    public Guid Id { get; set; }
+    public Guid FormRequestId { get; set; }
+    public int StepNo { get; set; }
+    public Guid? AssigneeUserId { get; set; } // Null ise kullanıcı bilerek boş bırakıp atlamayı seçmiştir
+}
+
+/// <summary>
 /// Sistem genelinde yapılan kritik işlemlerin (Kayıt, Güncelleme, Silme vb.) denetim izini (Audit) tutan varlık.
 /// </summary>
 public sealed class AuditLogEntity

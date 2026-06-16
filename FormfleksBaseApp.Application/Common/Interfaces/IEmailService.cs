@@ -18,5 +18,6 @@ public interface IEmailService
     Task SendDraftReminderEmailAsync(string toEmail, string requesterName, string formRequestNo, Guid formRequestId, string formTypeName, int waitingDays, CancellationToken cancellationToken = default);
     Task SendDraftDeletedEmailAsync(string toEmail, string requesterName, string formRequestNo, string formTypeName, int autoDeleteDays, CancellationToken cancellationToken = default);
     Task SendIntegrationErrorEmailAsync(string toEmails, string integrationName, string errorMessage, CancellationToken cancellationToken = default);
+    Task SendWorkflowFailureEmailAsync(string toEmails, string formRequestDetails, string stepName, string failureReason, CancellationToken cancellationToken = default);
     Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }
