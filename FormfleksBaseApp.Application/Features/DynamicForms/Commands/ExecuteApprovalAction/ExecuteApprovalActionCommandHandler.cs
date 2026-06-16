@@ -143,7 +143,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         else // Approve
         {
             if (approval is not null)
-                approval.Status = (short)ApprovalStatus.Approved;
+                approval.Status = (short)ApprovalStatus.Approved; //
 
             (FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, System.Collections.Generic.List<(FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity Step, string Reason)> SkippedSteps) simResult;
             try
