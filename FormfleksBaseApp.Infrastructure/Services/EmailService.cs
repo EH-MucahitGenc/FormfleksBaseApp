@@ -53,7 +53,7 @@ public class EmailService : IEmailService
             ? string.Concat(parts.Take(2).Select(p => p[0]))
             : recipientName[..1];
 
-        string accentLabelTitleCase = string.Join(" ", accentLabel.Split(' ').Select(w => w.Length > 0 ? char.ToUpper(w[0]) + w.Substring(1).ToLower() : ""));
+
 
         return $$"""
         <!DOCTYPE html>
@@ -94,7 +94,7 @@ public class EmailService : IEmailService
                 <!-- HERO -->
                 <tr>
                   <td style="background-color:#0f172a;padding:30px 20px;text-align:center;">
-                    <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">{{statusIcon}} {{accentLabelTitleCase}}</h1>
+                    <h1 style="margin:0 0 8px;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;text-transform:uppercase;">{{statusIcon}} {{accentLabel}}</h1>
                     <p style="margin:0;font-size:12px;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">{{platformLabel}} Kurumsal Form ve Onay Platformu</p>
                   </td>
                 </tr>
@@ -418,8 +418,8 @@ public class EmailService : IEmailService
 
         var bodyHtml = $"""
             <p>
-              Bilgilendirme: <strong style="color:#7e22ce;">{requesterName}</strong> tarafından oluşturulan
-              <strong style="color:#7e22ce;">{formTypeName}</strong> formu tüm onay aşamalarını başarıyla tamamlamıştır.
+              <strong style="color:#7e22ce;">{requesterName}</strong> tarafından oluşturulan
+              <strong style="color:#7e22ce;">{formTypeName}</strong> tüm onay aşamalarını başarıyla tamamlamıştır.
             </p>
             <p style="margin-top:16px;">
               Bu e-posta tamamen bilgilendirme amaçlıdır; herhangi bir işlem yapmanız gerekmemektedir.

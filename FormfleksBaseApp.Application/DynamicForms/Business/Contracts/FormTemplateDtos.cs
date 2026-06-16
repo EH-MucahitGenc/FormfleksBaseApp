@@ -50,6 +50,7 @@ public sealed class FormTemplateWorkflowStepUpsertDto
     public Guid? FallbackUserId { get; set; }
     public bool IsParallel { get; set; }
     public Guid? TargetLocationRoleId { get; set; }
+    public bool IsGlobalManagerInfoOnly { get; set; } = true;
 }
 
 public sealed class FormTemplateSummaryDto

@@ -127,7 +127,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 await _db.SaveChangesAsync(ct);
 
                 // Email Bildirimi (Background Queue'ya atılır)
-                await NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, ct);
+                await NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, firstStep.IsGlobalManagerInfoOnly, ct);
 
                 return new FormRequestResultDto
                 {
@@ -160,7 +160,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         };
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name, Guid UserId)>();
 
@@ -169,9 +169,16 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
 
-            var authorizedLocationUserIds = await _db.UserLocationRoles
+            IQueryable<UserLocationRoleEntity> query = _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.LocationName == reqLocation)
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value);
+
+            if (isGlobalManagerInfoOnly)
+                query = query.Where(x => x.LocationName == reqLocation);
+            else
+                query = query.Where(x => x.IsGlobalManager || x.LocationName == reqLocation);
+
+            var authorizedLocationUserIds = await query
                 .Select(x => x.UserId)
                 .Distinct()
                 .ToListAsync(ct);

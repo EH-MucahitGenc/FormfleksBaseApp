@@ -193,7 +193,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeUserId = assignedUser
                 });
                 
-                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, atts, ct);
+                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, nextStep.AssigneeType, nextStep.TargetLocationRoleId, nextStep.IsGlobalManagerInfoOnly, atts, ct);
             }
         }
 
@@ -230,7 +230,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return attachments;
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name, Guid UserId)>();
 
@@ -239,9 +239,16 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
 
-            var authorizedLocationUserIds = await _db.UserLocationRoles
+            IQueryable<UserLocationRoleEntity> query = _db.UserLocationRoles
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.LocationName == reqLocation)
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value);
+
+            if (isGlobalManagerInfoOnly)
+                query = query.Where(x => x.LocationName == reqLocation);
+            else
+                query = query.Where(x => x.IsGlobalManager || x.LocationName == reqLocation);
+
+            var authorizedLocationUserIds = await query
                 .Select(x => x.UserId)
                 .Distinct()
                 .ToListAsync(ct);
@@ -406,7 +413,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         var locationRoleIds = await _db.WorkflowSteps
             .AsNoTracking()
-            .Where(s => s.WorkflowDefinitionId == wfDef.Id && s.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && s.TargetLocationRoleId.HasValue)
+            .Where(s => s.WorkflowDefinitionId == wfDef.Id && s.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && s.TargetLocationRoleId.HasValue && s.IsGlobalManagerInfoOnly)
             .Select(s => s.TargetLocationRoleId!.Value)
             .Distinct()
             .ToListAsync(ct);

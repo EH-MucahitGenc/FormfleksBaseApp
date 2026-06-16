@@ -65,7 +65,8 @@ public sealed class UpsertTemplateWorkflowCommandHandler : IRequestHandler<Upser
                 FallbackAction = sDto.FallbackAction,
                 FallbackUserId = sDto.FallbackUserId,
                 IsParallel = sDto.IsParallel,
-                TargetLocationRoleId = sDto.TargetLocationRoleId
+                TargetLocationRoleId = sDto.TargetLocationRoleId,
+                IsGlobalManagerInfoOnly = sDto.IsGlobalManagerInfoOnly
             });
             stepNo++;
         }

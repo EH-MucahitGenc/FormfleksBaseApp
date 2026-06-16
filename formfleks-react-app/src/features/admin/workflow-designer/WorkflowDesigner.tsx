@@ -346,16 +346,26 @@ export const WorkflowDesigner: React.FC = () => {
                                                 <div className="px-3 py-2 text-sm text-brand-accent bg-brand-accent/5 border border-brand-accent/20 rounded-lg whitespace-nowrap overflow-hidden text-ellipsis italic font-medium">Bu rol HR ağacından çalışma anında (runtime) bulunur.</div>
                                             )}
                                             {step.assigneeType === 15 && (
-                                                <div className="bg-surface-base rounded-lg border border-brand-primary/20">
-                                                    <FfSelectBox 
-                                                        value={step.targetLocationRoleId || ''} 
-                                                        onValueChanged={e => handleUpdateStep(sIdx, { targetLocationRoleId: e.value })} 
-                                                        dataSource={roles}
-                                                        valueExpr="id"
-                                                        displayExpr={(item: any) => item ? `${item.name} (${item.code})` : ''}
-                                                        placeholder="Rol Ara & Seçiniz..."
-                                                        searchEnabled={true}
-                                                    />
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="bg-surface-base rounded-lg border border-brand-primary/20">
+                                                        <FfSelectBox 
+                                                            value={step.targetLocationRoleId || ''} 
+                                                            onValueChanged={e => handleUpdateStep(sIdx, { targetLocationRoleId: e.value })} 
+                                                            dataSource={roles}
+                                                            valueExpr="id"
+                                                            displayExpr={(item: any) => item ? `${item.name} (${item.code})` : ''}
+                                                            placeholder="Rol Ara & Seçiniz..."
+                                                            searchEnabled={true}
+                                                        />
+                                                    </div>
+                                                    <label className="flex items-start gap-2 cursor-pointer group mt-1">
+                                                        <div className="relative pt-0.5">
+                                                            <input type="checkbox" className="sr-only" checked={step.isGlobalManagerInfoOnly !== false} onChange={e => handleUpdateStep(sIdx, { isGlobalManagerInfoOnly: e.target.checked })} />
+                                                            <div className={`block w-8 h-4.5 rounded-full transition-colors ${step.isGlobalManagerInfoOnly !== false ? 'bg-status-info' : 'bg-surface-muted'}`}></div>
+                                                            <div className={`absolute left-0.5 top-1 bg-surface-base w-3.5 h-3.5 rounded-full transition-transform transform ${step.isGlobalManagerInfoOnly !== false ? 'translate-x-3.5' : ''}`}></div>
+                                                        </div>
+                                                        <span className="text-[11px] font-bold text-brand-dark group-hover:text-status-info">Global Yöneticilere Sadece Bilgilendirme (Aktif Onaycı Yapma)</span>
+                                                    </label>
                                                 </div>
                                             )}
                                             {step.assigneeType === 3 && (

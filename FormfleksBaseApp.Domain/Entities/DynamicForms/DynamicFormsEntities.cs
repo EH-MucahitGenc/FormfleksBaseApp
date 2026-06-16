@@ -109,6 +109,7 @@ public sealed class WorkflowStepEntity
     
     // Enterprise Organizational Roles Additions
     public Guid? TargetLocationRoleId { get; set; }
+    public bool IsGlobalManagerInfoOnly { get; set; } = true;
 }
 
 /// <summary>

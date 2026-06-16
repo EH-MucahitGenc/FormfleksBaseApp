@@ -45,7 +45,8 @@ public sealed class GetTemplateWorkflowQueryHandler : IRequestHandler<GetTemplat
             FallbackAction = s.FallbackAction,
             FallbackUserId = s.FallbackUserId,
             IsParallel = s.IsParallel,
-            TargetLocationRoleId = s.TargetLocationRoleId
+            TargetLocationRoleId = s.TargetLocationRoleId,
+            IsGlobalManagerInfoOnly = s.IsGlobalManagerInfoOnly
         }).ToList();
     }
 }
