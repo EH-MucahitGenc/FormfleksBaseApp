@@ -15,5 +15,8 @@ public interface IEmailService
     Task SendFormCancelledEmailAsync(string toEmail, string assigneeName, string formRequestNo, Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null, CancellationToken cancellationToken = default);
     Task SendApprovalReminderEmailAsync(string toEmail, string assigneeName, string formRequestNo, Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, string? token = null, CancellationToken cancellationToken = default);
     Task SendGlobalManagerInfoEmailAsync(string toEmail, string assigneeName, string formRequestNo, Guid formRequestId, string formTypeName, string requesterName, string requesterCompany, List<EmailAttachment>? attachments = null, CancellationToken cancellationToken = default);
+    Task SendDraftReminderEmailAsync(string toEmail, string requesterName, string formRequestNo, Guid formRequestId, string formTypeName, int waitingDays, CancellationToken cancellationToken = default);
+    Task SendDraftDeletedEmailAsync(string toEmail, string requesterName, string formRequestNo, string formTypeName, int autoDeleteDays, CancellationToken cancellationToken = default);
+    Task SendIntegrationErrorEmailAsync(string toEmails, string integrationName, string errorMessage, CancellationToken cancellationToken = default);
     Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }

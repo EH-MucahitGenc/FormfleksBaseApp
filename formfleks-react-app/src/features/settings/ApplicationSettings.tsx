@@ -9,7 +9,7 @@ import { Save, Server, Mail, ShieldAlert, CheckCircle, RefreshCcw, Key, GitMerge
 
 export const ApplicationSettings: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'app' | 'email' | 'jwt' | 'workflow'>('app');
+  const [activeTab, setActiveTab] = useState<'app' | 'email' | 'jwt' | 'workflow' | 'integration'>('app');
   const [testEmailStatus, setTestEmailStatus] = useState<{ loading: boolean; success?: boolean; error?: string }>({ loading: false });
 
   // -- QUERIES --
@@ -18,31 +18,37 @@ export const ApplicationSettings: React.FC = () => {
   const { data: jwtData, isLoading: jwtLoading } = useQuery({ queryKey: ['jwt-settings'], queryFn: () => settingsService.getJwtSettings() });
   const { data: ldapData, isLoading: ldapLoading } = useQuery({ queryKey: ['ldap-settings'], queryFn: () => settingsService.getLdapSettings() });
   const { data: workflowData, isLoading: workflowLoading } = useQuery({ queryKey: ['workflow-settings'], queryFn: () => settingsService.getWorkflowSettings() });
+  const { data: integrationData, isLoading: integrationLoading } = useQuery({ queryKey: ['integration-settings'], queryFn: () => settingsService.getIntegrationSettings() });
 
   // -- MUTATIONS --
   const appMutation = useMutation({
-    mutationFn: (data: AppSettingsDto) => settingsService.updateAppSettings(data),
+    mutationFn: (data: any) => settingsService.updateAppSettings(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['app-settings'] }); toast.success('Genel ayarlar kaydedildi.'); },
   });
 
   const emailMutation = useMutation({
-    mutationFn: (data: EmailSettingsDto) => settingsService.updateEmailSettings(data),
+    mutationFn: (data: any) => settingsService.updateEmailSettings(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['email-settings'] }); toast.success('E-posta ayarları kaydedildi.'); },
   });
 
   const jwtMutation = useMutation({
-    mutationFn: (data: JwtSettingsDto) => settingsService.updateJwtSettings(data),
+    mutationFn: (data: any) => settingsService.updateJwtSettings(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['jwt-settings'] }); toast.success('JWT ayarları kaydedildi.'); },
   });
 
   const ldapMutation = useMutation({
-    mutationFn: (data: LdapSettingsDto) => settingsService.updateLdapSettings(data),
+    mutationFn: (data: any) => settingsService.updateLdapSettings(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ldap-settings'] }); toast.success('Active Directory ayarları kaydedildi.'); },
   });
 
   const workflowMutation = useMutation({
-    mutationFn: (data: WorkflowSettingsDto) => settingsService.updateWorkflowSettings(data),
+    mutationFn: (data: any) => settingsService.updateWorkflowSettings(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['workflow-settings'] }); toast.success('İş akışı kuralları kaydedildi.'); },
+  });
+
+  const integrationMutation = useMutation({
+    mutationFn: (data: any) => settingsService.updateIntegrationSettings(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['integration-settings'] }); toast.success('Entegrasyon ayarları kaydedildi.'); },
   });
 
   const handleTestEmail = async (email: string) => {
@@ -56,7 +62,7 @@ export const ApplicationSettings: React.FC = () => {
     }
   };
 
-  if (appLoading || emailLoading || jwtLoading || workflowLoading || ldapLoading) {
+  if (appLoading || emailLoading || jwtLoading || workflowLoading || ldapLoading || integrationLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
@@ -116,6 +122,15 @@ export const ApplicationSettings: React.FC = () => {
               <GitMerge className={`h-5 w-5 ${activeTab === 'workflow' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
               İş Akışı Kuralları
             </button>
+            <button
+              onClick={() => setActiveTab('integration')}
+              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
+                activeTab === 'integration' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
+              }`}
+            >
+              <Server className={`h-5 w-5 ${activeTab === 'integration' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
+              Entegrasyonlar
+            </button>
           </div>
         </div>
 
@@ -130,6 +145,7 @@ export const ApplicationSettings: React.FC = () => {
             </div>
           )}
           {activeTab === 'workflow' && workflowData && <WorkflowForm data={workflowData} mutation={workflowMutation} />}
+          {activeTab === 'integration' && integrationData && <IntegrationForm data={integrationData} mutation={integrationMutation} />}
         </div>
       </div>
     </PageContainer>
@@ -139,6 +155,55 @@ export const ApplicationSettings: React.FC = () => {
 // ==========================================
 // SUB FORMS
 // ==========================================
+
+const IntegrationForm = ({ data, mutation }: { data: any, mutation: any }) => {
+  const { control, handleSubmit } = useForm<any>({ defaultValues: data });
+
+  return (
+    <GlassCard noPadding className="overflow-hidden">
+      <div className="p-6 md:p-8 space-y-6">
+        <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Dış Sistem Entegrasyonları</h3>
+        {mutation.isSuccess && <div className="p-3 bg-status-success/10 text-status-success border border-status-success/20 rounded-lg flex items-center gap-2 text-sm font-medium"><CheckCircle className="h-4 w-4" /> Ayarlar başarıyla kaydedildi.</div>}
+
+        <form id="integration-settings-form" onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Controller 
+              name="personnelSyncTime" 
+              control={control} 
+              rules={{ required: 'Zorunlu alan', pattern: { value: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, message: 'Geçerli bir saat giriniz (Örn: 02:00)' } }} 
+              render={({ field, fieldState }) => (
+                <PremiumInput 
+                  label="Personel Senkronizasyon Saati" 
+                  type="time" 
+                  helperText="Sistemin her gün Oracle'dan personelleri çekeceği tam saat (Türkiye Saati)." 
+                  error={fieldState.error?.message} 
+                  {...field} 
+                />
+              )} 
+            />
+            <Controller 
+              name="personnelSyncErrorEmail" 
+              control={control} 
+              render={({ field, fieldState }) => (
+                <PremiumInput 
+                  label="Hata Bildirim E-Postası" 
+                  type="text" 
+                  placeholder="bt@sirket.com, destek@sirket.com" 
+                  helperText="Oracle bağlantısında bir kopukluk olursa haber verilecek yetkililer (virgülle ayrılabilir)." 
+                  error={fieldState.error?.message} 
+                  {...field} 
+                />
+              )} 
+            />
+          </div>
+        </form>
+      </div>
+      <div className="px-6 py-4 bg-surface-muted/30 border-t border-surface-muted flex justify-end">
+        <FfButton form="integration-settings-form" type="submit" variant="primary" leftIcon={<Save className="h-4 w-4" />} isLoading={mutation.isPending}>Kaydet</FfButton>
+      </div>
+    </GlassCard>
+  );
+};
 
 const AppForm = ({ data, mutation }: { data: AppSettingsDto, mutation: any }) => {
   const { control, handleSubmit } = useForm<AppSettingsDto>({ defaultValues: data });
@@ -307,8 +372,26 @@ const WorkflowForm = ({ data, mutation }: { data: WorkflowSettingsDto, mutation:
 
         <form id="workflow-settings-form" onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-6">
           <div className="grid grid-cols-1 gap-6">
-            <Controller name="reminderCheckIntervalHours" control={control} rules={{ required: 'Zorunlu alan', min: 1 }} render={({ field, fieldState }) => <PremiumInput label="Hatırlatıcı Kontrol Döngüsü (Saat)" type="number" helperText="Arka plan servisinin geciken onayları tarama sıklığı (Örn: 12)." error={fieldState.error?.message} {...field} />} />
-            <Controller name="pendingApprovalThresholdHours" control={control} rules={{ required: 'Zorunlu alan', min: 1 }} render={({ field, fieldState }) => <PremiumInput label="Gecikme Eşiği (Saat)" type="number" helperText="Bir onayın 'gecikmiş' sayılması için beklemesi gereken saat (Örn: 24)." error={fieldState.error?.message} {...field} />} />
+            <Controller 
+              name="approvalReminderTime" 
+              control={control} 
+              rules={{ required: 'Zorunlu alan', pattern: { value: /^([01]?[0-9]|2[0-3]):[0-5][0-9](,\s*([01]?[0-9]|2[0-3]):[0-5][0-9])*$/, message: 'Geçerli saatler giriniz (Örn: 10:00 veya 10:00,15:00)' } }} 
+              render={({ field, fieldState }) => <PremiumInput label="Onay Hatırlatma Saatleri" placeholder="10:00,15:00" helperText="Sistemin gecikmiş onayları tarayıp hatırlatma atacağı saatler (Virgülle ayırabilirsiniz)." error={fieldState.error?.message} {...field} />} 
+            />
+            <Controller name="pendingApprovalThresholdHours" control={control} rules={{ required: 'Zorunlu alan', min: 1 }} render={({ field, fieldState }) => <PremiumInput label="Onay Gecikme Eşiği (Saat)" type="number" helperText="Bir onayın 'gecikmiş' sayılması için beklemesi gereken saat (Örn: 24)." error={fieldState.error?.message} {...field} />} />
+            
+            <div className="pt-4 mt-2 border-t border-surface-muted">
+              <h4 className="text-sm font-bold text-brand-dark mb-4">Taslak Form Yönetimi</h4>
+              <div className="grid grid-cols-1 gap-6">
+                <Controller 
+                  name="draftReminderTime" 
+                  control={control} 
+                  rules={{ required: 'Zorunlu alan', pattern: { value: /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, message: 'Geçerli bir saat giriniz (Örn: 09:00)' } }} 
+                  render={({ field, fieldState }) => <PremiumInput label="Taslak Hatırlatma Saati" type="time" helperText="Sistemin her gün taslak formları kontrol edeceği tam saat." error={fieldState.error?.message} {...field} />} 
+                />
+                <Controller name="draftAutoDeleteThresholdDays" control={control} rules={{ required: 'Zorunlu alan', min: 1 }} render={({ field, fieldState }) => <PremiumInput label="Taslak Otomatik Temizleme Süresi (Gün)" type="number" helperText="Taslak formların oluşturulduğu tarihten itibaren kaç gün sonra otomatik olarak silineceği (Örn: 7)." error={fieldState.error?.message} {...field} />} />
+              </div>
+            </div>
           </div>
         </form>
       </div>

@@ -15,10 +15,27 @@ public class PersonnelSyncBackgroundJob : CronJobService
     public PersonnelSyncBackgroundJob(
         IServiceProvider serviceProvider, 
         ILogger<PersonnelSyncBackgroundJob> logger) 
-        // 0 2 * * * = Her gün gece 02:00'da çalıştır.
         : base("0 2 * * *", GetTurkeyTimeZone(), logger)
     {
         _serviceProvider = serviceProvider;
+    }
+
+    protected override async Task<string> GetCronExpressionAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var settingsService = scope.ServiceProvider.GetRequiredService<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService>();
+        var settings = await settingsService.GetSettingAsync<FormfleksBaseApp.Application.Common.Models.IntegrationSettings>("IntegrationSettings", new FormfleksBaseApp.Application.Common.Models.IntegrationSettings(), cancellationToken);
+        
+        if (settings != null && !string.IsNullOrWhiteSpace(settings.PersonnelSyncTime) && settings.PersonnelSyncTime.Contains(":"))
+        {
+            var parts = settings.PersonnelSyncTime.Split(':');
+            if (parts.Length == 2 && int.TryParse(parts[0], out int hour) && int.TryParse(parts[1], out int minute))
+            {
+                return $"{minute} {hour} * * *";
+            }
+        }
+        
+        return "0 2 * * *";
     }
 
     private static TimeZoneInfo GetTurkeyTimeZone()

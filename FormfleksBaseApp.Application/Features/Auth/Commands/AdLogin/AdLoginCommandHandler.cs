@@ -22,13 +22,15 @@ public sealed class AdLoginCommandHandler : IRequestHandler<AdLoginCommand, Auth
     private readonly IActiveDirectoryAuthenticator _ad;
     private readonly IAuthTokenIssuer _issuer;
     private readonly IDynamicFormsDbContext _db;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService _systemSettingsService;
 
-    public AdLoginCommandHandler(IUserRepository users, IActiveDirectoryAuthenticator ad, IAuthTokenIssuer issuer, IDynamicFormsDbContext db)
+    public AdLoginCommandHandler(IUserRepository users, IActiveDirectoryAuthenticator ad, IAuthTokenIssuer issuer, IDynamicFormsDbContext db, FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService systemSettingsService)
     {
         _users = users;
         _ad = ad;
         _issuer = issuer;
         _db = db;
+        _systemSettingsService = systemSettingsService;
     }
 
     /// <summary>
@@ -111,6 +113,20 @@ public sealed class AdLoginCommandHandler : IRequestHandler<AdLoginCommand, Auth
                 personnel.LinkedUserId = user.Id;
                 _db.QdmsPersoneller.Update(personnel);
                 await _db.SaveChangesAsync(ct);
+            }
+        }
+
+        // Bakım modu kontrolü
+        var appSettings = _systemSettingsService.GetSetting<FormfleksBaseApp.Application.Common.Models.AppSettings>("AppSettings");
+        if (appSettings != null && appSettings.MaintenanceMode)
+        {
+            var userRoles = await _users.GetRoleCodesAsync(user.Id, ct);
+            bool isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || 
+                                              r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase));
+            if (!isAdmin)
+            {
+                // Bakım modunda 503 fırlat (frontend bunu algılayıp yönlendiriyor)
+                throw new FormfleksBaseApp.Application.Common.Exceptions.MaintenanceException();
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using FormfleksBaseApp.Application.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -65,6 +65,19 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     };
                     pd.Extensions["errorCode"] = ErrorCodes.Unauthorized;
                     httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    break;
+                }
+            case FormfleksBaseApp.Application.Common.Exceptions.MaintenanceException:
+                {
+                    pd = new ProblemDetails
+                    {
+                        Status = 503,
+                        Title = "Service Unavailable",
+                        Detail = exception.Message,
+                        Instance = httpContext.Request.Path
+                    };
+                    pd.Extensions["isMaintenance"] = true;
+                    httpContext.Response.StatusCode = 503;
                     break;
                 }
 

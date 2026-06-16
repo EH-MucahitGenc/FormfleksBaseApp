@@ -31,7 +31,10 @@ public class SystemIntegrationsController : ControllerBase
     [HttpPost("sync-personnel")]
     public async Task<IActionResult> SyncPersonnel()
     {
-        var result = await _mediator.Send(new SyncQdmsPersonelCommand());
+        var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        Guid.TryParse(currentUserId, out var actorId);
+
+        var result = await _mediator.Send(new SyncQdmsPersonelCommand { ActorUserId = actorId });
         if (result.Success)
             return Ok(new { message = result.Message });
 

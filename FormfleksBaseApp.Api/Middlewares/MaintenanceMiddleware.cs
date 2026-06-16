@@ -19,6 +19,7 @@ public class MaintenanceMiddleware
     public async Task InvokeAsync(HttpContext context, ISystemSettingsService systemSettingsService)
     {
         if (context.Request.Method == "OPTIONS" ||
+            context.Request.Path.StartsWithSegments("/api/public") ||
             context.Request.Path.StartsWithSegments("/api/auth/login") ||
             context.Request.Path.StartsWithSegments("/api/auth/ad-login") ||
             context.Request.Path.StartsWithSegments("/api/auth/refresh"))

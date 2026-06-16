@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form'; // Fixed the import
 import { FfTextField } from '@/components/dev-extreme/FfFormLayout';
 import { FfButton } from '@/components/ui/index';
@@ -6,6 +6,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -23,6 +24,21 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
+  const [isMaintenance, setIsMaintenance] = useState(false);
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || '/api'}/public/system-status`);
+        if (res.data?.maintenanceMode) {
+          setIsMaintenance(true);
+        }
+      } catch (err) {
+        console.error("Could not fetch system status", err);
+      }
+    };
+    checkMaintenance();
+  }, []);
 
   const setCredentials = useAuthStore((state) => state.setCredentials);
 
@@ -52,6 +68,17 @@ export const Login: React.FC = () => {
   return (
     <div className="w-full flex-col flex gap-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
+      {isMaintenance && (
+        <div className="bg-status-danger/10 border border-status-danger/30 rounded-xl p-4 flex flex-col items-center gap-2 text-center animate-pulse">
+          <AlertCircle className="h-8 w-8 text-status-danger mb-1" />
+          <p className="text-sm md:text-base text-status-danger font-bold leading-snug">
+            SİSTEM ŞU AN BAKIMDADIR
+          </p>
+          <p className="text-xs md:text-sm text-status-danger/80 font-medium">
+            Sadece "Admin" yetkisine sahip kullanıcılar giriş yapabilir. Diğer kullanıcılar içeri alınmayacaktır.
+          </p>
+        </div>
+      )}
       {/* Form Context Title */}
       <div className="text-center">
         <h3 className="text-xl font-bold tracking-tight text-brand-dark">Kimlik Doğrulama</h3>

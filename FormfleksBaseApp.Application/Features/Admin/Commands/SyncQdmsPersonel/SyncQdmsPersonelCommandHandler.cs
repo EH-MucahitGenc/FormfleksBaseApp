@@ -16,15 +16,21 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
     private readonly IDynamicFormsDbContext _context;
     private readonly IQdmsPersonelAktarimRepository _oracleRepository;
     private readonly IAdminUserRepository _adminUserRepository;
+    private readonly IEmailService _emailService;
+    private readonly ISystemSettingsService _systemSettingsService;
 
     public SyncQdmsPersonelCommandHandler(
         IDynamicFormsDbContext context,
         IQdmsPersonelAktarimRepository oracleRepository,
-        IAdminUserRepository adminUserRepository)
+        IAdminUserRepository adminUserRepository,
+        IEmailService emailService,
+        ISystemSettingsService systemSettingsService)
     {
         _context = context;
         _oracleRepository = oracleRepository;
         _adminUserRepository = adminUserRepository;
+        _emailService = emailService;
+        _systemSettingsService = systemSettingsService;
     }
 
     public async Task<SyncQdmsPersonelResponseDto> Handle(SyncQdmsPersonelCommand request, CancellationToken cancellationToken)
@@ -33,10 +39,42 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
         var currentUserId = request.ActorUserId != Guid.Empty ? request.ActorUserId : Guid.Empty;
 
         // 1. Fetch from Oracle
-        var oracleData = await _oracleRepository.GetAllActivePersonnelAsync(cancellationToken);
-        if (oracleData == null || !oracleData.Any())
+        var oracleData = new List<QdmsPersonelAktarimOracleDto>();
+        try
         {
-            return new SyncQdmsPersonelResponseDto { Success = false, Message = "Oracle view'inden veri alınamadı veya boş döndü." };
+            oracleData = await _oracleRepository.GetAllActivePersonnelAsync(cancellationToken);
+            if (oracleData == null || !oracleData.Any())
+            {
+                var errorLog = new QdmsPersonelSyncLog
+                {
+                    Id = Guid.NewGuid(),
+                    TriggeredByUserId = currentUserId,
+                    StartTime = startTime,
+                    EndTime = DateTime.UtcNow,
+                    ErrorsJson = "Oracle view'inden veri alınamadı veya boş döndü."
+                };
+                _context.QdmsPersonelSyncLogs.Add(errorLog);
+                await _context.SaveChangesAsync(cancellationToken);
+                
+                await NotifyErrorAsync("Oracle view'inden veri alınamadı veya boş döndü.", cancellationToken);
+                return new SyncQdmsPersonelResponseDto { Success = false, Message = "Oracle view'inden veri alınamadı veya boş döndü." };
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorLog = new QdmsPersonelSyncLog
+            {
+                Id = Guid.NewGuid(),
+                TriggeredByUserId = currentUserId,
+                StartTime = startTime,
+                EndTime = DateTime.UtcNow,
+                ErrorsJson = "Oracle bağlantı hatası: " + ex.Message
+            };
+            _context.QdmsPersonelSyncLogs.Add(errorLog);
+            await _context.SaveChangesAsync(cancellationToken);
+            
+            await NotifyErrorAsync("Oracle bağlantı hatası: " + ex.Message, cancellationToken);
+            return new SyncQdmsPersonelResponseDto { Success = false, Message = "Oracle bağlantı hatası: " + ex.Message };
         }
 
         var distinctOracleData = oracleData
@@ -159,5 +197,25 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
         await _context.SaveChangesAsync(cancellationToken);
 
         return new SyncQdmsPersonelResponseDto { Success = true, Message = $"Senkronizasyon tamamlandı: {inserted} Eklendi, {updated} Güncellendi, {deactivated} Pasife Alındı." };
+    }
+
+    private async Task NotifyErrorAsync(string errorMessage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settings = await _systemSettingsService.GetSettingAsync<FormfleksBaseApp.Application.Common.Models.IntegrationSettings>("IntegrationSettings", new FormfleksBaseApp.Application.Common.Models.IntegrationSettings(), cancellationToken);
+            if (settings != null && !string.IsNullOrWhiteSpace(settings.PersonnelSyncErrorEmail))
+            {
+                await _emailService.SendIntegrationErrorEmailAsync(
+                    toEmails: settings.PersonnelSyncErrorEmail,
+                    integrationName: "Personel Senkronizasyonu",
+                    errorMessage: errorMessage,
+                    cancellationToken: cancellationToken);
+            }
+        }
+        catch (Exception)
+        {
+            // E-posta gönderimi başarısız olursa ana işlemi kesintiye uğratmamak için yutulur.
+        }
     }
 }

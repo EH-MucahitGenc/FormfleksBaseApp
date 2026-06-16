@@ -30,8 +30,10 @@ export interface JwtSettingsDto {
 }
 
 export interface WorkflowSettingsDto {
-  reminderCheckIntervalHours: number;
+  approvalReminderTime: string;
   pendingApprovalThresholdHours: number;
+  draftReminderTime: string;
+  draftAutoDeleteThresholdDays: number;
 }
 
 export interface LdapSettingsDto {
@@ -43,6 +45,11 @@ export interface LdapSettingsDto {
   baseDn: string;
   serviceUserName?: string;
   servicePassword?: string;
+}
+
+export interface IntegrationSettingsDto {
+  personnelSyncTime: string;
+  personnelSyncErrorEmail: string;
 }
 
 class SettingsService {
@@ -122,13 +129,13 @@ class SettingsService {
       Enabled: data.enabled,
       Smtp: {
         Host: data.smtp.host,
-        Port: data.smtp.port,
-        EnableSsl: data.smtp.enableSsl,
+        Port: Number(data.smtp.port),
         Username: data.smtp.username,
         Password: data.smtp.password,
         DefaultFrom: data.smtp.defaultFrom,
-        TimeoutSeconds: data.smtp.timeoutSeconds,
-        RetryCount: data.smtp.retryCount
+        EnableSsl: data.smtp.enableSsl,
+        TimeoutSeconds: Number(data.smtp.timeoutSeconds),
+        RetryCount: Number(data.smtp.retryCount)
       }
     };
     return systemAdminService.updateSystemSetting('EmailSettings', payload);
@@ -152,8 +159,8 @@ class SettingsService {
   }
 
   async updateJwtSettings(data: JwtSettingsDto): Promise<boolean> {
-    await systemAdminService.updateSystemSetting('Jwt:AccessTokenMinutes', data.accessTokenMinutes);
-    await systemAdminService.updateSystemSetting('Jwt:RefreshTokenDays', data.refreshTokenDays);
+    await systemAdminService.updateSystemSetting('Jwt:AccessTokenMinutes', Number(data.accessTokenMinutes));
+    await systemAdminService.updateSystemSetting('Jwt:RefreshTokenDays', Number(data.refreshTokenDays));
     return true;
   }
 
@@ -161,21 +168,27 @@ class SettingsService {
     const data: any = await systemAdminService.getSystemSetting<any>('WorkflowRules');
     if (data && Object.keys(data).length > 0) {
       return {
-        reminderCheckIntervalHours: data.ReminderCheckIntervalHours || 12,
-        pendingApprovalThresholdHours: data.PendingApprovalThresholdHours || 24
+        approvalReminderTime: data.ApprovalReminderTime || '10:00,15:00',
+        pendingApprovalThresholdHours: data.PendingApprovalThresholdHours || 24,
+        draftReminderTime: data.DraftReminderTime || '09:00',
+        draftAutoDeleteThresholdDays: data.DraftAutoDeleteThresholdDays || 7
       };
     }
     
     return {
-      reminderCheckIntervalHours: 12,
-      pendingApprovalThresholdHours: 24
+      approvalReminderTime: '10:00,15:00',
+      pendingApprovalThresholdHours: 24,
+      draftReminderTime: '09:00',
+      draftAutoDeleteThresholdDays: 7
     };
   }
 
   async updateWorkflowSettings(data: WorkflowSettingsDto): Promise<boolean> {
     const payload = {
-      ReminderCheckIntervalHours: data.reminderCheckIntervalHours,
-      PendingApprovalThresholdHours: data.pendingApprovalThresholdHours
+      ApprovalReminderTime: data.approvalReminderTime,
+      PendingApprovalThresholdHours: Number(data.pendingApprovalThresholdHours),
+      DraftReminderTime: data.draftReminderTime,
+      DraftAutoDeleteThresholdDays: Number(data.draftAutoDeleteThresholdDays)
     };
     return systemAdminService.updateSystemSetting('WorkflowRules', payload);
   }
@@ -219,6 +232,29 @@ class SettingsService {
       ServicePassword: data.servicePassword
     };
     return systemAdminService.updateSystemSetting('LdapSettings', payload);
+  }
+
+  async getIntegrationSettings(): Promise<IntegrationSettingsDto> {
+    const data: any = await systemAdminService.getSystemSetting<any>('IntegrationSettings');
+    if (data && Object.keys(data).length > 0) {
+      return {
+        personnelSyncTime: data.PersonnelSyncTime || '02:00',
+        personnelSyncErrorEmail: data.PersonnelSyncErrorEmail || ''
+      };
+    }
+    
+    return {
+      personnelSyncTime: '02:00',
+      personnelSyncErrorEmail: ''
+    };
+  }
+
+  async updateIntegrationSettings(data: IntegrationSettingsDto): Promise<boolean> {
+    const payload = {
+      PersonnelSyncTime: data.personnelSyncTime,
+      PersonnelSyncErrorEmail: data.personnelSyncErrorEmail
+    };
+    return systemAdminService.updateSystemSetting('IntegrationSettings', payload);
   }
 
   async testEmailConnection(_email: string): Promise<boolean> {

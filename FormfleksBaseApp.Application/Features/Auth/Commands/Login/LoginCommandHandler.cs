@@ -12,12 +12,14 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResp
     private readonly IUserRepository _users;
     private readonly IPasswordHasher _hasher;
     private readonly IAuthTokenIssuer _issuer;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService _systemSettingsService;
 
-    public LoginCommandHandler(IUserRepository users, IPasswordHasher hasher, IAuthTokenIssuer issuer)
+    public LoginCommandHandler(IUserRepository users, IPasswordHasher hasher, IAuthTokenIssuer issuer, FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService systemSettingsService)
     {
         _users = users;
         _hasher = hasher;
         _issuer = issuer;
+        _systemSettingsService = systemSettingsService;
     }
 
     public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken ct)
@@ -37,6 +39,20 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResp
         var ok = _hasher.VerifyHashedPassword(user, user.PasswordHash, request.Request.Password);
         if (!ok)
             throw new BusinessException("Invalid email or password.");
+
+        // Bakım modu kontrolü
+        var appSettings = _systemSettingsService.GetSetting<FormfleksBaseApp.Application.Common.Models.AppSettings>("AppSettings");
+        if (appSettings != null && appSettings.MaintenanceMode)
+        {
+            var userRoles = await _users.GetRoleCodesAsync(user.Id, ct);
+            bool isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || 
+                                              r.Equals("SystemAdmin", StringComparison.OrdinalIgnoreCase));
+            if (!isAdmin)
+            {
+                // Bakım modunda 503 fırlat (frontend bunu algılayıp yönlendiriyor)
+                throw new FormfleksBaseApp.Application.Common.Exceptions.MaintenanceException();
+            }
+        }
 
         return await _issuer.IssueAsync(user, ct);
     }

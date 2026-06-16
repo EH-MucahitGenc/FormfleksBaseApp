@@ -574,6 +574,150 @@ public class EmailService : IEmailService
         }, cancellationToken);
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 6. TASLAK HATIRLATMA (Sarı/Turuncu Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendDraftReminderEmailAsync(
+        string toEmail, string requesterName, string formRequestNo,
+        Guid formRequestId, string formTypeName, int waitingDays,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+
+        var bodyHtml = $"""
+            <p>
+              Taslak olarak kaydettiğiniz <strong style="color:#d97706;">{formTypeName}</strong> 
+              {waitingDays} gündür herhangi bir işlem görmedi.
+            </p>
+            <p style="margin-top:16px;">
+              Sistem sağlığı açısından, onaya göndermeyeceğiniz taslakları silmeniz veya işleminizi tamamlayarak formu onaya sunmanız rica olunur. Belirli bir süre işlem görmeyen taslaklar otomatik olarak sistemden kalıcı şekilde silinmektedir.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#f59e0b",
+            accentDark: "#d97706",
+            accentTextColor: "#ffffff",
+            accentLabel: "TASLAK HATIRLATMASI",
+            statusIcon: "📝",
+            recipientName: requesterName,
+            subject: $"Taslak Hatırlatması: {formRequestNo}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: requesterName,
+            actionUrl: actionUrl,
+            actionLabel: "Taslağı Görüntüle ve İşlem Yap",
+            actionBgColor: "#f59e0b",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: "Erkurt");
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"📝 Taslak Hatırlatması: {formTypeName} ({formRequestNo})",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 7. TASLAK SİLİNDİ (Kırmızı Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendDraftDeletedEmailAsync(
+        string toEmail, string requesterName, string formRequestNo,
+        string formTypeName, int autoDeleteDays,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}"; // Taslak silindiği için ana sayfaya yönlendir
+
+        var bodyHtml = $"""
+            <p>
+              Sistemde taslak olarak bekleyen <strong style="color:#dc2626;">{formTypeName}</strong> kaydınız,
+              {autoDeleteDays} gün boyunca işlem yapılmadığı için sistem tarafından otomatik olarak 
+              <strong style="color:#dc2626;">kalıcı olarak silinmiştir</strong>.
+            </p>
+            <p style="margin-top:16px;">
+              Veritabanı optimizasyonu sebebiyle süre aşımına uğrayan taslak formlar sistemden tamamen temizlenmektedir. Bu form için tekrar başvuru yapmak isterseniz yeni bir form oluşturmanız gerekmektedir.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#ef4444",
+            accentDark: "#dc2626",
+            accentTextColor: "#ffffff",
+            accentLabel: "TASLAK SİLİNDİ",
+            statusIcon: "🗑️",
+            recipientName: requesterName,
+            subject: $"Süre Aşımı Nedeniyle Taslak Silindi: {formRequestNo}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: requesterName,
+            actionUrl: actionUrl,
+            actionLabel: "Platforma Dön",
+            actionBgColor: "#ef4444",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: "Erkurt");
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"🗑️ Taslağınız Silindi: {formTypeName} ({formRequestNo})",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
+    public async Task SendIntegrationErrorEmailAsync(string toEmails, string integrationName, string errorMessage, CancellationToken cancellationToken = default)
+    {
+        var subject = $"[Sistem Hatası] {integrationName} Başarısız";
+
+        var bodyHtml = $@"
+            <p style='margin:0 0 16px 0;'>Merhaba,</p>
+            <p style='margin:0 0 16px 0;'><strong>{integrationName}</strong> işlemi sırasında aşağıdaki hata meydana gelmiştir:</p>
+            <div style='background-color:#fef2f2; border:1px solid #fecaca; padding:15px; border-radius:6px; color:#991b1b; font-family:monospace; margin-bottom:16px;'>
+                {errorMessage}
+            </div>
+            <p style='margin:0 0 16px 0; font-size:13px; color:#6b7280;'>Lütfen sistem ayarlarını veya entegrasyon bağlantılarını kontrol ediniz.</p>
+        ";
+
+        var appSettings = await _systemSettingsService.GetSettingAsync<AppSettings>("AppSettings", new AppSettings { SiteUrl = "http://localhost:3000" }, cancellationToken);
+        var baseAppUrl = appSettings?.SiteUrl?.TrimEnd('/') ?? "http://localhost:3000";
+        var systemSettingsUrl = $"{baseAppUrl}/admin/settings";
+
+        var htmlContent = BuildEmail(
+            accentColor: "#ef4444",       // Red
+            accentDark: "#dc2626",
+            accentTextColor: "#ffffff",
+            accentLabel: "HATA BİLDİRİMİ",
+            statusIcon: "⚠️",
+            recipientName: "Sistem Yöneticisi",
+            subject: subject,
+            bodyHtml: bodyHtml,
+            formRequestNo: "SİSTEM",
+            formTypeName: integrationName,
+            requesterName: "Sistem",
+            actionUrl: systemSettingsUrl,
+            actionLabel: "Sistem Ayarlarına Git",
+            actionBgColor: "#ef4444",
+            baseUrl: baseAppUrl,
+            requesterCompany: "Formfleks",
+            actionTextColor: "#ffffff"
+        );
+
+        var toEmailList = toEmails.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(e => e.Trim())
+                                  .ToList();
+
+        var message = new EmailMessage
+        {
+            ToAddresses = toEmailList,
+            Subject = subject,
+            HtmlBody = htmlContent
+        };
+
+        await QueueEmailAsync(message, cancellationToken);
+    }
+
     public async Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         await _emailQueue.QueueEmailAsync(message, cancellationToken);
