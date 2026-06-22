@@ -52,7 +52,7 @@ public class IntegrationExecutionService : IIntegrationExecutionService
 
         try
         {
-            _logger.LogInformation("Executing integration query {QueryId} ({QueryName}) with connection {ConnectionName}", 
+            _logger.LogInformation("Executing integration query {QueryId} ({QueryName}) with connection {ConnectionName}", //
                 queryId, queryDef.Name, queryDef.ConnectionName);
 
             // Fetch the first row only
