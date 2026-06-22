@@ -75,5 +75,10 @@ export const integrationsService = {
       params: { page, pageSize, searchTerm, isActive }
     });
     return data;
+  },
+
+  executeIntegrationQuery: async (queryId: string, parameters: Record<string, any>): Promise<any[]> => {
+    const { data } = await apiClient.post<any[]>(`/dynamic-forms/integrations/execute/${queryId}`, parameters);
+    return data;
   }
 };

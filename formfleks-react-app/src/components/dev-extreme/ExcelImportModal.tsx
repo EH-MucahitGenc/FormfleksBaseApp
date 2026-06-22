@@ -46,7 +46,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
         const ws = wb.Sheets[wsname];
         
         // raw data arrays
-        const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 });
+        const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, raw: false, defval: '' });
         
         if (data.length < 2) {
           setError("Seçilen Excel dosyasında yeterli veri bulunamadı (En az başlık ve 1 satır veri olmalıdır).");
@@ -84,7 +84,21 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
           headers.forEach((h, colIndex) => {
             const hStr = (h || '').toString().trim();
             if (hStr) {
-              rowObj[hStr] = row[colIndex];
+              let val = row[colIndex];
+              if (typeof val === 'string') {
+                const amPmRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(AM|PM)$/i;
+                const match = val.trim().match(amPmRegex);
+                if (match) {
+                  let hours = parseInt(match[1], 10);
+                  const minutes = match[2];
+                  const seconds = match[3] || '00';
+                  const ampm = match[4].toUpperCase();
+                  if (ampm === 'PM' && hours < 12) hours += 12;
+                  if (ampm === 'AM' && hours === 12) hours = 0;
+                  val = `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+                }
+              }
+              rowObj[hStr] = val;
             }
           });
           rows.push(rowObj);

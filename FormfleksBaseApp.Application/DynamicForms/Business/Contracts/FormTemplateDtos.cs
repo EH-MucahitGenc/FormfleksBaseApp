@@ -34,6 +34,7 @@ public sealed class FormTemplateFieldUpsertDto
     public string? VisibilityRuleJson { get; set; }
     public string? ValidationRuleJson { get; set; }
     public string? OptionsJson { get; set; }
+    public string? AutoFillJson { get; set; }
     public bool Active { get; set; } = true;
 }
 

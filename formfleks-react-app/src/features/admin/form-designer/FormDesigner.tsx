@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List, Search } from 'lucide-react';
+import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List, Search, Database } from 'lucide-react';
 
 import { systemAdminService, type FormTemplateUpsertDto } from '@/services/system-admin.service';
+import { integrationQueryService, type IntegrationQueryLookupDto } from '@/services/integration-query.service';
 import { PageHeader, FfButton, PageContainer, GlassCard, FfModal } from '@/components/ui/index';
 import { generateUUID } from '@/lib/uuid';
+import { AutoFillMappingBuilder } from './components/AutoFillMappingBuilder';
 
 // Form Builder Types (Local State overrides)
 interface FieldState {
@@ -14,6 +16,7 @@ interface FieldState {
   fieldType: number;
   isRequired: boolean;
   optionsJson?: string;
+  autoFillJson?: string;
   placeholder?: string;
 }
 
@@ -115,6 +118,25 @@ export const FormDesigner: React.FC = () => {
     }
   };
 
+  const [autoFillManager, setAutoFillManager] = useState<{ secId: string, fieldId: string, settings: any } | null>(null);
+
+  const openAutoFillManager = (secId: string, fieldId: string, autoFillJson?: string) => {
+    let settings = { queryId: '', inputMappings: {}, outputMappings: [] };
+    if (autoFillJson) {
+      try { 
+        settings = JSON.parse(autoFillJson); 
+      } catch {}
+    }
+    setAutoFillManager({ secId, fieldId, settings });
+  };
+
+  const saveAutoFillSettings = () => {
+    if (autoFillManager) {
+      updateField(autoFillManager.secId, autoFillManager.fieldId, { autoFillJson: JSON.stringify(autoFillManager.settings) });
+      setAutoFillManager(null);
+    }
+  };
+
   // Load Existing Templates for reference listing
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['adminFormTemplates'],
@@ -124,6 +146,11 @@ export const FormDesigner: React.FC = () => {
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ['adminRolesLookup'],
     queryFn: systemAdminService.getRolesLookup
+  });
+
+  const { data: integrationQueries = [], isLoading: integrationQueriesLoading } = useQuery({
+    queryKey: ['integrationQueriesLookup'],
+    queryFn: () => integrationQueryService.getLookup()
   });
 
   const searchLower = searchTerm.toLocaleLowerCase('tr-TR');
@@ -171,6 +198,7 @@ export const FormDesigner: React.FC = () => {
             fieldType: f.fieldType,
             isRequired: f.isRequired,
             optionsJson: f.fieldType === 4 ? formatOptionsToCsv(f.optionsJson) : f.optionsJson,
+            autoFillJson: f.autoFillJson,
             placeholder: f.placeholder
           })) || []
         }));
@@ -389,6 +417,7 @@ export const FormDesigner: React.FC = () => {
           sectionTitle: s.title,
           active: true,
           optionsJson: f.fieldType === 4 && f.optionsJson ? JSON.stringify(f.optionsJson.split(',').map(x => ({ Value: x.trim(), Text: x.trim() }))) : (f.fieldType === 11 || f.fieldType === 10 ? f.optionsJson : undefined),
+          autoFillJson: f.autoFillJson,
           placeholder: f.placeholder
         }))
       ),
@@ -770,6 +799,9 @@ export const FormDesigner: React.FC = () => {
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-2 text-center">
+                                                            <button onClick={() => openAutoFillManager(section.id, f.id, f.autoFillJson)} className={`p-1 rounded transition-colors ${f.autoFillJson ? 'text-brand-primary' : 'text-brand-gray hover:text-brand-primary opacity-0 group-hover/row:opacity-100 focus:opacity-100'}`} title="Dış Veri Kaynağı (Otomatik Doldurma)">
+                                                                <Database className="h-4 w-4" />
+                                                            </button>
                                                             <button onClick={() => removeField(section.id, f.id)} className="text-brand-gray hover:text-status-danger p-1 rounded transition-colors opacity-0 group-hover/row:opacity-100 focus:opacity-100">
                                                                 <Trash2 className="h-4 w-4" />
                                                             </button>
@@ -962,6 +994,52 @@ export const FormDesigner: React.FC = () => {
                   <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">İzin Verilen Uzantılar</label>
                   <input type="text" value={fileManager.settings.allowedExtensions} onChange={e => setFileManager({...fileManager, settings: {...fileManager.settings, allowedExtensions: e.target.value}})} className="w-full px-3 py-2 bg-surface-hover border border-surface-muted rounded-lg text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20" placeholder=".pdf, .jpg, .png" />
                   <p className="text-xs text-brand-gray mt-1">Örnek: .pdf, .jpg, .png, .xlsx</p>
+               </div>
+            </div>
+        )}
+      </FfModal>
+
+      <FfModal isOpen={!!autoFillManager} onClose={() => setAutoFillManager(null)} title="Dış Veri Kaynağı (Otomatik Doldurma)" size="md"
+        footer={
+            <div className="flex justify-end gap-3 w-full">
+               <FfButton variant="primary" onClick={saveAutoFillSettings} leftIcon={<CheckCircle2 className="h-4 w-4" />}>
+                 Kaydet ve Kapat
+               </FfButton>
+            </div>
+        }
+      >
+        {autoFillManager && (
+            <div className="p-4 space-y-5">
+               <div className="bg-brand-primary/5 border border-brand-primary/20 p-3 rounded-lg flex gap-3 text-sm text-brand-dark mb-4">
+                  <Settings className="h-5 w-5 text-brand-primary shrink-0" />
+                  <p>Bu alanın değeri değiştiğinde (onBlur) seçili sorguyu çalıştırıp, dönen sonuçları diğer alanlara otomatik yerleştirebilirsiniz.</p>
+               </div>
+               
+               <div>
+                  <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Çalıştırılacak Sorgu</label>
+                  {integrationQueriesLoading ? (
+                    <div className="text-sm text-brand-gray">Sorgular yükleniyor...</div>
+                  ) : (
+                    <select
+                      value={autoFillManager.settings.queryId || ''}
+                      onChange={e => setAutoFillManager({...autoFillManager, settings: {...autoFillManager.settings, queryId: e.target.value}})}
+                      className="w-full px-3 py-2 bg-surface-hover border border-surface-muted rounded-lg text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                    >
+                      <option value="">-- Sorgu Seçin --</option>
+                      {integrationQueries.map((q: IntegrationQueryLookupDto) => (
+                        <option key={q.id} value={q.id}>{q.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="text-xs text-brand-gray mt-1">Dış veri kaynaklarında tanımlı sorgulardan birini seçin.</p>
+               </div>
+               
+               <div className="border-t border-surface-muted pt-4">
+                  <AutoFillMappingBuilder 
+                     settings={autoFillManager.settings} 
+                     onChange={(newSettings) => setAutoFillManager({...autoFillManager, settings: newSettings})}
+                     availableFields={sections.flatMap((s: SectionState) => s.fields).map((f: FieldState) => ({ id: f.fieldKey, label: f.label || f.fieldKey }))}
+                  />
                </div>
             </div>
         )}

@@ -3,17 +3,20 @@ using System;
 using FormfleksBaseApp.DynamicForms.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
+namespace FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Migrations
 {
     [DbContext(typeof(DynamicFormsDbContext))]
-    partial class DynamicFormsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618092507_AddDbEngineToIntegrationQueries")]
+    partial class AddDbEngineToIntegrationQueries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

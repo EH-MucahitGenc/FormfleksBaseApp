@@ -110,6 +110,7 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                 existingField.VisibilityRuleJson = fldDto.VisibilityRuleJson;
                 existingField.ValidationRuleJson = fldDto.ValidationRuleJson;
                 existingField.OptionsJson = fldDto.OptionsJson;
+                existingField.AutoFillJson = fldDto.AutoFillJson;
                 existingField.Active = fldDto.Active;
             }
             else
@@ -129,6 +130,7 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                     VisibilityRuleJson = fldDto.VisibilityRuleJson,
                     ValidationRuleJson = fldDto.ValidationRuleJson,
                     OptionsJson = fldDto.OptionsJson,
+                    AutoFillJson = fldDto.AutoFillJson,
                     Active = fldDto.Active
                 });
             }

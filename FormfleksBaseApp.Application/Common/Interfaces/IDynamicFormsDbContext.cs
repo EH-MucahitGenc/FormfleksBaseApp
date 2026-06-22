@@ -25,6 +25,7 @@ public interface IDynamicFormsDbContext
     DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs { get; }
     DbSet<UserDelegationEntity> UserDelegations { get; }
     DbSet<UserLocationRoleEntity> UserLocationRoles { get; }
+    DbSet<IntegrationQueryEntity> IntegrationQueries { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     int SaveChanges();

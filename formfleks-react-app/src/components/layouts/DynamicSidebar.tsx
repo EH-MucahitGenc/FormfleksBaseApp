@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogOut, LayoutDashboard, FileText, Settings,
   Users, LayoutTemplate, Route, 
-  ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck, BarChart2
+  ChevronLeft, Shield, CheckSquare, User, Activity, UserCheck, BarChart2, Database
 } from 'lucide-react';
 import { cn } from '@/components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -204,7 +204,12 @@ export const DynamicSidebar = ({
         
         <div className="mt-auto pt-4 border-t border-surface-muted">
           <NavItem to="/settings/delegations" icon={UserCheck} label="Vekalet Devri" isCollapsed={!isSidebarOpen} />
-          {canSeeSysSettings && <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />}
+          {canSeeSysSettings && (
+            <>
+              <NavItem to="/admin/integration-queries" icon={Database} label="Dış Veri Kaynakları" isCollapsed={!isSidebarOpen} />
+              <NavItem to="/admin/system-settings" icon={Settings} label="Sistem Ayarları" isCollapsed={!isSidebarOpen} />
+            </>
+          )}
         </div>
       </div>
 

@@ -404,6 +404,7 @@ public sealed class GetRequestDetailedQueryHandler
                         Label = f.Label ?? f.FieldKey,
                         FieldType = f.FieldType,
                         OptionsJson = f.OptionsJson,
+                        AutoFillJson = f.AutoFillJson,
                         ValueText = computedValue
                     };
                 }).ToList(),

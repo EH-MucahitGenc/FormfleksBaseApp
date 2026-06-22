@@ -29,6 +29,7 @@ public sealed class FormFieldDto
     public string? HelpText { get; set; }
     public string? DefaultValue { get; set; }
     public string? OptionsJson { get; set; }
+    public string? AutoFillJson { get; set; }
     public string? ValidationJson { get; set; }
     public string? VisibilityRuleJson { get; set; }
 }

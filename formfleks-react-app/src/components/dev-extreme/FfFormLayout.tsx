@@ -45,6 +45,7 @@ export interface FfFieldProps {
   disabled?: boolean;
   mode?: 'text' | 'password' | 'email' | 'search' | 'tel' | 'url';
   autoComplete?: string;
+  onBlur?: (e: any) => void;
 }
 
 const FieldWrapper: React.FC<{ label: string; required?: boolean; error?: string; children: React.ReactNode; className?: string }> = ({ 
@@ -62,7 +63,7 @@ const FieldWrapper: React.FC<{ label: string; required?: boolean; error?: string
   );
 };
 
-export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled, mode, autoComplete }) => {
+export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, placeholder, className, disabled, mode, autoComplete, onBlur }) => {
   const { control } = useFormContext();
 
   return (
@@ -83,6 +84,11 @@ export const FfTextField: React.FC<FfFieldProps> = ({ name, label, required, pla
             placeholder={placeholder}
             disabled={disabled}
             mode={mode || "text"}
+            onFocusOut={(e) => {
+              // trigger React Hook Form's onBlur (if needed) and custom onBlur
+              restField.onBlur();
+              if (onBlur) onBlur(e);
+            }}
             stylingMode="outlined"
             inputAttr={{ autoComplete: autoComplete }}
             className={cn("w-full transition-all", error ? "border-status-danger" : "focus-within:border-brand-primary")}

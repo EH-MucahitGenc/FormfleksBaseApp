@@ -3,6 +3,7 @@ using System;
 using FormfleksBaseApp.DynamicForms.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
 {
     [DbContext(typeof(DynamicFormsDbContext))]
-    partial class DynamicFormsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260618081842_AddIntegrationQueries")]
+    partial class AddIntegrationQueries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -239,9 +242,6 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.Property<bool>("Active")
                         .HasColumnType("boolean")
                         .HasColumnName("active");
-
-                    b.Property<string>("AutoFillJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("DefaultValue")
                         .HasColumnType("text")
@@ -590,9 +590,6 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("connection_name");
-
-                    b.Property<int>("Engine")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()

@@ -171,6 +171,8 @@ builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IEmail
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IPdfGeneratorService, FormfleksBaseApp.Infrastructure.Services.PdfGeneratorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IFormAttachmentCollectorService, FormfleksBaseApp.Infrastructure.Services.FormAttachmentCollectorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IAppNotificationService, FormfleksBaseApp.Api.Services.AppNotificationService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIntegrationExecutionService, FormfleksBaseApp.Infrastructure.Services.IntegrationExecutionService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIntegrationQueryService, FormfleksBaseApp.Infrastructure.Services.IntegrationQueryService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService, FormfleksBaseApp.Infrastructure.Services.SystemSettingsService>();
 

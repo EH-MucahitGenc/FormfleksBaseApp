@@ -73,6 +73,7 @@ public sealed class FormFieldEntity
     public string? VisibilityRuleJson { get; set; }
     public string? ValidationRuleJson { get; set; }
     public string? OptionsJson { get; set; }
+    public string? AutoFillJson { get; set; }
     public bool Active { get; set; }
 }
 
@@ -210,4 +211,46 @@ public sealed class AuditLogEntity
     public Guid? ActorUserId { get; set; }
     public string? DetailJson { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Sistemdeki dış veri kaynaklarına (Oracle, SQL vb.) atılacak sorguları ve bağlantı bilgilerini tutan varlık.
+/// Otomatik Doldurma (Auto-fill) gibi dinamik entegrasyon özelliklerinde kullanılır.
+/// </summary>
+public sealed class IntegrationQueryEntity
+{
+    public Guid Id { get; set; }
+    
+    /// <summary>
+    /// Sorgunun yönetici tarafındaki anlaşılır adı (Örn: "Personel Getir")
+    /// </summary>
+    public string Name { get; set; } = default!;
+    
+    /// <summary>
+    /// appsettings.json içerisindeki ConnectionStrings nesnesinin anahtarı (Örn: "Oracle" veya "DefaultConnection")
+    /// </summary>
+    public string ConnectionName { get; set; } = default!;
+    
+    /// <summary>
+    /// Çalıştırılacak SQL sorgusu. Dapper standartlarına uygun şekilde parametrik olmalıdır (Örn: "... WHERE emp_no = @sicilNo")
+    /// </summary>
+    public string QueryTemplate { get; set; } = default!;
+    
+    /// <summary>
+    /// Bu sorgunun dışarıdan hangi parametreleri beklediğini tutan JSON nesnesi.
+    /// (Tasarım ekranında kullanıcıya parametre eşleştirmesinde yardımcı olmak için)
+    /// </summary>
+    public string? ParametersJson { get; set; }
+
+    /// <summary>
+    /// Hangi veritabanı motorunun kullanılacağı.
+    /// </summary>
+    public DbEngine Engine { get; set; } = DbEngine.Oracle;
+}
+
+public enum DbEngine
+{
+    SqlServer = 1,
+    Oracle = 2,
+    PostgreSql = 3
 }

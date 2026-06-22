@@ -114,6 +114,7 @@ public sealed class GetFormDefinitionQueryHandler : IRequestHandler<GetFormDefin
             HelpText = fld.HelpText,
             DefaultValue = fld.DefaultValue,
             OptionsJson = fld.OptionsJson,
+            AutoFillJson = fld.AutoFillJson,
             ValidationJson = fld.ValidationRuleJson,
             VisibilityRuleJson = fld.VisibilityRuleJson
         };

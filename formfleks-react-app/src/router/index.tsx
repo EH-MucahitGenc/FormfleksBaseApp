@@ -29,6 +29,7 @@ const WorkflowDesigner = lazy(() => import('@/features/admin/workflow-designer/W
 const ApplicationSettings = lazy(() => import('@/features/settings/ApplicationSettings').then(m => ({ default: m.ApplicationSettings })));
 const Delegations = lazy(() => import('@/features/profile/Delegations').then(m => ({ default: m.Delegations })));
 const PersonnelSync = lazy(() => import('@/features/admin/personnel-sync/PersonnelSyncDashboard'));
+const IntegrationQueries = lazy(() => import('@/features/admin/IntegrationQueries').then(m => ({ default: m.IntegrationQueries })));
 const Maintenance = lazy(() => import('@/app/Maintenance'));
 
 // ─── Suspense Fallback ───────────────────────────────────────────────
@@ -137,6 +138,10 @@ export const router = createBrowserRouter([
               { 
                 path: 'workflow-designer', 
                 element: <ProtectedRoute requiredPermission="Workflows.Manage"><Suspense fallback={<PageFallback />}><WorkflowDesigner /></Suspense></ProtectedRoute> 
+              },
+              { 
+                path: 'integration-queries', 
+                element: <ProtectedRoute requiredPermission="System.Settings"><Suspense fallback={<PageFallback />}><IntegrationQueries /></Suspense></ProtectedRoute> 
               }
             ]
           },

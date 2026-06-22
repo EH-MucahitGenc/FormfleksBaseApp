@@ -29,6 +29,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog> QdmsPersonelSyncLogs => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>();
     public DbSet<UserDelegationEntity> UserDelegations => Set<UserDelegationEntity>();
     public DbSet<UserLocationRoleEntity> UserLocationRoles => Set<UserLocationRoleEntity>();
+    public DbSet<IntegrationQueryEntity> IntegrationQueries => Set<IntegrationQueryEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -318,6 +319,18 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.ErrorsJson).HasColumnName("errors_json").HasColumnType("jsonb");
             
             e.HasIndex(x => x.StartTime);
+        });
+
+        modelBuilder.Entity<IntegrationQueryEntity>(e =>
+        {
+            e.ToTable("integration_queries");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.Name).HasColumnName("name").HasColumnType("character varying(200)").HasMaxLength(200);
+            e.Property(x => x.ConnectionName).HasColumnName("connection_name").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.QueryTemplate).HasColumnName("query_template").HasColumnType("text");
+            e.Property(x => x.ParametersJson).HasColumnName("parameters_json").HasColumnType("jsonb");
+            e.HasIndex(x => x.Name).IsUnique();
         });
     }
 }

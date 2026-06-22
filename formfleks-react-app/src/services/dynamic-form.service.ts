@@ -10,6 +10,7 @@ export interface DynamicFieldSchema {
   // Tablo (Grid) kolon tanımları (eğer editorType === 'grid' ise)
   gridColumns?: Array<DynamicFieldSchema>;
   optionsJson?: string;
+  autoFillJson?: string;
 }
 
 export interface DynamicSectionSchema {
@@ -36,6 +37,7 @@ export interface BackendFormFieldDto {
   sectionTitle: string;
   placeholder?: string;
   optionsJson?: string; 
+  autoFillJson?: string;
   active: boolean;
 }
 
@@ -180,7 +182,8 @@ class DynamicFormService {
            editorType,
            lookupData,
            gridColumns,
-           optionsJson
+           optionsJson,
+           autoFillJson: f.autoFillJson || f.AutoFillJson
          });
       });
 

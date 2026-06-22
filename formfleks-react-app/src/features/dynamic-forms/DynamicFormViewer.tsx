@@ -31,6 +31,7 @@ import { FfDynamicFileField } from '@/components/dev-extreme/FfDynamicFileField'
 import NumberBox from 'devextreme-react/number-box';
 import TextArea from 'devextreme-react/text-area';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
+import { integrationsService } from '@/services/integrations.service';
 
 export const DynamicFormViewer: React.FC = () => {
   const { formCode } = useParams<{ formCode: string }>();
@@ -215,6 +216,90 @@ export const DynamicFormViewer: React.FC = () => {
     onSendRequest();
   };
 
+  const handleFieldBlur = async (field: DynamicFieldSchema) => {
+    if (!field.autoFillJson) return;
+
+    try {
+      const settings = JSON.parse(field.autoFillJson);
+      if (!settings.queryId) return;
+
+      const currentValue = methods.getValues(field.dataField);
+      if (!currentValue) return;
+
+      // Extract parameters from mappings
+      const params: Record<string, any> = {};
+      let hasMissingRequiredParam = false;
+      
+      const mappings = settings.inputMappings;
+      if (mappings) {
+        for (const [paramKey, sourceVal] of Object.entries(mappings)) {
+           let val: any = null;
+           if (sourceVal === '$currentValue') {
+              val = currentValue;
+           } else if (typeof sourceVal === 'string' && sourceVal.startsWith('$form.')) {
+              const formFieldKey = sourceVal.replace('$form.', '');
+              val = methods.getValues(formFieldKey);
+           } else if (typeof sourceVal === 'string' && methods.getValues(sourceVal) !== undefined) {
+              // Intuitively fallback to checking if the string is a valid field key
+              val = methods.getValues(sourceVal);
+           } else {
+              val = sourceVal;
+           }
+           
+           // Check if value is truly empty (null, undefined, or empty string)
+           if (val === null || val === undefined || val === '') {
+              hasMissingRequiredParam = true;
+           }
+           
+           params[paramKey] = val;
+        }
+      }
+
+      if (hasMissingRequiredParam) {
+         console.log("AutoFill paused: Waiting for all mapped parameters to be filled.");
+         return; // Wait silently until all parameters are filled
+      }
+
+      // Execute query
+      const results = await integrationsService.executeIntegrationQuery(settings.queryId, params);
+      
+      if (results) {
+        const firstResult = Array.isArray(results) ? results[0] : results;
+        if (!firstResult) return;
+        
+        // Map outputs
+        const outMappings = settings.outputMappings;
+        if (outMappings) {
+           const processMapping = (mapping: any) => {
+              // Format 1: { sourceKey: "X", targetFieldKey: "Y" }
+              if (mapping.sourceKey && mapping.targetFieldKey) {
+                 if (firstResult[mapping.sourceKey] !== undefined) {
+                    methods.setValue(mapping.targetFieldKey, firstResult[mapping.sourceKey], { shouldValidate: true, shouldDirty: true });
+                 }
+              } 
+              // Format 2: { "ADSOYAD": "field_931", "BOLUMU": "field_261" }
+              else {
+                 for (const [sqlCol, formField] of Object.entries(mapping)) {
+                    if (typeof formField === 'string' && firstResult[sqlCol] !== undefined) {
+                       methods.setValue(formField, firstResult[sqlCol], { shouldValidate: true, shouldDirty: true });
+                    }
+                 }
+              }
+           };
+
+           if (Array.isArray(outMappings)) {
+              outMappings.forEach(processMapping);
+           } else if (typeof outMappings === 'object') {
+              processMapping(outMappings);
+           }
+        }
+      }
+
+    } catch (e) {
+      console.error("AutoFill Error", e);
+    }
+  };
+
   const handleManualAssignmentSubmit = () => {
     if (manualAssignmentError) {
       const newAssignment = {
@@ -366,7 +451,8 @@ export const DynamicFormViewer: React.FC = () => {
             label={field.label}
             componentProps={{
               required: field.isRequired,
-              stylingMode: "outlined"
+              stylingMode: "outlined",
+              onFocusOut: () => handleFieldBlur(field)
             }}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
@@ -393,7 +479,8 @@ export const DynamicFormViewer: React.FC = () => {
             componentProps={{
               required: field.isRequired,
               stylingMode: "outlined",
-              minHeight: 100
+              minHeight: 100,
+              onFocusOut: () => handleFieldBlur(field)
             }}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
@@ -407,6 +494,7 @@ export const DynamicFormViewer: React.FC = () => {
             label={field.label}
             required={field.isRequired}
             className={field.colSpan === 2 ? 'col-span-full' : ''}
+            onBlur={() => handleFieldBlur(field)}
           />
         );
     }

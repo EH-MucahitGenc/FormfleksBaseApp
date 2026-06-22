@@ -70,7 +70,7 @@ export const FfModal: React.FC<FfModalProps> = ({
     >
       <div
         className={cn(
-          'w-full bg-surface-base rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300',
+          'w-full max-h-[90vh] bg-surface-base rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300',
           sizes[size],
           isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
         )}

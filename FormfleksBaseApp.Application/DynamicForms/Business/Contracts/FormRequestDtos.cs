@@ -86,6 +86,7 @@ public sealed class FormRequestValueDto
     public string Label { get; set; } = default!;
     public int FieldType { get; set; }
     public string? OptionsJson { get; set; }
+    public string? AutoFillJson { get; set; }
     public string? ValueText { get; set; }
 }
 
