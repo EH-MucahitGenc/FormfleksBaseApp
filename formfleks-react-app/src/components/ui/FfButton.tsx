@@ -42,7 +42,7 @@ export const FfButton = React.forwardRef<HTMLButtonElement, FfButtonProps>(
       >
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {!isLoading && leftIcon && <span className="mr-2">{leftIcon}</span>}
-        {children}
+        <span className="truncate">{children}</span>
         {!isLoading && rightIcon && <span className="ml-2">{rightIcon}</span>}
       </button>
     );
