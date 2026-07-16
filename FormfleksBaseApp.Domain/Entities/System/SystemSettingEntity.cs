@@ -1,10 +1,12 @@
 using FormfleksBaseApp.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities.System;
 
 /// <summary>
 /// Sistem ayarlarını (JSON formatında) dinamik olarak veritabanında tutan entity.
 /// </summary>
+[Table("system_settings", Schema = "public")]
 public class SystemSettingEntity
 {
     /// <summary>

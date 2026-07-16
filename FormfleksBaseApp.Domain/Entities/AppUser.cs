@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace FormfleksBaseApp.Domain.Entities;
 
 /// <summary>
 /// Sistemdeki kullanıcıları temsil eden temel varlık (Entity).
 /// </summary>
+[Table("users", Schema = "public")]
 public class AppUser : BaseEntity
 {
     public string Email { get; set; } = default!;

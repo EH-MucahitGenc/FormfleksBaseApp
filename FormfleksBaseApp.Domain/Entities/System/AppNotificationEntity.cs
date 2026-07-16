@@ -1,10 +1,12 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities.System;
 
 /// <summary>
 /// Sistem içi (In-App) gerçek zamanlı ve kalıcı bildirimlerin tutulduğu varlık.
 /// </summary>
+[Table("app_notifications", Schema = "public")]
 public sealed class AppNotificationEntity
 {
     public Guid Id { get; set; }

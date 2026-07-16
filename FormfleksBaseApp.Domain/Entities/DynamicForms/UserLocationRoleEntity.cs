@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 
@@ -6,6 +7,7 @@ namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 /// Sistem genelinde lokasyon bazlı dinamik rol atamalarını tutan çok-a-çok (Many-to-Many) ilişki varlığı.
 /// Örn: "Mücahit", "Satın Alma" rolünde "Bursa" lokasyonu için yetkilidir.
 /// </summary>
+[Table("user_location_roles", Schema = "public")]
 public sealed class UserLocationRoleEntity
 {
     public Guid Id { get; set; }

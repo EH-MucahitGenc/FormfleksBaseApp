@@ -47,7 +47,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppUser>(e =>
         {
-            e.ToTable("users");
             e.HasKey(x => x.Id);
             ConfigureBaseEntity(e);
 
@@ -92,7 +91,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<RefreshToken>(e =>
         {
-            e.ToTable("refresh_tokens");
             e.HasKey(x => x.Id);
             ConfigureBaseEntity(e);
 
@@ -126,7 +124,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppRole>(e =>
         {
-            e.ToTable("roles");
             e.HasKey(x => x.Id);
             
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid").ValueGeneratedNever();
@@ -142,7 +139,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppPermission>(e =>
         {
-            e.ToTable("permissions");
             e.HasKey(x => x.Id);
             ConfigureBaseEntity(e);
 
@@ -154,7 +150,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppUserRole>(e =>
         {
-            e.ToTable("user_roles");
             e.HasKey(x => new { x.UserId, x.RoleId });
 
             e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
@@ -166,7 +161,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppRolePermission>(e =>
         {
-            e.ToTable("role_permissions");
             e.HasKey(x => new { x.RoleId, x.PermissionId });
 
             e.Property(x => x.RoleId).HasColumnName("role_id").HasColumnType("uuid");

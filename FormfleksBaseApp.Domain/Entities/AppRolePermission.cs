@@ -1,5 +1,8 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace FormfleksBaseApp.Domain.Entities;
 
+[Table("role_permissions", Schema = "public")]
 public class AppRolePermission
 {
     public Guid RoleId { get; set; }

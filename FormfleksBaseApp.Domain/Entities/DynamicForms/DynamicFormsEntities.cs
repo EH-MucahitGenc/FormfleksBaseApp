@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace FormfleksBaseApp.Domain.Entities.DynamicForms;
 
 /// <summary>
 /// Dinamik form sistemindeki rol tanımlarını tutan varlık.
 /// </summary>
+[Table("roles", Schema = "public")]
 public sealed class RoleEntity
 {
     public Guid Id { get; set; }
@@ -14,6 +17,7 @@ public sealed class RoleEntity
 /// <summary>
 /// Kullanıcı ve Rol arasındaki çoka çok (many-to-many) ilişkiyi tutan varlık.
 /// </summary>
+[Table("user_roles", Schema = "public")]
 public sealed class UserRoleEntity
 {
     public Guid UserId { get; set; }
@@ -25,6 +29,7 @@ public sealed class UserRoleEntity
 /// <summary>
 /// Bir form şablonunun (Örn: İzin Formu, Masraf Formu) ana tanımını tutan varlık.
 /// </summary>
+[Table("form_types", Schema = "public")]
 public sealed class FormTypeEntity
 {
     public Guid Id { get; set; }
@@ -46,6 +51,7 @@ public sealed class FormTypeEntity
 /// <summary>
 /// Form şablonu içerisindeki bölümleri (sekmeler/gruplar) tanımlayan varlık.
 /// </summary>
+[Table("form_sections", Schema = "public")]
 public sealed class FormSectionEntity
 {
     public Guid Id { get; set; }
@@ -57,6 +63,7 @@ public sealed class FormSectionEntity
 /// <summary>
 /// Form şablonu içerisindeki her bir alanı (TextBox, Dropdown vb.) ve kurallarını tanımlayan varlık.
 /// </summary>
+[Table("form_fields", Schema = "public")]
 public sealed class FormFieldEntity
 {
     public Guid Id { get; set; }
@@ -80,6 +87,7 @@ public sealed class FormFieldEntity
 /// <summary>
 /// Bir form şablonuna ait onay iş akışının genel tanımını ve versiyonunu tutan varlık.
 /// </summary>
+[Table("workflow_definitions", Schema = "public")]
 public sealed class WorkflowDefinitionEntity
 {
     public Guid Id { get; set; }
@@ -91,6 +99,7 @@ public sealed class WorkflowDefinitionEntity
 /// <summary>
 /// İş akışındaki her bir onay adımını (Kim onaylayacak, kural ne vb.) tanımlayan varlık.
 /// </summary>
+[Table("workflow_steps", Schema = "public")]
 public sealed class WorkflowStepEntity
 {
     public Guid Id { get; set; }
@@ -116,6 +125,7 @@ public sealed class WorkflowStepEntity
 /// <summary>
 /// Kullanıcılar tarafından doldurulan ve onaya sunulan her bir form talebinin ana kaydını tutan varlık.
 /// </summary>
+[Table("form_requests", Schema = "public")]
 public sealed class FormRequestEntity
 {
     public Guid Id { get; set; }
@@ -156,6 +166,7 @@ public sealed class FormRequestEntity
 /// <summary>
 /// Bir form talebi doldurulurken girilen alan değerlerini (Cevapları) tutan varlık.
 /// </summary>
+[Table("form_request_values", Schema = "public")]
 public sealed class FormRequestValueEntity
 {
     public Guid Id { get; set; }
@@ -172,6 +183,7 @@ public sealed class FormRequestValueEntity
 /// <summary>
 /// Bir form talebi üzerindeki anlık onay işlemlerini, bekleyen adımları ve geçmiş aksiyonları tutan varlık.
 /// </summary>
+[Table("form_request_approvals", Schema = "public")]
 public sealed class FormRequestApprovalEntity
 {
     public Guid Id { get; set; }
@@ -191,6 +203,7 @@ public sealed class FormRequestApprovalEntity
 /// <summary>
 /// Sistem tarafından otomatik bulunamayan adımlar için kullanıcının manuel olarak yaptığı atamaları tutan varlık.
 /// </summary>
+[Table("form_request_manual_assignments", Schema = "public")]
 public sealed class FormRequestManualAssignmentEntity
 {
     public Guid Id { get; set; }
@@ -202,6 +215,7 @@ public sealed class FormRequestManualAssignmentEntity
 /// <summary>
 /// Sistem genelinde yapılan kritik işlemlerin (Kayıt, Güncelleme, Silme vb.) denetim izini (Audit) tutan varlık.
 /// </summary>
+[Table("audit_logs", Schema = "public")]
 public sealed class AuditLogEntity
 {
     public Guid Id { get; set; }
@@ -217,6 +231,7 @@ public sealed class AuditLogEntity
 /// Sistemdeki dış veri kaynaklarına (Oracle, SQL vb.) atılacak sorguları ve bağlantı bilgilerini tutan varlık.
 /// Otomatik Doldurma (Auto-fill) gibi dinamik entegrasyon özelliklerinde kullanılır.
 /// </summary>
+[Table("integration_queries", Schema = "public")]
 public sealed class IntegrationQueryEntity
 {
     public Guid Id { get; set; }

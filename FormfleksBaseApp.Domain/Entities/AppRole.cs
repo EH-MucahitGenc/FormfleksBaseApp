@@ -1,8 +1,11 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace FormfleksBaseApp.Domain.Entities;
 
 /// <summary>
 /// Sistemdeki rolleri ve yetki gruplarını temsil eden temel varlık (Entity).
 /// </summary>
+[Table("roles", Schema = "public")]
 public class AppRole : BaseEntity
 {
     public string Name { get; set; } = default!;

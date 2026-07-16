@@ -4,6 +4,8 @@ using FormfleksBaseApp.Application.Features.AdminRoles.Dtos;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System;
+using FormfleksBaseApp.Domain.Entities;
+using FormfleksBaseApp.Application.Common.Utils;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -28,9 +30,10 @@ public class RolePermissionRepository : IRolePermissionRepository
     public async Task<IReadOnlyList<PermissionDto>> GetAllPermissionsAsync(CancellationToken ct)
     {
         using var connection = CreateConnection();
-        const string sql = @"
+        var permTable = TableHelper.GetTableName<AppPermission>();
+        var sql = $@"
             SELECT id AS Id, name AS Name, description AS Description 
-            FROM permissions 
+            FROM {permTable} 
             ORDER BY name";
 
         var permissions = await connection.QueryAsync<PermissionDto>(sql);
@@ -40,10 +43,12 @@ public class RolePermissionRepository : IRolePermissionRepository
     public async Task<IReadOnlyList<string>> GetRolePermissionsAsync(Guid roleId, CancellationToken ct)
     {
         using var connection = CreateConnection();
-        const string sql = @"
+        var rolePermTable = TableHelper.GetTableName<AppRolePermission>();
+        var permTable = TableHelper.GetTableName<AppPermission>();
+        var sql = $@"
             SELECT p.name 
-            FROM role_permissions rp 
-            INNER JOIN permissions p ON rp.permission_id = p.id 
+            FROM {rolePermTable} rp 
+            INNER JOIN {permTable} p ON rp.permission_id = p.id 
             WHERE rp.role_id = @RoleId";
 
         var permissions = await connection.QueryAsync<string>(sql, new { RoleId = roleId });
@@ -56,10 +61,13 @@ public class RolePermissionRepository : IRolePermissionRepository
         await connection.OpenAsync(ct);
         using var transaction = connection.BeginTransaction();
 
+        var rolePermTable = TableHelper.GetTableName<AppRolePermission>();
+        var permTable = TableHelper.GetTableName<AppPermission>();
+
         try
         {
             // 1. Rolün mevcut tüm yetkilerini temizle
-            const string deleteSql = "DELETE FROM role_permissions WHERE role_id = @RoleId";
+            var deleteSql = $"DELETE FROM {rolePermTable} WHERE role_id = @RoleId";
             await connection.ExecuteAsync(deleteSql, new { RoleId = roleId }, transaction);
 
             // 2. Eğer eklenecek yetki yoksa işlemi tamamla
@@ -70,13 +78,13 @@ public class RolePermissionRepository : IRolePermissionRepository
             }
 
             // 3. İsimleri gönderilen yetkilerin ID'lerini bul
-            const string getIdsSql = "SELECT id FROM permissions WHERE name = ANY(@Names)";
+            var getIdsSql = $"SELECT id FROM {permTable} WHERE name = ANY(@Names)";
             var permissionIds = (await connection.QueryAsync<Guid>(getIdsSql, new { Names = permissionNames.ToArray() }, transaction)).ToList();
 
             // 4. Yeni yetkileri role_permissions tablosuna ekle
             if (permissionIds.Any())
             {
-                const string insertSql = "INSERT INTO role_permissions (role_id, permission_id) VALUES (@RoleId, @PermissionId)";
+                var insertSql = $"INSERT INTO {rolePermTable} (role_id, permission_id) VALUES (@RoleId, @PermissionId)";
                 
                 var insertData = permissionIds.Select(pid => new { RoleId = roleId, PermissionId = pid });
                 await connection.ExecuteAsync(insertSql, insertData, transaction);

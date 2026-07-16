@@ -35,7 +35,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     {
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity>(e =>
         {
-            e.ToTable("system_settings");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("character varying(100)").HasMaxLength(100);
             e.Property(x => x.Value).HasColumnName("value").HasColumnType("jsonb");
@@ -43,7 +42,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
         });
         modelBuilder.Entity<UserDelegationEntity>(e =>
         {
-            e.ToTable("user_delegations");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.DelegatorUserId).HasColumnName("delegator_user_id").HasColumnType("uuid");
@@ -66,7 +64,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<RoleEntity>(e =>
         {
-            e.ToTable("roles");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.Code).HasColumnName("code").HasColumnType("character varying(50)").HasMaxLength(50);
@@ -77,7 +74,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<UserRoleEntity>(e =>
         {
-            e.ToTable("user_roles");
             e.HasKey(x => new { x.UserId, x.RoleId });
             e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
             e.Property(x => x.RoleId).HasColumnName("role_id").HasColumnType("uuid");
@@ -87,7 +83,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormTypeEntity>(e =>
         {
-            e.ToTable("form_types");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.Code).HasColumnName("code").HasColumnType("character varying(50)").HasMaxLength(50);
@@ -101,7 +96,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormSectionEntity>(e =>
         {
-            e.ToTable("form_sections");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
@@ -112,7 +106,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormFieldEntity>(e =>
         {
-            e.ToTable("form_fields");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
@@ -135,7 +128,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<WorkflowDefinitionEntity>(e =>
         {
-            e.ToTable("workflow_definitions");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
@@ -147,7 +139,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<WorkflowStepEntity>(e =>
         {
-            e.ToTable("workflow_steps");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.WorkflowDefinitionId).HasColumnName("workflow_definition_id").HasColumnType("uuid");
@@ -166,7 +157,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormRequestEntity>(e =>
         {
-            e.ToTable("form_requests");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
@@ -185,7 +175,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormRequestValueEntity>(e =>
         {
-            e.ToTable("form_request_values");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.RequestId).HasColumnName("request_id").HasColumnType("uuid");
@@ -202,7 +191,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormRequestApprovalEntity>(e =>
         {
-            e.ToTable("form_request_approvals");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.RequestId).HasColumnName("request_id").HasColumnType("uuid");
@@ -221,7 +209,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormRequestManualAssignmentEntity>(e =>
         {
-            e.ToTable("form_request_manual_assignments");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.FormRequestId).HasColumnName("form_request_id").HasColumnType("uuid");
@@ -232,7 +219,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<UserLocationRoleEntity>(e =>
         {
-            e.ToTable("user_location_roles");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
@@ -247,7 +233,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<AuditLogEntity>(e =>
         {
-            e.ToTable("audit_logs");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.EntityType).HasColumnName("entity_type").HasColumnType("character varying(100)").HasMaxLength(100);
@@ -261,7 +246,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>(e =>
         {
-            e.ToTable("app_notifications");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
@@ -278,7 +262,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>(e =>
         {
-            e.ToTable("qdms_personeller");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.Sirket).HasColumnName("sirket").HasColumnType("character varying(50)").HasMaxLength(50);
@@ -307,7 +290,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelSyncLog>(e =>
         {
-            e.ToTable("qdms_personel_sync_logs");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.TriggeredByUserId).HasColumnName("triggered_by_user_id").HasColumnType("uuid");
@@ -323,7 +305,6 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 
         modelBuilder.Entity<IntegrationQueryEntity>(e =>
         {
-            e.ToTable("integration_queries");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
             e.Property(x => x.Name).HasColumnName("name").HasColumnType("character varying(200)").HasMaxLength(200);

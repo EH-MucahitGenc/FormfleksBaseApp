@@ -1,7 +1,10 @@
 using FormfleksBaseApp.Domain.Entities;
 
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace FormfleksBaseApp.Domain.Entities.Admin;
 
+[Table("qdms_personeller", Schema = "public")]
 public class QdmsPersonelAktarim : BaseEntity
 {
     public string Sirket { get; set; } = default!;
