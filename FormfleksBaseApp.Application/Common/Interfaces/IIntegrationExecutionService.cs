@@ -8,11 +8,12 @@ namespace FormfleksBaseApp.Application.Common.Interfaces;
 public interface IIntegrationExecutionService
 {
     /// <summary>
-    /// Executes a configured integration query and returns a dictionary of mapped values.
+    /// Yapılandırılmış bir dış entegrasyon sorgusunu (IntegrationQuery) çalıştırır ve 
+    /// eşleştirilmiş kolon/değer sözlüğünü (Dictionary) döner.
     /// </summary>
-    /// <param name="queryId">The ID of the IntegrationQueryEntity</param>
-    /// <param name="parameters">The key-value pairs of parameters passed from the frontend</param>
-    /// <param name="ct">Cancellation token</param>
-    /// <returns>A dictionary containing the first row of the query result, mapped to column names.</returns>
+    /// <param name="queryId">Çalıştırılacak entegrasyon sorgusunun ID'si.</param>
+    /// <param name="parameters">Sorguya dışarıdan/istemciden gönderilen parametrelerin anahtar-değer çiftleri.</param>
+    /// <param name="ct">İptal tokeni.</param>
+    /// <returns>Sorgu sonucundaki ilk satırı kolon isimleriyle birlikte sözlük olarak döner.</returns>
     Task<IDictionary<string, object>?> ExecuteQueryAsync(Guid queryId, IDictionary<string, string> parameters, CancellationToken ct);
 }

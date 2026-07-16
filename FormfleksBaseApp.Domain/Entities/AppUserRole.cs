@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities;
 
+/// <summary>
+/// Kullanıcılar (<see cref="AppUser"/>) ve Roller (<see cref="AppRole"/>) arasındaki çoka-çok ilişkiyi temsil eden ara tablo (Entity).
+/// </summary>
 [Table("user_roles", Schema = "public")]
 public class AppUserRole
 {

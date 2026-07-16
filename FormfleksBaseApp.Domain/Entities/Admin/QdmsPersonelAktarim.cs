@@ -4,6 +4,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities.Admin;
 
+/// <summary>
+/// QDMS (Kalite Yönetim Sistemi) üzerinden veya diğer harici İK sistemlerinden 
+/// aktarılan personel bilgilerini geçici veya kalıcı olarak tutan varlık.
+/// Bu tablo, yerel AppUser tablosu ile senkronizasyon süreçlerinde kullanılır.
+/// </summary>
 [Table("qdms_personeller", Schema = "public")]
 public class QdmsPersonelAktarim : BaseEntity
 {

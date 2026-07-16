@@ -13,6 +13,11 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * React uygulamasının kök (Root) bileşeni. 
+ * React Query (Data Fetching), React Router (Yönlendirme) ve Toaster (Bildirimler)
+ * gibi temel sağlayıcıları (Providers) kapsar.
+ */
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

@@ -2,6 +2,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FormfleksBaseApp.Domain.Entities;
 
+/// <summary>
+/// Sistemde tanımlı olan yetkileri (Örn: "users.view", "forms.manage") temsil eden varlık.
+/// Bu yetkiler rollere atanarak sistem içerisindeki yetkilendirme mekanizmasını oluşturur.
+/// </summary>
 [Table("permissions", Schema = "public")]
 public class AppPermission : BaseEntity
 {

@@ -6,6 +6,10 @@ using System.Text.Json;
 
 namespace FormfleksBaseApp.Api.Middleware;
 
+/// <summary>
+/// Uygulama genelinde (HTTP Pipeline) fırlatılan işlenmemiş (unhandled) hataları yakalayarak,
+/// istemciye standart bir API Hata formatında dönmesini sağlayan ara katman (Middleware) sınıfı.
+/// </summary>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;

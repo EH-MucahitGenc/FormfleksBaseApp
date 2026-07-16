@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Infrastructure.Services;
 
+/// <summary>
+/// Veritabanında JSON formatında tutulan sistem ayarlarının okunması, önbelleğe (Cache) alınması
+/// ve güncellenmesi işlemlerini yürüten servis sınıfı.
+/// </summary>
 public class SystemSettingsService : ISystemSettingsService
 {
     private readonly IServiceScopeFactory _scopeFactory;

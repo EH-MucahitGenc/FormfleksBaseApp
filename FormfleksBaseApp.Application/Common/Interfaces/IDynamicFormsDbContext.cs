@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Common.Interfaces;
 
+/// <summary>
+/// Dinamik Formlar ve uygulamanın ana tabloları (Kullanıcı, Rol, Bildirim, Ayarlar vb.) 
+/// için Entity Framework Core veritabanı bağlam (Context) arayüzü.
+/// </summary>
 public interface IDynamicFormsDbContext
 {
     DbSet<RoleEntity> Roles { get; }

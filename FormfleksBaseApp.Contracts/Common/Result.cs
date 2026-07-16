@@ -37,6 +37,10 @@ public class Result
     public static Result<TValue> Create<TValue>(TValue? value) => value is not null ? Success(value) : Failure<TValue>(Error.NullValue);
 }
 
+/// <summary>
+/// İşlem sonucunda ek olarak bir veri (<typeparamref name="TValue"/>) dönmesi gereken durumlar için 
+/// kullanılan jenerik Result sınıfı.
+/// </summary>
 public class Result<TValue> : Result
 {
     private readonly TValue? _value;

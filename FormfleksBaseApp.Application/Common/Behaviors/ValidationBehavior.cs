@@ -1,9 +1,14 @@
-﻿using FluentValidation;
+using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 
 namespace FormfleksBaseApp.Application.Common.Behaviors;
 
+/// <summary>
+/// MediatR istek akışı (Pipeline) içerisine girerek gelen isteklerin (Command/Query) 
+/// FluentValidation kurallarına uygunluğunu otomatik olarak denetleyen davranış sınıfı.
+/// Kurallara uyulmadığı takdirde ValidationException fırlatır.
+/// </summary>
 public sealed class ValidationBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull

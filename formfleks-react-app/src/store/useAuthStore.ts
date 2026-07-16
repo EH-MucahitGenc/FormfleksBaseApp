@@ -24,6 +24,10 @@ interface AuthState {
   logout: () => void;
 }
 
+/**
+ * Uygulamanın istemci tarafındaki (Client-side) oturum ve kullanıcı (Auth) durumunu
+ * Zustand kütüphanesi kullanarak yöneten ve LocalStorage'da kalıcı hale getiren (Persist) Store.
+ */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({

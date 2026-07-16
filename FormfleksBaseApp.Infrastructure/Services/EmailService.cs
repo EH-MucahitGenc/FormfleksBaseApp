@@ -4,6 +4,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace FormfleksBaseApp.Infrastructure.Services;
 
+/// <summary>
+/// Sistem üzerinden kullanıcılara gönderilecek olan e-postaların (Onay, Red, Hatırlatma vb.) 
+/// HTML şablonlarını oluşturan ve gönderim kuyruğuna (BackgroundQueue) ekleyen servis sınıfı.
+/// </summary>
 public class EmailService : IEmailService
 {
     private readonly IEmailBackgroundQueue _emailQueue;

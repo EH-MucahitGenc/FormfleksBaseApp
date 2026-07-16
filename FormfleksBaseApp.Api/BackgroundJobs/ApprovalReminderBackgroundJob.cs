@@ -12,6 +12,10 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Api.BackgroundJobs;
 
+/// <summary>
+/// Sistemde belirli bir süredir onay bekleyen (Pending) form talepleri için 
+/// onaylayıcılara (Kullanıcı veya Rol) periyodik olarak hatırlatma e-postaları gönderen arka plan servisi (Cron Job).
+/// </summary>
 public class ApprovalReminderBackgroundJob : CronJobService
 {
     private readonly IServiceProvider _serviceProvider;

@@ -1,5 +1,9 @@
 namespace FormfleksBaseApp.Domain.Entities;
 
+/// <summary>
+/// Guid tipinde Id'ye sahip varlıklar (Entity'ler) için temel sınıf.
+/// Oluşturulma, güncellenme tarihleri ve aktiflik durumunu (soft delete / active flag) barındırır.
+/// </summary>
 public abstract class BaseEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();

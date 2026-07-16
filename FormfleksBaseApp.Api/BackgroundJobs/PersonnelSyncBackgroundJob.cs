@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Api.BackgroundJobs;
 
+/// <summary>
+/// Harici İK Sistemlerinden (Örn: QDMS, Oracle) form sistemi kullanıcılarının
+/// sicil ve departman bilgilerini belirli aralıklarla (Cron) otomatik senkronize eden arka plan servisi.
+/// </summary>
 public class PersonnelSyncBackgroundJob : CronJobService
 {
     private readonly IServiceProvider _serviceProvider;

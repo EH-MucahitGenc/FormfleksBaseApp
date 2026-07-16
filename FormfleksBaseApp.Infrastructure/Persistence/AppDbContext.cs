@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FormfleksBaseApp.Infrastructure.Persistence;
 
+/// <summary>
+/// Uygulamanın temel kullanıcı yönetimi, roller ve yetkilendirmeler (Authentication & Authorization)
+/// için kullanılan Entity Framework Core veritabanı bağlam (Context) sınıfı.
+/// </summary>
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }

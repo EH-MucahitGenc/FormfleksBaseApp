@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.DynamicForms.DataAccess;
 
+/// <summary>
+/// Dinamik Formlar, İş Akışları (Workflow), Bildirimler (Notifications) ve Entegrasyonlar
+/// gibi uygulamanın ana modüllerini yöneten Entity Framework Core veritabanı bağlam sınıfı.
+/// </summary>
 public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
 {
     public DynamicFormsDbContext(DbContextOptions<DynamicFormsDbContext> options) : base(options)

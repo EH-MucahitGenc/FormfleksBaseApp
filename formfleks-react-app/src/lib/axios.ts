@@ -1,7 +1,11 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Create base instance
+/**
+ * Axios tabanlı merkezi HTTP istemcisi (API Client).
+ * Uygulama genelinde JWT Authorization header'ı ekleme, Token süre aşımı (401) veya
+ * yetkisiz erişim (403) hatalarını global seviyede yakalama (Interceptor) işlemlerini yürütür.
+ */
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 10000,

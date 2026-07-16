@@ -1,5 +1,9 @@
 namespace FormfleksBaseApp.Domain.Common;
 
+/// <summary>
+/// Int tipinde Id'ye sahip olan ve veritabanı kayıt işlemlerinde
+/// denetim izini (Audit) tutmak üzere oluşturma/güncelleme/silme yapan kişiyi (Who) ve zamanı (When) barındıran temel sınıf.
+/// </summary>
 public abstract class BaseEntity
 {
     public int Id { get; set; }

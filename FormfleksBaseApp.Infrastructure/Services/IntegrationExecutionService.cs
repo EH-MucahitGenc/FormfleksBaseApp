@@ -16,6 +16,10 @@ using Microsoft.Data.SqlClient;
 
 namespace FormfleksBaseApp.Infrastructure.Services;
 
+/// <summary>
+/// Sistemde tanımlanmış olan dış entegrasyon sorgularını (Oracle, SQL Server, PostgreSQL vb.) 
+/// Dapper kullanarak dinamik olarak çalıştıran ve sonuçları sözlük (Dictionary) olarak dönen servis sınıfı.
+/// </summary>
 public class IntegrationExecutionService : IIntegrationExecutionService
 {
     private readonly IDynamicFormsDbContext _db;

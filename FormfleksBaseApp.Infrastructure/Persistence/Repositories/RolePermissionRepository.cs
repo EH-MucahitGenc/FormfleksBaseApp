@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Infrastructure.Persistence.Repositories;
 
+/// <summary>
+/// Roller ve onlara bağlı yetkilerin (Permissions) veritabanından Dapper kullanılarak hızlı bir şekilde
+/// okunması ve güncellenmesi işlemlerini üstlenen veri erişim sınıfı.
+/// </summary>
 public class RolePermissionRepository : IRolePermissionRepository
 {
     private readonly IConfiguration _configuration;
