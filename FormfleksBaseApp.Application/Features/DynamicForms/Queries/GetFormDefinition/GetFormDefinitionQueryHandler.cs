@@ -116,7 +116,9 @@ public sealed class GetFormDefinitionQueryHandler : IRequestHandler<GetFormDefin
             OptionsJson = fld.OptionsJson,
             AutoFillJson = fld.AutoFillJson,
             ValidationJson = fld.ValidationRuleJson,
-            VisibilityRuleJson = fld.VisibilityRuleJson
+            VisibilityRuleJson = fld.VisibilityRuleJson,
+            ColSpan = fld.ColSpan,
+            CalculationRuleJson = fld.CalculationRuleJson
         };
     }
 }

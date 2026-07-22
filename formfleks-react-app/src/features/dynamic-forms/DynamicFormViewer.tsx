@@ -32,6 +32,46 @@ import NumberBox from 'devextreme-react/number-box';
 import TextArea from 'devextreme-react/text-area';
 import { dynamicFormService, type DynamicFieldSchema } from '@/services/dynamic-form.service';
 import { integrationsService } from '@/services/integrations.service';
+import { useWatch } from 'react-hook-form';
+
+const evaluateFormula = (formula: string, context: Record<string, any>) => {
+  if (!formula) return null;
+  try {
+    const keys = Object.keys(context);
+    const values = Object.values(context).map(v => (v === undefined || v === '') ? 0 : v);
+    
+    // Matematiksel yardımcı fonksiyonlar (Grid'ler için)
+    const SUM = (arr: any[], key: string) => Array.isArray(arr) ? arr.reduce((acc, val) => acc + (Number(val[key]) || 0), 0) : 0;
+    const AVG = (arr: any[], key: string) => {
+        if (!Array.isArray(arr) || arr.length === 0) return 0;
+        const total = SUM(arr, key);
+        return total / arr.length;
+    };
+
+    const fn = new Function('SUM', 'AVG', ...keys, `return ${formula};`);
+    const result = fn(SUM, AVG, ...values);
+    return isNaN(result) || !isFinite(result) ? null : result;
+  } catch (e) {
+    return null; // Silent catch for incomplete/invalid formulas
+  }
+};
+
+const CalculationField = ({ field, control }: { field: DynamicFieldSchema, control: any }) => {
+  const formValues = useWatch({ control });
+  const val = evaluateFormula(field.calculationRuleJson || '', formValues);
+
+  return (
+    <div className={`flex flex-col gap-1.5`}>
+      <label className="text-sm font-semibold text-brand-dark flex items-center justify-between">
+        <span>{field.label} {field.isRequired && <span className="text-status-danger">*</span>}</span>
+        <span className="text-xs bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">Hesaplama</span>
+      </label>
+      <div className="w-full bg-surface-muted border border-surface-muted rounded px-3 py-2 text-brand-dark font-medium cursor-not-allowed">
+        {val !== null ? val.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '-'}
+      </div>
+    </div>
+  );
+};
 
 export const DynamicFormViewer: React.FC = () => {
   const { formCode } = useParams<{ formCode: string }>();
@@ -100,6 +140,7 @@ export const DynamicFormViewer: React.FC = () => {
         if (v.fieldType === 3) {
           if (val === 'true') val = true;
           else if (val === 'false') val = false;
+          else if (val === null || val === undefined || val === '') val = false; // Prevent indeterminate "filled" state
         }
 
         // Fix decimal strings coming back as "0,000000" or similar
@@ -365,23 +406,33 @@ export const DynamicFormViewer: React.FC = () => {
   };
 
   // Maps a dynamic schema field to the corresponding standard Formfleks wrapper
-  const renderField = (field: DynamicFieldSchema) => {
+  const renderFieldContent = (field: DynamicFieldSchema) => {
     switch (field.editorType) {
+      case 'calculation':
+        return <CalculationField field={field} control={control} />;
+      case 'statichtml':
+        return (
+          <div className="w-full">
+            {field.label && <h4 className="text-sm font-semibold text-brand-dark mb-2">{field.label}</h4>}
+            <div 
+              className="prose prose-sm max-w-none text-brand-gray" 
+              dangerouslySetInnerHTML={{ __html: field.optionsJson || '' }} 
+            />
+          </div>
+        );
       case 'grid':
         return (
           <FfDynamicGridField
-            key={field.dataField}
             name={field.dataField}
             label={field.label}
             required={field.isRequired}
             columnsSchema={field.gridColumns || []}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
+            optionsJson={field.optionsJson}
           />
         );
       case 'file':
         return (
           <FfField
-            key={field.dataField}
             control={control}
             name={field.dataField}
             component={FfDynamicFileField as any}
@@ -391,13 +442,11 @@ export const DynamicFormViewer: React.FC = () => {
               fieldKey: field.dataField,
               optionsJson: field.optionsJson
             }}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'select':
         return (
           <FfField
-            key={field.dataField}
             control={control}
             component={FfSelectBox}
             name={field.dataField}
@@ -408,43 +457,35 @@ export const DynamicFormViewer: React.FC = () => {
               displayExpr: "name",
               valueExpr: "id"
             }}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'date':
         return (
           <FfDateBoxRHF
-            key={field.dataField}
             name={field.dataField}
             label={field.label}
             required={field.isRequired}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'time':
         return (
           <FfTimeBox
-            key={field.dataField}
             name={field.dataField}
             label={field.label}
             required={field.isRequired}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'datetime':
         return (
           <FfDateTimeBoxRHF
-            key={field.dataField}
             name={field.dataField}
             label={field.label}
             required={field.isRequired}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'number':
         return (
           <FfField
-            key={field.dataField}
             control={control}
             component={NumberBox as any}
             name={field.dataField}
@@ -454,24 +495,20 @@ export const DynamicFormViewer: React.FC = () => {
               stylingMode: "outlined",
               onFocusOut: () => handleFieldBlur(field)
             }}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'boolean':
         return (
           <FfField
-            key={field.dataField}
             control={control}
             component={FfCheckBox}
             name={field.dataField}
             label={field.label}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'textarea':
         return (
           <FfField
-            key={field.dataField}
             control={control}
             component={TextArea as any}
             name={field.dataField}
@@ -482,22 +519,42 @@ export const DynamicFormViewer: React.FC = () => {
               minHeight: 100,
               onFocusOut: () => handleFieldBlur(field)
             }}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
           />
         );
       case 'text':
       default:
         return (
           <FfTextField
-            key={field.dataField}
             name={field.dataField}
             label={field.label}
             required={field.isRequired}
-            className={field.colSpan === 2 ? 'col-span-full' : ''}
             onBlur={() => handleFieldBlur(field)}
           />
         );
     }
+  };
+
+  const renderField = (field: DynamicFieldSchema) => {
+    const colSpanClass = {
+      1: 'md:col-span-1',
+      2: 'md:col-span-2',
+      3: 'md:col-span-3',
+      4: 'md:col-span-4',
+      5: 'md:col-span-5',
+      6: 'md:col-span-6',
+      7: 'md:col-span-7',
+      8: 'md:col-span-8',
+      9: 'md:col-span-9',
+      10: 'md:col-span-10',
+      11: 'md:col-span-11',
+      12: 'md:col-span-12',
+    }[field.colSpan || 12] || 'md:col-span-12';
+
+    return (
+      <div key={field.dataField} className={`${colSpanClass} w-full`}>
+        {renderFieldContent(field)}
+      </div>
+    );
   };
 
   if (!formCode) {
@@ -521,7 +578,7 @@ export const DynamicFormViewer: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] w-full">
-      <div className="mb-4">
+      <div className="w-full mb-4">
         <FfButton variant="ghost" className="mb-2 -ml-3" leftIcon={<ArrowLeft className="h-4 w-4"/>} onClick={() => navigate(-1)}>
           Geri
         </FfButton>
@@ -531,7 +588,7 @@ export const DynamicFormViewer: React.FC = () => {
         />
       </div>
 
-      <div className="flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted p-6 md:p-8 overflow-y-auto">
+      <div className="w-full flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted p-6 md:p-8 overflow-y-auto mb-6 scrollbar-thin">
         <FormProvider {...methods}>
           <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
             

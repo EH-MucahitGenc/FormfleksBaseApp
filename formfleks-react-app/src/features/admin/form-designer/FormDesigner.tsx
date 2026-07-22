@@ -7,6 +7,8 @@ import { integrationQueryService, type IntegrationQueryLookupDto } from '@/servi
 import { PageHeader, FfButton, PageContainer, GlassCard, FfModal } from '@/components/ui/index';
 import { generateUUID } from '@/lib/uuid';
 import { AutoFillMappingBuilder } from './components/AutoFillMappingBuilder';
+import { useForm, FormProvider } from 'react-hook-form';
+import { FfDynamicGridField } from '@/components/dev-extreme/FfDynamicGridField';
 
 // Form Builder Types (Local State overrides)
 interface FieldState {
@@ -15,8 +17,10 @@ interface FieldState {
   label: string;
   fieldType: number;
   isRequired: boolean;
+  colSpan?: number;
   optionsJson?: string;
   autoFillJson?: string;
+  calculationRuleJson?: string;
   placeholder?: string;
 }
 
@@ -62,6 +66,7 @@ const formatOptionsToCsv = (val: any): string => {
 
 export const FormDesigner: React.FC = () => {
   const queryClient = useQueryClient();
+  const methods = useForm();
   const [activeTab, setActiveTab] = useState<'list' | 'designer' | 'preview'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -80,21 +85,39 @@ export const FormDesigner: React.FC = () => {
    * Grid (Tablo) kolon yöneticisi state'i.
    * Modalın açık/kapalı durumu ve aktif kolonların bilgisini tutar.
    */
-  const [gridManager, setGridManager] = useState<{ secId: string, fieldId: string, columns: any[] } | null>(null);
+  const [gridManager, setGridManager] = useState<{sectionId: string, fieldId: string, columns: any[], fixedRows: string} | null>(null);
 
-  const openGridManager = (secId: string, fieldId: string, optionsJson?: string) => {
-    let cols = [];
-    if (optionsJson) {
-      try { cols = JSON.parse(optionsJson); } catch {}
+  const openGridManager = (sectionId: string, fieldId: string, currentOptions: string | undefined) => {
+    let columns = [];
+    let fixedRows = '';
+    if (currentOptions) {
+      try {
+        const parsed = JSON.parse(currentOptions);
+        if (Array.isArray(parsed)) {
+            columns = parsed;
+        } else {
+            columns = parsed.columns || [];
+            fixedRows = parsed.fixedRows ? parsed.fixedRows.join('\n') : '';
+        }
+      } catch (e) {
+        console.error("Failed to parse grid options", e);
+      }
     }
-    setGridManager({ secId, fieldId, columns: cols });
+    setGridManager({ sectionId, fieldId, columns, fixedRows });
   };
 
   const saveGridColumns = () => {
-    if (gridManager) {
-      updateField(gridManager.secId, gridManager.fieldId, { optionsJson: JSON.stringify(gridManager.columns) });
-      setGridManager(null);
-    }
+    if (!gridManager) return;
+    const { sectionId, fieldId, columns, fixedRows } = gridManager;
+    const rowArray = fixedRows.split('\n').map(r => r.trim()).filter(r => r !== '');
+    
+    // Yalnızca array kaydetmek yerine object kaydet
+    const optionsObj: any = { columns: columns };
+    if (rowArray.length > 0) optionsObj.fixedRows = rowArray;
+    
+    const optionsJson = JSON.stringify(optionsObj);
+    updateField(sectionId, fieldId, { optionsJson });
+    setGridManager(null);
   };
 
   const [fileManager, setFileManager] = useState<{ secId: string, fieldId: string, settings: { maxSizeMB: number, allowedExtensions: string } } | null>(null);
@@ -199,7 +222,8 @@ export const FormDesigner: React.FC = () => {
             isRequired: f.isRequired,
             optionsJson: f.fieldType === 4 ? formatOptionsToCsv(f.optionsJson) : f.optionsJson,
             autoFillJson: f.autoFillJson,
-            placeholder: f.placeholder
+            placeholder: f.placeholder,
+            colSpan: f.colSpan || f.ColSpan || 12
           })) || []
         }));
         setSections(mappedSections);
@@ -271,7 +295,8 @@ export const FormDesigner: React.FC = () => {
             fieldKey: `field_${Math.floor(Math.random() * 1000)}`, 
             label: `Yeni Alan`, 
             fieldType: 1, 
-            isRequired: false 
+            isRequired: false,
+            colSpan: 12
           }]
         };
       }
@@ -416,6 +441,8 @@ export const FormDesigner: React.FC = () => {
           sortOrder: fIndex + 1,
           sectionTitle: s.title,
           active: true,
+          colSpan: f.colSpan,
+          calculationRuleJson: f.calculationRuleJson,
           optionsJson: f.fieldType === 4 && f.optionsJson ? JSON.stringify(f.optionsJson.split(',').map(x => ({ Value: x.trim(), Text: x.trim() }))) : (f.fieldType === 11 || f.fieldType === 10 ? f.optionsJson : undefined),
           autoFillJson: f.autoFillJson,
           placeholder: f.placeholder
@@ -776,9 +803,18 @@ export const FormDesigner: React.FC = () => {
                                                                 <option value={5}>Tarih</option>
                                                                 <option value={6}>Saat</option>
                                                                 <option value={7}>Tarih & Saat</option>
+                                                                <option value={8}>Sayı</option>
                                                                 <option value={10}>Dosya</option>
                                                                 <option value={11}>Tablo (Grid)</option>
+                                                                <option value={12}>Hesaplamalı Alan (Formül)</option>
+                                                                <option value={13}>Statik Bilgi Metni</option>
                                                             </select>
+                                                            <div className="mt-1 flex items-center justify-between text-xs text-brand-gray">
+                                                                <span>Genişlik:</span>
+                                                                <select value={f.colSpan || 12} onChange={e => updateField(section.id, f.id, { colSpan: Number(e.target.value) })} className="w-16 bg-surface-hover border-none rounded px-1 py-1 focus:ring-1 focus:ring-brand-primary text-brand-dark">
+                                                                    {[1, 2, 3, 4, 6, 12].map(col => <option key={col} value={col}>{col}/12</option>)}
+                                                                </select>
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-2 text-center">
                                                             <input type="checkbox" checked={f.isRequired} onChange={e => updateField(section.id, f.id, { isRequired: e.target.checked })} className="rounded border-surface-muted text-brand-primary focus:ring-brand-primary/50 h-4 w-4" />
@@ -786,7 +822,7 @@ export const FormDesigner: React.FC = () => {
                                                         <td className="px-4 py-2">
                                                             {f.fieldType === 11 ? (
                                                                 <FfButton size="sm" variant="outline" onClick={() => openGridManager(section.id, f.id, f.optionsJson)}>
-                                                                    Kolonları Yönet ({f.optionsJson ? (function(){ try { return JSON.parse(f.optionsJson).length; } catch { return 0; }})() : 0})
+                                                                    Tablo Ayarları
                                                                 </FfButton>
                                                             ) : f.fieldType === 10 ? (
                                                                 <FfButton size="sm" variant="outline" onClick={() => openFileManager(section.id, f.id, f.optionsJson)}>
@@ -794,6 +830,10 @@ export const FormDesigner: React.FC = () => {
                                                                 </FfButton>
                                                             ) : f.fieldType === 4 ? (
                                                                 <input type="text" value={f.optionsJson || ''} onChange={e => updateField(section.id, f.id, { optionsJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="A,B,C (Virgülle ayırın)" />
+                                                            ) : f.fieldType === 12 ? (
+                                                                <input type="text" value={f.calculationRuleJson || ''} onChange={e => updateField(section.id, f.id, { calculationRuleJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs font-mono" placeholder="Örn: (not1 + not2)/2" />
+                                                            ) : f.fieldType === 13 ? (
+                                                                <input type="text" value={f.optionsJson || ''} onChange={e => updateField(section.id, f.id, { optionsJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="<p>HTML İçerik</p>" />
                                                             ) : (
                                                                 <input type="text" value={f.placeholder || ''} onChange={e => updateField(section.id, f.id, { placeholder: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="Placeholder..." />
                                                             )}
@@ -840,12 +880,31 @@ export const FormDesigner: React.FC = () => {
                             <div key={sec.id} className="relative">
                                 {sec.title && <h3 className="text-base flex items-center gap-3 font-bold text-brand-primary mb-5"><span className="w-2 h-2 rounded-full bg-brand-accent"></span>{sec.title}</h3>}
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-                                    {sec.fields.map(f => (
-                                        <div key={f.id} className={[2, 11].includes(f.fieldType) ? 'md:col-span-12' : 'md:col-span-6'}>
+                                    {sec.fields.map(f => {
+                                        const colSpanClass = {
+                                            1: 'md:col-span-1',
+                                            2: 'md:col-span-2',
+                                            3: 'md:col-span-3',
+                                            4: 'md:col-span-4',
+                                            5: 'md:col-span-5',
+                                            6: 'md:col-span-6',
+                                            7: 'md:col-span-7',
+                                            8: 'md:col-span-8',
+                                            9: 'md:col-span-9',
+                                            10: 'md:col-span-10',
+                                            11: 'md:col-span-11',
+                                            12: 'md:col-span-12',
+                                        }[f.colSpan || 12] || 'md:col-span-12';
+                                        
+                                        return (
+                                        <div key={f.id} className={colSpanClass}>
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-sm font-semibold text-brand-dark flex items-center justify-between">
-                                                    <span>{f.label} {f.isRequired && <span className="text-status-danger">*</span>}</span>
-                                                </label>
+                                                {f.fieldType !== 13 && (
+                                                    <label className="text-sm font-semibold text-brand-dark flex items-center justify-between">
+                                                        <span>{f.label} {f.isRequired && <span className="text-status-danger">*</span>}</span>
+                                                        {f.fieldType === 12 && <span className="text-xs bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">Hesaplama</span>}
+                                                    </label>
+                                                )}
                                                 
                                                 {/* Preview Render Dummies based on type */}
                                                 {f.fieldType === 1 && <input type="text" disabled placeholder={f.placeholder} className="w-full bg-surface-hover border border-surface-muted rounded-lg px-3 py-2 text-sm text-brand-gray cursor-not-allowed" />}
@@ -864,21 +923,43 @@ export const FormDesigner: React.FC = () => {
                                                 {[5, 6, 7].includes(f.fieldType) && (
                                                     <input type={f.fieldType === 5 ? 'date' : f.fieldType === 6 ? 'time' : 'datetime-local'} disabled className="w-full bg-surface-hover border border-surface-muted rounded-lg px-3 py-2 text-sm text-brand-gray cursor-not-allowed opacity-70" />
                                                 )}
+                                                {f.fieldType === 8 && <input type="number" disabled placeholder={f.placeholder} className="w-full bg-surface-hover border border-surface-muted rounded-lg px-3 py-2 text-sm text-brand-gray cursor-not-allowed" />}
                                                 {f.fieldType === 10 && (
                                                     <div className="border border-dashed border-surface-muted bg-surface-hover rounded-lg px-3 py-4 text-center text-xs text-brand-gray/70">
                                                         Dosya Yükleme Alanı
                                                     </div>
                                                 )}
                                                 {f.fieldType === 11 && (
-                                                    <div className="border border-surface-muted bg-surface-hover rounded-lg px-3 py-10 text-center flex flex-col items-center justify-center gap-2">
-                                                        <Columns className="h-6 w-6 text-brand-gray/40" />
-                                                        <span className="text-sm font-medium text-brand-gray">Grid (Tablo) Alanı</span>
-                                                        <span className="text-xs text-brand-gray/50">Form doldururken burada satır/kolon tabanlı bir grid gösterilecektir.</span>
+                                                    <FormProvider {...methods}>
+                                                        <FfDynamicGridField
+                                                            name={`preview_${f.id}`}
+                                                            label=""
+                                                            required={f.isRequired}
+                                                            columnsSchema={f.optionsJson ? (function(){
+                                                                try {
+                                                                    const parsed = JSON.parse(f.optionsJson);
+                                                                    return Array.isArray(parsed) ? parsed : (parsed.columns || []);
+                                                                } catch { return []; }
+                                                            })() : []}
+                                                            optionsJson={f.optionsJson}
+                                                        />
+                                                    </FormProvider>
+                                                )}
+                                                {f.fieldType === 12 && (
+                                                    <div className="w-full bg-surface-muted border border-surface-muted rounded-lg px-3 py-2 text-brand-dark font-medium cursor-not-allowed">
+                                                        -
+                                                    </div>
+                                                )}
+                                                {f.fieldType === 13 && (
+                                                    <div className="w-full">
+                                                        {f.label && <h4 className="text-sm font-semibold text-brand-dark mb-2">{f.label}</h4>}
+                                                        <div className="prose prose-sm max-w-none text-brand-gray/80" dangerouslySetInnerHTML={{ __html: f.optionsJson || '<p>Statik içerik buraya gelecek...</p>' }} />
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))
@@ -971,6 +1052,17 @@ export const FormDesigner: React.FC = () => {
                     ))}
                  </div>
               )}
+
+              <div className="mt-6 border-t border-surface-muted pt-4">
+                 <h4 className="text-sm font-semibold text-brand-dark mb-1">Sabit Satırlar (Rubric Modu)</h4>
+                 <p className="text-xs text-brand-gray mb-3">Eğer bu tablonun sabit sorulardan oluşmasını istiyorsanız (Örn: Performans Değerlendirmesi), satır isimlerini her satıra bir tane gelecek şekilde alt alta yazın. Sabit satır tanımlandığında form doldurulurken satır ekleme/silme kapatılır ve bu satırlar varsayılan olarak gelir.</p>
+                 <textarea 
+                    value={gridManager.fixedRows}
+                    onChange={e => setGridManager({ ...gridManager, fixedRows: e.target.value })}
+                    className="w-full bg-surface-hover border border-surface-muted rounded-lg px-3 py-2 text-sm text-brand-dark min-h-[120px] focus:ring-1 focus:ring-brand-primary"
+                    placeholder="İş Bilgisi ve Teknik Yetkinlik&#10;Verimlilik ve İş Çıktısı Kalitesi&#10;İletişim ve Kurumsal Davranış"
+                 />
+              </div>
            </div>
         )}
       </FfModal>

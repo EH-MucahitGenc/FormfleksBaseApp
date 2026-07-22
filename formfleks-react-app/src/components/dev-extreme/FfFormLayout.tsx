@@ -24,7 +24,7 @@ export const FormSection: React.FC<FormSectionProps> = ({ title, description, ch
           {description && <p className="text-sm text-brand-gray">{description}</p>}
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {children}
       </div>
     </div>

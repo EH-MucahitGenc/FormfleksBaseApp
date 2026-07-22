@@ -76,9 +76,11 @@ public sealed class FormFieldEntity
     public string? Placeholder { get; set; }
     public string? HelpText { get; set; }
     public int SortOrder { get; set; }
+    public int? ColSpan { get; set; } // Grid Layout için sütun genişliği (örn: 12'li sistemde kaç birim kaplayacak)
     public string? DefaultValue { get; set; }
     public string? VisibilityRuleJson { get; set; }
     public string? ValidationRuleJson { get; set; }
+    public string? CalculationRuleJson { get; set; } // Formül (Örn: (not1 + not2) / 2)
     public string? OptionsJson { get; set; }
     public string? AutoFillJson { get; set; }
     public bool Active { get; set; }

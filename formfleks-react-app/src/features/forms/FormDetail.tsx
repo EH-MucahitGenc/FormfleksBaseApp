@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
+import { dynamicFormService } from '@/services/dynamic-form.service';
 import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
 import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer, FastForward } from 'lucide-react';
 import { FfButton } from '@/components/ui/index';
@@ -63,6 +64,13 @@ export const FormDetail: React.FC = () => {
   const { data, isLoading, isError } = useFormDetail(id || '');
   const { data: pendingApprovals } = usePendingApprovals();
   const approvalMutation = useApprovalAction();
+
+  const { data: template } = useQuery({
+    queryKey: ['dynamic-form-schema', data?.formTypeCode],
+    queryFn: () => dynamicFormService.getTemplateByCode(data!.formTypeCode),
+    enabled: !!data?.formTypeCode,
+  });
+
   
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -165,6 +173,196 @@ export const FormDetail: React.FC = () => {
     return true;
   };
 
+  const renderField = (f: any, i: string | number) => {
+    let isGrid = f.fieldType === 11;
+    let gridData: any = null;
+    
+    if (f.valueText) {
+      try {
+        if (isGrid) {
+          gridData = JSON.parse(f.valueText);
+        } else if (f.valueText.startsWith('[') && f.valueText.includes('{')) {
+          const parsed = JSON.parse(f.valueText);
+          if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && !parsed[0].hasOwnProperty('Text')) {
+            isGrid = true;
+            gridData = parsed;
+          }
+        }
+      } catch(e) {}
+    }
+
+    if (isGrid && gridData) {
+      let gridCols: any[] = [];
+      if (f.optionsJson) {
+         try { 
+             const parsedOpts = JSON.parse(f.optionsJson); 
+             gridCols = Array.isArray(parsedOpts) ? parsedOpts : (parsedOpts.columns || []);
+         } catch {}
+      }
+      if (!gridCols || gridCols.length === 0) {
+         if (Array.isArray(gridData) && gridData.length > 0) {
+            gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
+         } else {
+            gridCols = [];
+         }
+      }
+
+      if (Array.isArray(gridData) && gridData.length > 0 && gridData[0].hasOwnProperty('_fixedRow')) {
+         if (!gridCols.find((c: any) => c.dataField === '_fixedRow')) {
+            gridCols.unshift({ dataField: '_fixedRow', caption: f.label || 'Kriter / Satır Bilgisi' });
+         }
+      }
+
+      if (Array.isArray(gridData)) {
+        const numberCols = gridCols.filter((c: any) => c.editorType === 'number' || c.dataType === 'number');
+        const hasSummary = numberCols.length > 0;
+
+        return (
+          <div key={`grid-${i}`} className="col-span-full group mt-2 mb-4">
+            <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-2 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+              {f.label || f.fieldKey}
+            </span>
+            <div className="overflow-x-auto w-full rounded-lg border border-surface-muted bg-surface-base shadow-sm">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-surface-hover text-xs uppercase text-brand-gray border-b border-surface-muted">
+                  <tr>
+                    <th className="px-4 py-3 w-12 text-center">#</th>
+                    {gridCols.map((c: any) => (
+                      <th key={c.dataField} className="px-4 py-3 font-semibold">{c.caption || c.label || c.dataField}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-muted">
+                  {gridData.length === 0 ? (
+                    <tr>
+                      <td colSpan={gridCols.length + 1} className="px-4 py-6 text-center text-brand-gray italic">
+                        Bu tabloya henüz bir veri eklenmemiş.
+                      </td>
+                    </tr>
+                  ) : gridData.map((row: any, rIdx: number) => (
+                    <tr key={rIdx} className="hover:bg-brand-primary/5 transition-colors">
+                      <td className="px-4 py-3 text-center font-bold text-brand-gray/50">{rIdx + 1}</td>
+                      {gridCols.map((c: any) => {
+                          let val = row[c.dataField];
+                          if (val === true) val = "Evet";
+                          if (val === false) val = "Hayır";
+                          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+                            try {
+                              const d = new Date(val);
+                              if (!isNaN(d.getTime())) {
+                                val = d.toLocaleDateString('tr-TR') + (c.editorType === 'datetime' ? ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '');
+                              }
+                            } catch (e) {}
+                          }
+                          return (
+                            <td key={c.dataField} className="px-4 py-3 text-brand-dark font-medium">{val ?? '-'}</td>
+                          );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+                {hasSummary && gridData.length > 0 && (
+                  <tfoot className="bg-surface-hover border-t-2 border-surface-muted">
+                    <tr>
+                      <td className="px-4 py-3 text-center font-bold text-brand-dark">Sonuçlar</td>
+                      {gridCols.map((c: any) => {
+                        if (c.editorType === 'number' || c.dataType === 'number') {
+                          let sum = 0;
+                          let count = 0;
+                          gridData.forEach((row: any) => {
+                            const num = parseFloat(row[c.dataField]);
+                            if (!isNaN(num)) {
+                              sum += num;
+                              count++;
+                            }
+                          });
+                          const avg = count > 0 ? (sum / count).toFixed(2) : '0';
+                          return (
+                            <td key={`sum_${c.dataField}`} className="px-4 py-3 text-brand-dark text-xs font-bold whitespace-nowrap">
+                              Top: {sum} <br /> Ort: {avg.endsWith('.00') ? Math.round(sum/count) : avg}
+                            </td>
+                          );
+                        }
+                        return <td key={`empty_${c.dataField}`}></td>;
+                      })}
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+        );
+      }
+    }
+
+    if (f.fieldType === 13) {
+       return (
+        <div key={`static-${i}`} className="col-span-full group my-2">
+          <div className="prose prose-sm max-w-none text-brand-dark bg-surface-muted/10 p-4 rounded-xl border border-surface-muted/50" dangerouslySetInnerHTML={{__html: f.label || f.valueText || ''}} />
+        </div>
+       );
+    }
+
+    if (f.fieldType === 10 && f.valueText) {
+      const isImage = f.valueText.match(/\.(jpeg|jpg|gif|png)$/i) != null;
+      const isPdf = f.valueText.match(/\.(pdf)$/i) != null;
+      const fileName = f.valueText.split('/').pop() || 'Dosya';
+      const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : '';
+      const fullUrl = f.valueText.startsWith('http') ? f.valueText : `${apiBase}${f.valueText.startsWith('/') ? '' : '/'}${f.valueText}`;
+      
+      return (
+        <div key={`file-${i}`} className="group col-span-full md:col-span-1">
+          <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+            {f.label || f.fieldKey}
+          </span>
+          <div className="flex items-center gap-3 bg-surface-muted/30 p-3 rounded-lg border border-surface-muted hover:border-brand-primary/40 transition-colors">
+             <div className="h-10 w-10 shrink-0 bg-brand-primary/10 rounded-md flex items-center justify-center text-brand-primary">
+               <FileText className="h-5 w-5" />
+             </div>
+             <div className="flex-1 min-w-0">
+                <a href={fullUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-brand-dark hover:text-brand-primary truncate block transition-colors" title="Dosyayı Görüntüle / İndir">
+                  {fileName}
+                </a>
+                <span className="text-xs text-brand-gray uppercase">{isImage ? 'Resim' : isPdf ? 'PDF Belgesi' : 'Belge'}</span>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (f.fieldType === 3) {
+       const isChecked = f.valueBool === true || f.valueText === 'true';
+       return (
+         <div key={`field-${i}`} className="group">
+           <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-2 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+             {f.label || f.fieldKey}
+           </span>
+           <div className={`flex items-center justify-center w-6 h-6 rounded-md border-2 shadow-sm transition-colors ${isChecked ? 'bg-brand-primary border-brand-primary text-white' : 'bg-surface-base border-brand-gray/40 text-transparent'}`}>
+             <Check className="w-4 h-4 stroke-[3]" />
+           </div>
+         </div>
+       );
+    }
+
+    let finalVal = formatFieldValue(f.valueText);
+    if (f.valueText === 'true' || f.valueText === 'false') {
+       finalVal = f.valueText === 'true' ? 'Evet' : 'Hayır';
+    } else if (typeof f.valueNumber === 'number') {
+       finalVal = String(f.valueNumber);
+    }
+
+    return (
+      <div key={`field-${i}`} className="group">
+        <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
+          {f.label || f.fieldKey}
+        </span>
+        <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10 break-words">
+           {finalVal || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <PageContainer>
       <div className="flex items-center gap-4 mb-2">
@@ -224,124 +422,32 @@ export const FormDetail: React.FC = () => {
               <FileText className="h-5 w-5 text-brand-primary" />
               Form İçeriği
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-2">
-              {data.values && data.values.length > 0 ? (
-                data.values.map((f: any, i: number) => {
-                  if (f.fieldType === 11 && f.valueText) {
-                    try {
-                      const gridData = JSON.parse(f.valueText);
-                      let gridCols: any[] = [];
-                      if (f.optionsJson) {
-                         gridCols = JSON.parse(f.optionsJson);
-                      } else if (Array.isArray(gridData) && gridData.length > 0) {
-                         gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
-                      }
-
-                      if (Array.isArray(gridData)) {
-                        return (
-                          <div key={i} className="col-span-full group mt-2 mb-4">
-                            <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-2 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                              {f.label || f.fieldKey}
-                            </span>
-                            <div className="overflow-x-auto w-full rounded-lg border border-surface-muted bg-surface-base shadow-sm">
-                              <table className="w-full text-sm text-left">
-                                <thead className="bg-surface-hover text-xs uppercase text-brand-gray border-b border-surface-muted">
-                                  <tr>
-                                    <th className="px-4 py-3 w-12 text-center">#</th>
-                                    {gridCols.map((c: any) => (
-                                      <th key={c.dataField} className="px-4 py-3 font-semibold">{c.caption || c.label || c.dataField}</th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-surface-muted">
-                                  {gridData.length === 0 ? (
-                                    <tr>
-                                      <td colSpan={gridCols.length + 1} className="px-4 py-6 text-center text-brand-gray italic">
-                                        Bu tabloya henüz bir veri eklenmemiş.
-                                      </td>
-                                    </tr>
-                                  ) : gridData.map((row: any, rIdx: number) => (
-                                    <tr key={rIdx} className="hover:bg-brand-primary/5 transition-colors">
-                                      <td className="px-4 py-3 text-center font-bold text-brand-gray/50">{rIdx + 1}</td>
-                                      {gridCols.map((c: any) => {
-                                          let val = row[c.dataField];
-                                          // Boolean vs check for UI
-                                          if (val === true) val = "Evet";
-                                          if (val === false) val = "Hayır";
-                                          // Format ISO date strings
-                                          if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-                                            try {
-                                              const d = new Date(val);
-                                              if (!isNaN(d.getTime())) {
-                                                val = d.toLocaleDateString('tr-TR') + (c.editorType === 'datetime' ? ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '');
-                                              }
-                                            } catch (e) {}
-                                          }
-                                          return (
-                                            <td key={c.dataField} className="px-4 py-3 text-brand-dark font-medium">{val ?? '-'}</td>
-                                          );
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        );
-                      }
-                    } catch(e) {
-                      console.error("Grid parse error", e);
-                    }
-                  }
-
-                  if (f.fieldType === 10 && f.valueText) {
-                    const isImage = f.valueText.match(/\.(jpeg|jpg|gif|png)$/i) != null;
-                    const isPdf = f.valueText.match(/\.(pdf)$/i) != null;
-                    const fileName = f.valueText.split('/').pop() || 'Dosya';
-                    const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : '';
-                    const fullUrl = f.valueText.startsWith('http') ? f.valueText : `${apiBase}${f.valueText.startsWith('/') ? '' : '/'}${f.valueText}`;
-                    
-                    return (
-                      <div key={i} className="group col-span-full md:col-span-1">
-                        <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                          {f.label || f.fieldKey}
-                        </span>
-                        <div className="flex items-center gap-3 bg-surface-muted/30 p-3 rounded-lg border border-surface-muted hover:border-brand-primary/40 transition-colors">
-                           <div className="h-10 w-10 shrink-0 bg-brand-primary/10 rounded-md flex items-center justify-center text-brand-primary">
-                             <FileText className="h-5 w-5" />
-                           </div>
-                           <div className="flex-1 min-w-0">
-                              <a href={fullUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-brand-dark hover:text-brand-primary truncate block transition-colors" title="Dosyayı Görüntüle / İndir">
-                                {fileName}
-                              </a>
-                              <span className="text-xs text-brand-gray uppercase">{isImage ? 'Resim' : isPdf ? 'PDF Belgesi' : 'Belge'}</span>
-                           </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={i} className="group">
-                      <span className="block text-xs font-bold text-brand-gray uppercase tracking-widest mb-1 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">
-                        {f.label || f.fieldKey}
-                      </span>
-                      <div className="text-base font-semibold text-brand-dark bg-surface-muted/30 p-3 rounded-md border border-brand-gray/10 break-words">
-                        {f.fieldType === 3 
-                          ? (f.valueBool === true || f.valueText === 'true' ? 'Evet' : 'Hayır')
-                          : typeof f.valueNumber === 'number' 
-                            ? f.valueNumber 
-                            : formatFieldValue(f.valueText) || <span className="text-brand-gray/50 italic">Belirtilmedi</span>}
-                      </div>
+            {template && template.sections && template.sections.length > 0 ? (
+              template.sections.map((section: any, sIdx: number) => {
+                const sectionFields = section.fields
+                  .map((sf: any) => data.values.find((v: any) => v.fieldKey === sf.dataField))
+                  .filter(Boolean);
+                if (sectionFields.length === 0) return null;
+                return (
+                  <div key={section.id || sIdx} className="col-span-full mb-2">
+                    <h4 className="text-md font-bold border-b pb-2 mb-4 text-brand-primary uppercase">{section.title}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                      {sectionFields.map((f: any, i: number) => renderField(f, `${sIdx}-${i}`))}
                     </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-full py-8 text-center text-sm font-medium text-brand-gray bg-surface-muted/20 rounded-lg border border-dashed border-brand-gray/30">
-                  Bu forma ait girilmiş bir veri bulunmuyor.
-                </div>
-              )}
-            </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-2">
+                {data.values && data.values.length > 0 ? (
+                  data.values.map((f: any, i: number) => renderField(f, i))
+                ) : (
+                  <div className="col-span-full py-8 text-center text-sm font-medium text-brand-gray bg-surface-muted/20 rounded-lg border border-dashed border-brand-gray/30">
+                    Bu forma ait girilmiş bir veri bulunmuyor.
+                  </div>
+                )}
+              </div>
+            )}
           </GlassCard>
         </div>
 
@@ -551,7 +657,7 @@ export const FormDetail: React.FC = () => {
 
       {/* Hidden Print Container */}
       <div className="hidden">
-        <PrintableFormDetail ref={printRef} data={data} />
+        <PrintableFormDetail ref={printRef} data={data} template={template} />
       </div>
 
     </PageContainer>

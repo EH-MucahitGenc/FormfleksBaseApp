@@ -2,22 +2,20 @@ namespace FormfleksBaseApp.DynamicForms.Domain.Enums;
 
 /// <summary>
 /// Dinamik formlardaki giriş alanlarının (input) tiplerini belirtir.
+/// NOT: React tarafındaki eşleştirmelerle (dynamic-form.service.ts) %100 uyumlu olmalıdır.
 /// </summary>
 public enum DynamicFieldType
 {
     Text = 1,
     TextArea = 2,
-    Number = 3,
-    Date = 4,
-    DateTime = 5,
+    Boolean = 3, // React UI uses 3 for Checkbox
+    Select = 4,  // React UI uses 4 for Dropdown
+    Date = 5,
     Time = 6,
-    Select = 7,
-    Radio = 8,
-    Checkbox = 9,
+    DateTime = 7,
+    Number = 8,  // Added new for Number type
     File = 10,
-    
-    /// <summary>
-    /// Kullanıcının form içerisinde tablo/satır bazlı (Master-Detail) çoklu veri girebildiği, alt alanları (kolonları) barındıran kompleks alan tipidir.
-    /// </summary>
-    Grid = 11
+    Grid = 11,
+    Calculation = 12,
+    StaticHtml = 13
 }

@@ -36,6 +36,9 @@ export interface FormTemplateFieldUpsertDto {
   placeholder?: string;
   optionsJson?: string; // Comma separated or JSON array for dropdown
   active: boolean;
+  colSpan?: number;
+  calculationRuleJson?: string;
+  autoFillJson?: string;
 }
 
 export interface FormTemplateSectionUpsertDto {

@@ -32,4 +32,6 @@ public sealed class FormFieldDto
     public string? AutoFillJson { get; set; }
     public string? ValidationJson { get; set; }
     public string? VisibilityRuleJson { get; set; }
+    public int? ColSpan { get; set; }
+    public string? CalculationRuleJson { get; set; }
 }

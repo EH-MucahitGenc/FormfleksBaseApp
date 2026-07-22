@@ -27,12 +27,14 @@ public sealed class FormTemplateFieldUpsertDto
     public int FieldType { get; set; }
     public bool IsRequired { get; set; }
     public int SortOrder { get; set; }
+    public int? ColSpan { get; set; }
     public string? SectionTitle { get; set; }
     public string? Placeholder { get; set; }
     public string? HelpText { get; set; }
     public string? DefaultValue { get; set; }
     public string? VisibilityRuleJson { get; set; }
     public string? ValidationRuleJson { get; set; }
+    public string? CalculationRuleJson { get; set; }
     public string? OptionsJson { get; set; }
     public string? AutoFillJson { get; set; }
     public bool Active { get; set; } = true;

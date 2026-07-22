@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/axios';
 
 export interface DynamicFieldSchema {
   dataField: string;
-  editorType: 'text' | 'number' | 'date' | 'time' | 'datetime' | 'select' | 'textarea' | 'boolean' | 'grid' | 'file';
+  editorType: 'text' | 'number' | 'date' | 'time' | 'datetime' | 'select' | 'textarea' | 'boolean' | 'grid' | 'file' | 'calculation' | 'statichtml';
   label: string;
   isRequired: boolean;
   colSpan?: number;
@@ -11,6 +11,7 @@ export interface DynamicFieldSchema {
   gridColumns?: Array<DynamicFieldSchema>;
   optionsJson?: string;
   autoFillJson?: string;
+  calculationRuleJson?: string;
 }
 
 export interface DynamicSectionSchema {
@@ -31,13 +32,15 @@ export interface DynamicFormTemplateDto {
 export interface BackendFormFieldDto {
   fieldKey: string;
   label: string;
-  fieldType: number; // 1: Text, 2: Textarea, 3: Checkbox, 4: Dropdown, 5: Date, 6: Time, 7: DateTime, 10: File, 11: Grid
+  fieldType: number; // 1: Text, 2: Textarea, 3: Checkbox, 4: Dropdown, 5: Date, 6: Time, 7: DateTime, 8: Number, 10: File, 11: Grid, 12: Calculation, 13: StaticHtml
   isRequired: boolean;
   sortOrder: number;
+  colSpan?: number;
   sectionTitle: string;
   placeholder?: string;
   optionsJson?: string; 
   autoFillJson?: string;
+  calculationRuleJson?: string;
   active: boolean;
 }
 
@@ -126,6 +129,7 @@ class DynamicFormService {
          const label = f.label || f.Label || fieldKey;
          const isRequired = f.isRequired || f.IsRequired || false;
          const optionsJson = f.optionsJson || f.OptionsJson;
+         const backendColSpan = f.colSpan || f.ColSpan;
 
          let editorType: DynamicFieldSchema['editorType'] = 'text';
          let lookupData;
@@ -158,6 +162,7 @@ class DynamicFormService {
            case 5: editorType = 'date'; break;
            case 6: editorType = 'time'; break;
            case 7: editorType = 'datetime'; break; 
+           case 8: editorType = 'number'; break;
            case 10: 
              editorType = 'file'; 
              break;
@@ -166,24 +171,34 @@ class DynamicFormService {
              // Grid kolonları JSON formatında optionsJson içinde gelir
              if (optionsJson) {
                try {
-                 gridColumns = JSON.parse(optionsJson);
+                 const parsed = JSON.parse(optionsJson);
+                 if (Array.isArray(parsed)) {
+                    gridColumns = parsed;
+                 } else if (typeof parsed === 'object') {
+                    gridColumns = parsed.columns || [];
+                 }
                } catch {
                  gridColumns = [];
                }
              }
              break;
+           case 12: editorType = 'calculation'; break;
+           case 13: editorType = 'statichtml'; break;
          }
+
+         let defaultColSpan = 12;
 
          parsedFields.push({
            dataField: fieldKey,
            label: label,
            isRequired: isRequired,
-           colSpan: (editorType === 'textarea' || editorType === 'grid') ? 2 : 1,
+           colSpan: backendColSpan ?? defaultColSpan,
            editorType,
            lookupData,
            gridColumns,
            optionsJson,
-           autoFillJson: f.autoFillJson || f.AutoFillJson
+           autoFillJson: f.autoFillJson || f.AutoFillJson,
+           calculationRuleJson: f.calculationRuleJson || f.CalculationRuleJson
          });
       });
 

@@ -1,4 +1,6 @@
 import { forwardRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { dynamicFormService } from '@/services/dynamic-form.service';
 import type { FormRequestDetailedDto } from '@/services/form.service';
 
 const formatFieldValue = (val: any): string => {
@@ -22,7 +24,7 @@ const formatFieldValue = (val: any): string => {
       }
       
       if (Array.isArray(parsed)) {
-        return parsed.map(item => {
+        return parsed.map((item: any) => {
           if (item && typeof item === 'object') {
             return item.Text || item.Value || item.label || item.value || JSON.stringify(item);
           }
@@ -45,11 +47,20 @@ const formatFieldValue = (val: any): string => {
 
 interface PrintableFormDetailProps {
   data: FormRequestDetailedDto;
+  template?: any;
 }
 
 export const PrintableFormDetail = forwardRef<HTMLDivElement, PrintableFormDetailProps>(
-  ({ data }, ref) => {
+  ({ data, template: externalTemplate }, ref) => {
     
+    const { data: fetchedTemplate } = useQuery({
+      queryKey: ['dynamic-form-schema', data.formTypeCode],
+      queryFn: () => dynamicFormService.getTemplateByCode(data.formTypeCode),
+      enabled: !!data.formTypeCode && !externalTemplate,
+    });
+
+    const template = externalTemplate || fetchedTemplate;
+
     const getStatusText = (status: number) => {
       switch(status) {
         case 1: return 'Taslak';
@@ -73,6 +84,174 @@ export const PrintableFormDetail = forwardRef<HTMLDivElement, PrintableFormDetai
         case 'Submitted': return 'Talebi Açtı';
         default: return status;
       }
+    };
+
+    const renderPrintableField = (v: any, idx: string | number) => {
+      let isGrid = v.fieldType === 11;
+      let gridData: any = null;
+      
+      if (v.valueText) {
+        try {
+          if (isGrid) {
+            gridData = JSON.parse(v.valueText);
+          } else if (v.valueText.startsWith('[') && v.valueText.includes('{')) {
+            const parsed = JSON.parse(v.valueText);
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && !parsed[0].hasOwnProperty('Text')) {
+              isGrid = true;
+              gridData = parsed;
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (isGrid && gridData) {
+          let gridCols: any[] = [];
+          if (v.optionsJson) {
+             try { 
+                 const parsedOpts = JSON.parse(v.optionsJson); 
+                 gridCols = Array.isArray(parsedOpts) ? parsedOpts : (parsedOpts.columns || []);
+             } catch {}
+          }
+          if (!gridCols || gridCols.length === 0) {
+             if (Array.isArray(gridData) && gridData.length > 0) {
+                gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
+             } else {
+                gridCols = [];
+             }
+          }
+
+          if (Array.isArray(gridData) && gridData.length > 0 && gridData[0].hasOwnProperty('_fixedRow')) {
+             if (!gridCols.find((c: any) => c.dataField === '_fixedRow')) {
+                gridCols.unshift({ dataField: '_fixedRow', caption: v.label || 'Kriter / Satır Bilgisi' });
+             }
+          }
+
+          if (Array.isArray(gridData)) {
+            const numberCols = gridCols.filter((c: any) => c.editorType === 'number' || c.dataType === 'number');
+            const hasSummary = numberCols.length > 0;
+
+            return (
+              <tr key={idx}>
+                <td colSpan={2} className="border border-black p-0">
+                  <div className="bg-gray-100 font-bold p-2 text-xs border-b border-black">{v.label} (Liste Verisi)</div>
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr>
+                        <th className="border-b border-r border-black p-1 w-8 text-center bg-gray-50">#</th>
+                        {gridCols.map((c: any) => (
+                          <th key={c.dataField} className="border-b border-r border-black p-1 font-bold bg-gray-50">{c.caption || c.label || c.dataField}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gridData.length === 0 ? (
+                        <tr>
+                          <td colSpan={gridCols.length + 1} className="p-2 text-center text-gray-500 italic">Veri girilmemiş</td>
+                        </tr>
+                      ) : gridData.map((row: any, rIdx: number) => (
+                        <tr key={rIdx}>
+                          <td className="border-b border-r border-black p-1 text-center">{rIdx + 1}</td>
+                          {gridCols.map((c: any) => {
+                            let val = row[c.dataField];
+                            if (val === true) val = "Evet";
+                            if (val === false) val = "Hayır";
+                            if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+                              try {
+                                const d = new Date(val);
+                                if (!isNaN(d.getTime())) {
+                                  val = d.toLocaleDateString('tr-TR') + (c.editorType === 'datetime' ? ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '');
+                                }
+                              } catch (e) {}
+                            }
+                            return (
+                              <td key={c.dataField} className="border-b border-r border-black p-1">{val ?? '-'}</td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                    {hasSummary && gridData.length > 0 && (
+                      <tfoot>
+                        <tr>
+                          <td className="border-t-2 border-r border-black p-1 font-bold text-center bg-gray-100">Sonuçlar</td>
+                          {gridCols.map((c: any) => {
+                            if (c.editorType === 'number' || c.dataType === 'number') {
+                              let sum = 0;
+                              let count = 0;
+                              gridData.forEach((row: any) => {
+                                const num = parseFloat(row[c.dataField]);
+                                if (!isNaN(num)) {
+                                  sum += num;
+                                  count++;
+                                }
+                              });
+                              const avg = count > 0 ? (sum / count).toFixed(2) : '0';
+                              return (
+                                <td key={`sum_${c.dataField}`} className="border-t-2 border-r border-black p-1 font-bold bg-gray-100 whitespace-nowrap text-[10px]">
+                                  Top: {sum} <br /> Ort: {avg.endsWith('.00') ? Math.round(sum/count) : avg}
+                                </td>
+                              );
+                            }
+                            return <td key={`empty_${c.dataField}`} className="border-t-2 border-r border-black p-1 bg-gray-100"></td>;
+                          })}
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </td>
+              </tr>
+            );
+          }
+      }
+
+      if (v.fieldType === 13) {
+         return (
+           <tr key={idx}>
+             <td colSpan={2} className="border border-black p-4 bg-gray-50 text-xs leading-relaxed" dangerouslySetInnerHTML={{__html: v.label || v.valueText || ''}}></td>
+           </tr>
+         );
+      }
+
+      if (v.fieldType === 10 && v.valueText) {
+        return (
+          <tr key={idx}>
+            <td className="border border-black p-2 font-bold bg-gray-50 text-xs">{v.label}</td>
+            <td className="border border-black p-2 font-bold break-words italic text-gray-600 text-xs">
+              [Eklenmiş Dosya: {v.valueText.split('/').pop()}]
+            </td>
+          </tr>
+        );
+      }
+
+      if (v.fieldType === 3) {
+         const isChecked = v.valueBool === true || v.valueText === 'true';
+         return (
+           <tr key={idx}>
+             <td className="border border-black p-2 font-bold bg-gray-50 text-xs">{v.label}</td>
+             <td className="border border-black p-2 font-medium text-xs">
+               <div className="flex items-center gap-2">
+                 <div className="w-4 h-4 border-2 border-black flex items-center justify-center bg-white" style={{ display: 'inline-flex', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                   {isChecked && <span className="font-bold text-black" style={{ fontSize: '12px', lineHeight: '10px' }}>✓</span>}
+                 </div>
+               </div>
+             </td>
+           </tr>
+         );
+      }
+
+      let finalVal = formatFieldValue(v.valueText);
+      if (v.valueText === 'true' || v.valueText === 'false') {
+         finalVal = v.valueText === 'true' ? 'Evet' : 'Hayır';
+      } else if (typeof v.valueNumber === 'number') {
+         finalVal = String(v.valueNumber);
+      }
+
+      return (
+        <tr key={idx}>
+          <td className="border border-black p-2 font-bold bg-gray-50 text-xs">{v.label}</td>
+          <td className="border border-black p-2 font-medium break-words text-xs">{finalVal || '-'}</td>
+        </tr>
+      );
     };
 
     return (
@@ -134,94 +313,47 @@ export const PrintableFormDetail = forwardRef<HTMLDivElement, PrintableFormDetai
           </div>
         </div>
 
-        <h2 className="section-title">1. FORM İÇERİK BİLGİLERİ</h2>
-        
-        <table className="w-full border-collapse border-2 border-black text-sm mb-6">
-          <thead>
-            <tr>
-              <th className="border border-black p-2 text-left w-1/3 bg-gray-100 font-bold text-[10px] uppercase">Veri Alanı</th>
-              <th className="border border-black p-2 text-left w-2/3 bg-gray-100 font-bold text-[10px] uppercase">Sisteme Girilen Değer</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.values && data.values.length > 0 ? data.values.map((v, idx) => {
-              if (v.fieldType === 11 && v.valueText) {
-                try {
-                  const gridData = JSON.parse(v.valueText);
-                  let gridCols: any[] = [];
-                  if (v.optionsJson) {
-                     gridCols = JSON.parse(v.optionsJson);
-                  } else if (Array.isArray(gridData) && gridData.length > 0) {
-                     gridCols = Object.keys(gridData[0]).map(k => ({ dataField: k, caption: k }));
-                  }
-
-                  if (Array.isArray(gridData)) {
-                    return (
-                      <tr key={idx}>
-                        <td colSpan={2} className="border border-black p-0">
-                          <div className="bg-gray-100 font-bold p-2 text-xs border-b border-black">{v.label} (Liste Verisi)</div>
-                          <table className="w-full text-xs text-left">
-                            <thead>
-                              <tr>
-                                <th className="border-b border-r border-black p-1 w-8 text-center bg-gray-50">#</th>
-                                {gridCols.map((c: any) => (
-                                  <th key={c.dataField} className="border-b border-r border-black p-1 font-bold bg-gray-50">{c.caption || c.label || c.dataField}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {gridData.length === 0 ? (
-                                <tr>
-                                  <td colSpan={gridCols.length + 1} className="p-2 text-center text-gray-500 italic">Veri girilmemiş</td>
-                                </tr>
-                              ) : gridData.map((row: any, rIdx: number) => (
-                                <tr key={rIdx}>
-                                  <td className="border-b border-r border-black p-1 text-center">{rIdx + 1}</td>
-                                  {gridCols.map((c: any) => {
-                                    let val = row[c.dataField];
-                                    if (val === true) val = "Evet";
-                                    if (val === false) val = "Hayır";
-                                    return (
-                                      <td key={c.dataField} className="border-b border-r border-black p-1">{val ?? '-'}</td>
-                                    );
-                                  })}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </td>
-                      </tr>
-                    );
-                  }
-                } catch(e) {}
-              }
-
-              if (v.fieldType === 10 && v.valueText) {
-                return (
-                  <tr key={idx}>
-                    <td className="border border-black p-2 font-bold bg-gray-50 text-xs">{v.label}</td>
-                    <td className="border border-black p-2 font-bold break-words italic text-gray-600 text-xs">
-                      [Eklenmiş Dosya: {v.valueText.split('/').pop()}]
+        {template && template.sections && template.sections.length > 0 ? (
+          template.sections.map((section: any, sIdx: number) => {
+            const sectionFields = section.fields
+              .map((sf: any) => data.values.find((v: any) => v.fieldKey === sf.dataField))
+              .filter(Boolean);
+            if (sectionFields.length === 0) return null;
+            return (
+              <div key={section.id || sIdx}>
+                <h2 className="section-title">{section.title}</h2>
+                <table className="w-full border-collapse border-2 border-black text-sm mb-6">
+                  <colgroup>
+                    <col className="w-1/3" />
+                    <col className="w-2/3" />
+                  </colgroup>
+                  <tbody>
+                    {sectionFields.map((v: any, i: number) => renderPrintableField(v, `${sIdx}-${i}`))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })
+        ) : (
+          <div>
+            <h2 className="section-title">1. FORM İÇERİK BİLGİLERİ</h2>
+            <table className="w-full border-collapse border-2 border-black text-sm mb-6">
+              <colgroup>
+                <col className="w-1/3" />
+                <col className="w-2/3" />
+              </colgroup>
+              <tbody>
+                {data.values && data.values.length > 0 ? data.values.map((v, idx) => renderPrintableField(v, idx)) : (
+                  <tr>
+                    <td colSpan={2} className="border border-black p-4 text-center italic text-gray-500">
+                      Form verisi bulunamadı.
                     </td>
                   </tr>
-                );
-              }
-
-              return (
-                <tr key={idx}>
-                  <td className="border border-black p-2 font-bold bg-gray-50 text-xs">{v.label}</td>
-                  <td className="border border-black p-2 font-medium break-words text-xs">{formatFieldValue(v.valueText) || '-'}</td>
-                </tr>
-              );
-            }) : (
-              <tr>
-                <td colSpan={2} className="border border-black p-4 text-center italic text-gray-500">
-                  Form verisi bulunamadı.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <h2 className="section-title">2. ONAY / RED TARİHÇESİ VE DİJİTAL İZLER</h2>
 

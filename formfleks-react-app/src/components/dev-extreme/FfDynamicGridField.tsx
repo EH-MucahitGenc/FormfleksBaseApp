@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import DataGrid, { Column, Editing, RequiredRule, Lookup } from 'devextreme-react/data-grid';
+import DataGrid, { Column, Editing, RequiredRule, Lookup, Summary, TotalItem } from 'devextreme-react/data-grid';
 import { cn } from '../ui';
 import { DownloadCloud } from 'lucide-react';
 import { ExcelImportModal } from './ExcelImportModal';
@@ -12,6 +12,7 @@ export interface FfDynamicGridFieldProps {
   required?: boolean;
   className?: string;
   disabled?: boolean;
+  optionsJson?: string;
 }
 
 /**
@@ -20,13 +21,23 @@ export interface FfDynamicGridFieldProps {
  * Tasarım ekranında (Form Builder) belirlenen kolonlara göre DevExtreme DataGrid render eder.
  */
 export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({ 
-  name, label, columnsSchema, required, className, disabled 
+  name, label, columnsSchema, required, className, disabled, optionsJson 
 }) => {
   const { control } = useFormContext();
 
+  const fixedRows = useMemo(() => {
+    if (!optionsJson) return [];
+    try {
+      const parsed = JSON.parse(optionsJson);
+      return Array.isArray(parsed.fixedRows) ? parsed.fixedRows : [];
+    } catch {
+      return [];
+    }
+  }, [optionsJson]);
+
   // Şemadaki kolonları DevExtreme formatına dönüştür
   const columns = useMemo(() => {
-    return columnsSchema?.map(col => ({
+    const cols = columnsSchema?.map(col => ({
        dataField: col.dataField,
        caption: col.label,
        dataType: col.editorType === 'number' ? 'number' : col.editorType === 'date' ? 'date' : 'string',
@@ -34,7 +45,21 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
        editorType: col.editorType,
        options: col.options,
     })) || [];
-  }, [columnsSchema]);
+    
+    if (fixedRows.length > 0) {
+      cols.unshift({
+         dataField: '_fixedRow',
+         caption: 'Değerlendirme Kriteri',
+         dataType: 'string',
+         isRequired: false,
+         editorType: 'text',
+         options: undefined,
+         allowEditing: false
+      });
+    }
+    
+    return cols;
+  }, [columnsSchema, fixedRows]);
 
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
@@ -46,7 +71,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
           {required && <span className="text-status-danger">*</span>}
         </label>
         
-        {!disabled && (
+        {!disabled && fixedRows.length === 0 && (
           <button
             type="button"
             onClick={() => setIsExcelModalOpen(true)}
@@ -74,6 +99,12 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
               gridData = [];
             }
           }
+          
+          if (gridData.length === 0 && fixedRows.length > 0) {
+             gridData = fixedRows.map(row => ({ _fixedRow: row }));
+             // Immediately push initial data to form state so it exists on save
+             setTimeout(() => onChange(gridData), 0);
+          }
 
           return (
             <div className={cn("border rounded-xl overflow-hidden", error ? "border-status-danger" : "border-surface-muted")}>
@@ -91,9 +122,9 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
               >
                 <Editing
                   mode="cell"
-                  allowAdding={!disabled}
+                  allowAdding={!disabled && fixedRows.length === 0}
                   allowUpdating={!disabled}
-                  allowDeleting={!disabled}
+                  allowDeleting={!disabled && fixedRows.length === 0}
                   selectTextOnEditStart={true}
                   startEditAction="click"
                 />
@@ -104,6 +135,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                     dataField={col.dataField} 
                     caption={col.caption} 
                     dataType={col.dataType as any}
+                    allowEditing={col.allowEditing !== false}
                   >
                     {col.isRequired && <RequiredRule message={`${col.caption} zorunludur`} />}
                     {col.editorType === 'select' && col.options && (
@@ -111,6 +143,30 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
                     )}
                   </Column>
                 ))}
+                
+                {fixedRows.length > 0 && columns.some(c => c.dataType === 'number') && (
+                   <Summary recalculateWhileEditing={true}>
+                      {columns.filter(c => c.dataType === 'number').flatMap(c => [
+                             <TotalItem 
+                                key={`sum_${c.dataField}`}
+                                column={c.dataField} 
+                                summaryType="sum" 
+                                displayFormat="Top: {0}" 
+                             />,
+                             <TotalItem 
+                                key={`avg_${c.dataField}`}
+                                column={c.dataField} 
+                                summaryType="avg" 
+                                displayFormat="Ort: {0}" 
+                             />
+                      ])}
+                      <TotalItem 
+                         column="_fixedRow" 
+                         summaryType="count" 
+                         displayFormat="Sonuçlar ->" 
+                      />
+                   </Summary>
+                )}
               </DataGrid>
               {error && <span className="text-xs text-status-danger mt-1 px-3 pb-2 block bg-surface-base">{error.message}</span>}
               <ExcelImportModal

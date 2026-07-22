@@ -104,11 +104,13 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                 existingField.FieldType = (short)fldDto.FieldType;
                 existingField.IsRequired = fldDto.IsRequired;
                 existingField.SortOrder = fldDto.SortOrder;
+                existingField.ColSpan = fldDto.ColSpan;
                 existingField.Placeholder = fldDto.Placeholder;
                 existingField.HelpText = fldDto.HelpText;
                 existingField.DefaultValue = fldDto.DefaultValue;
                 existingField.VisibilityRuleJson = fldDto.VisibilityRuleJson;
                 existingField.ValidationRuleJson = fldDto.ValidationRuleJson;
+                existingField.CalculationRuleJson = fldDto.CalculationRuleJson;
                 existingField.OptionsJson = fldDto.OptionsJson;
                 existingField.AutoFillJson = fldDto.AutoFillJson;
                 existingField.Active = fldDto.Active;
@@ -124,11 +126,13 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                     FieldType = (short)fldDto.FieldType,
                     IsRequired = fldDto.IsRequired,
                     SortOrder = fldDto.SortOrder,
+                    ColSpan = fldDto.ColSpan,
                     Placeholder = fldDto.Placeholder,
                     HelpText = fldDto.HelpText,
                     DefaultValue = fldDto.DefaultValue,
                     VisibilityRuleJson = fldDto.VisibilityRuleJson,
                     ValidationRuleJson = fldDto.ValidationRuleJson,
+                    CalculationRuleJson = fldDto.CalculationRuleJson,
                     OptionsJson = fldDto.OptionsJson,
                     AutoFillJson = fldDto.AutoFillJson,
                     Active = fldDto.Active
