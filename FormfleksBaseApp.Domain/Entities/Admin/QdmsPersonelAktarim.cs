@@ -36,4 +36,10 @@ public class QdmsPersonelAktarim : BaseEntity
     public Guid? LinkedUserId { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastSyncDate { get; set; }
+    
+    // New QDMS Fields for Probation Tracking
+    public DateTime? Baslama_Tarihi { get; set; }
+    public DateTime? Deneme2Ay_Trh { get; set; }
+    public DateTime? Deneme6Ay_Trh { get; set; }
+    public DateTime? Dogum_Tarihi { get; set; }
 }

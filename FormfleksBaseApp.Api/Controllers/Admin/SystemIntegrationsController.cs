@@ -42,6 +42,25 @@ public class SystemIntegrationsController : ControllerBase
     }
 
     /// <summary>
+    /// Deneme süresi (2 ay / 6 ay) arka plan görevini (Cron Job) manuel tetikler. (Test amaçlıdır)
+    /// </summary>
+    [HttpPost("trigger-probation-test")]
+    public async Task<IActionResult> TriggerProbationTest([FromServices] IServiceProvider sp)
+    {
+        try
+        {
+            await FormfleksBaseApp.Api.BackgroundJobs.ProbationTrackingCronJob.TestTriggerCronJob(sp, HttpContext.RequestAborted);
+            return Ok(new { message = "2 aylık ve 6 aylık deneme süresi kontrolü manuel olarak tetiklendi. Şartları sağlayan personeller için formlar oluşturulacak." });
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message;
+            if (ex.InnerException != null) msg += " | INNER EXCEPTION: " + ex.InnerException.Message;
+            return StatusCode(500, new { error = msg, stackTrace = ex.StackTrace });
+        }
+    }
+
+    /// <summary>
     /// Senkronize edilen personellerin departman ve unvan bazlı istatistiklerini getirir.
     /// </summary>
     [HttpGet("personnel-stats")]

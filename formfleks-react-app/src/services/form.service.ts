@@ -122,6 +122,15 @@ class FormService {
     await apiClient.delete(`/dynamic-forms/requests/${requestId}/draft`);
     return { success: true };
   }
+
+  async reassignRequest(requestId: string, newOwnerUserId: string): Promise<{ success: boolean }> {
+    await apiClient.put(`/dynamic-forms/requests/${requestId}/reassign`, `"${newOwnerUserId}"`, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    return { success: true };
+  }
 }
 
 export const formService = new FormService();

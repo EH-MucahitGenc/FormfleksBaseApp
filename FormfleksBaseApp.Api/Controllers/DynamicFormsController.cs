@@ -81,6 +81,27 @@ public sealed class DynamicFormsController : ControllerBase
     }
 
     /// <summary>
+    /// Taslak halindeki formu başka bir kullanıcıya devreder (manuel yönlendirme).
+    /// </summary>
+    [HttpPut("requests/{requestId:guid}/reassign")]
+    public async Task<IActionResult> ReassignRequest(Guid requestId, [FromBody] Guid newOwnerUserId, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        var userRoles = User.Claims
+            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+            .Select(c => c.Value)
+            .ToList();
+
+        var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || r.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+        await _mediator.Send(new FormfleksBaseApp.Application.Features.DynamicForms.Commands.ReassignRequest.ReassignRequestCommand(requestId, newOwnerUserId, userId, isAdmin), ct);
+        
+        return Ok();
+    }
+
+    /// <summary>
     /// Doldurulan formu onaya sunar (İş akışını başlatır).
     /// </summary>
     [HttpPost("requests/submit")]

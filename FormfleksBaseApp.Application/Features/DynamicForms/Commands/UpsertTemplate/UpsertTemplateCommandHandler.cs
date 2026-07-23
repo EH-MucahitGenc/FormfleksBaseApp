@@ -40,6 +40,7 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
             formType.Code = dto.Code;
             formType.Name = dto.Name;
             formType.Active = dto.Active;
+            formType.SystemUsageType = dto.SystemUsageType;
             formType.AllowedCreateRoleCodesJson = dto.AllowedCreateRoleCodes != null && dto.AllowedCreateRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedCreateRoleCodes) : null;
             formType.AllowedReportRoleCodesJson = dto.AllowedReportRoleCodes != null && dto.AllowedReportRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedReportRoleCodes) : null;
 
@@ -56,6 +57,7 @@ public sealed class UpsertTemplateCommandHandler : IRequestHandler<UpsertTemplat
                 Code = dto.Code,
                 Name = dto.Name,
                 Active = dto.Active,
+                SystemUsageType = dto.SystemUsageType,
                 CreatedByUserId = request.ActorUserId,
                 CreatedAt = DateTime.UtcNow,
                 AllowedCreateRoleCodesJson = dto.AllowedCreateRoleCodes != null && dto.AllowedCreateRoleCodes.Any() ? System.Text.Json.JsonSerializer.Serialize(dto.AllowedCreateRoleCodes) : null,

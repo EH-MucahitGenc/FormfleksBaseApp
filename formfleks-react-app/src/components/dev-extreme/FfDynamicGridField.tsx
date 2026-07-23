@@ -36,14 +36,15 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
   }, [optionsJson]);
 
   // Şemadaki kolonları DevExtreme formatına dönüştür
-  const columns = useMemo(() => {
-    const cols = columnsSchema?.map(col => ({
+  const columns: any[] = useMemo(() => {
+    const cols: any[] = columnsSchema?.map(col => ({
        dataField: col.dataField,
        caption: col.label,
        dataType: col.editorType === 'number' ? 'number' : col.editorType === 'date' ? 'date' : 'string',
        isRequired: col.isRequired,
        editorType: col.editorType,
        options: col.options,
+       allowEditing: col.allowEditing
     })) || [];
     
     if (fixedRows.length > 0) {
@@ -89,7 +90,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
         render={({ field: { onChange, value }, fieldState: { error } }) => {
           
           // Arka yüzden string olarak gelen JSON verisini parse et (Eğer daha önce parse edilmediyse)
-          let gridData = [];
+          let gridData: any[] = [];
           if (Array.isArray(value)) {
             gridData = value;
           } else if (value && typeof value === 'string') {
@@ -101,7 +102,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
           }
           
           if (gridData.length === 0 && fixedRows.length > 0) {
-             gridData = fixedRows.map(row => ({ _fixedRow: row }));
+             gridData = fixedRows.map((row: any) => ({ _fixedRow: row }));
              // Immediately push initial data to form state so it exists on save
              setTimeout(() => onChange(gridData), 0);
           }

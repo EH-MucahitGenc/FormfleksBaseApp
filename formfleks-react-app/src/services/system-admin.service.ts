@@ -24,6 +24,7 @@ export interface FormTemplateSummaryDto {
   createdAt: string;
   allowedCreateRoleCodes?: string[];
   allowedReportRoleCodes?: string[];
+  systemUsageType?: string;
 }
 
 export interface FormTemplateFieldUpsertDto {
@@ -55,6 +56,7 @@ export interface FormTemplateUpsertDto {
   fields: FormTemplateFieldUpsertDto[];
   allowedCreateRoleCodes?: string[];
   allowedReportRoleCodes?: string[];
+  systemUsageType?: string;
 }
 
 // --- WORKFLOW DTOs ---

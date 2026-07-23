@@ -3,21 +3,24 @@ using System;
 using FormfleksBaseApp.DynamicForms.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
+namespace FormfleksBaseApp.Infrastructure.DynamicForms.DataAccess.Migrations
 {
     [DbContext(typeof(DynamicFormsDbContext))]
-    partial class DynamicFormsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722124207_AddProbationTrackingFields")]
+    partial class AddProbationTrackingFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.29")
+                .HasAnnotation("ProductVersion", "8.0.28")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -37,20 +40,17 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasColumnType("character varying(100)")
                         .HasColumnName("adi");
 
-                    b.Property<DateTime?>("Baslama_Tarihi")
-                        .HasColumnType("date")
-                        .HasColumnName("baslama_tarihi");
+                    b.Property<string>("Baslama_Tarihi")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("Deneme2Ay_Trh")
-                        .HasColumnType("date")
-                        .HasColumnName("deneme2ay_trh");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("Deneme6Ay_Trh")
-                        .HasColumnType("date")
-                        .HasColumnName("deneme6ay_trh");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Departman_Adi")
                         .HasMaxLength(150)
@@ -63,8 +63,7 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasColumnName("departman_kodu");
 
                     b.Property<DateTime?>("Dogum_Tarihi")
-                        .HasColumnType("date")
-                        .HasColumnName("dogum_tarihi");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .HasMaxLength(150)

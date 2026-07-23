@@ -16,4 +16,8 @@ public class QdmsPersonelAktarimOracleDto
     public string? Ust_Pozisyon_Kodu { get; set; }
     public string? Departman_Kodu { get; set; }
     public string? Departman_Adi { get; set; }
+    public string? Baslama_Tarihi { get; set; }
+    public string? Dogum_Tarihi { get; set; }
+    public string? Deneme2Ay_Trh { get; set; }
+    public string? Deneme6Ay_Trh { get; set; }
 }

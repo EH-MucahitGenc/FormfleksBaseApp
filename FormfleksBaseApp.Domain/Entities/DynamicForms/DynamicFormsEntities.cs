@@ -46,6 +46,9 @@ public sealed class FormTypeEntity
 
     // JSON array of role codes that are allowed to view reports/dashboards for this form.
     public string? AllowedReportRoleCodesJson { get; set; }
+    
+    // Identifies if this form template is triggered automatically by a background job (e.g. 2_MONTH_PROBATION)
+    public string? SystemUsageType { get; set; }
 }
 
 /// <summary>

@@ -23,7 +23,7 @@ public class ApprovalReminderBackgroundJob : CronJobService
     public ApprovalReminderBackgroundJob(
         IServiceProvider serviceProvider, 
         ILogger<ApprovalReminderBackgroundJob> logger) 
-        : base("0 10,15 * * *", GetTurkeyTimeZone(), logger)
+        : base("0 10,15 * * 1-5", GetTurkeyTimeZone(), logger)
     {
         _serviceProvider = serviceProvider;
     }
@@ -61,11 +61,11 @@ public class ApprovalReminderBackgroundJob : CronJobService
                 if (!minutes.Any()) minutes.Add(0);
                 string hoursCron = string.Join(",", hours.OrderBy(h => h));
                 string minutesCron = string.Join(",", minutes.OrderBy(m => m));
-                return $"{minutesCron} {hoursCron} * * *";
+                return $"{minutesCron} {hoursCron} * * 1-5"; // Sadece hafta içi
             }
         }
         
-        return "0 10,15 * * *";
+        return "0 10,15 * * 1-5"; // Sadece hafta içi
     }
 
     private static TimeZoneInfo GetTurkeyTimeZone()
@@ -84,6 +84,13 @@ public class ApprovalReminderBackgroundJob : CronJobService
     {
         Logger.LogInformation("Approval Reminder Background Job is running.");
         
+        var turkeyTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, GetTurkeyTimeZone());
+        if (turkeyTime.DayOfWeek == DayOfWeek.Saturday || turkeyTime.DayOfWeek == DayOfWeek.Sunday)
+        {
+            Logger.LogInformation("Hafta sonu olduğu için hatırlatma mailleri gönderilmiyor (Skipping weekend).");
+            return;
+        }
+
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IDynamicFormsDbContext>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();

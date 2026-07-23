@@ -95,6 +95,7 @@ public sealed class GetFormDefinitionQueryHandler : IRequestHandler<GetFormDefin
             FormTypeId = formType.Id,
             Code = formType.Code,
             Name = formType.Name,
+            SystemUsageType = formType.SystemUsageType,
             Sections = sectionDtos.OrderBy(s => s.SortOrder).ToList(),
             AllowedCreateRoleCodes = allowedRoles
         };

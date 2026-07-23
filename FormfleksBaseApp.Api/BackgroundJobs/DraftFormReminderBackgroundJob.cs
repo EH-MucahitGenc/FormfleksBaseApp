@@ -18,7 +18,7 @@ public class DraftFormReminderBackgroundJob : CronJobService
     public DraftFormReminderBackgroundJob(
         IServiceProvider serviceProvider, 
         ILogger<DraftFormReminderBackgroundJob> logger) 
-        : base("0 9 * * *", GetTurkeyTimeZone(), logger)
+        : base("0 9 * * 1-5", GetTurkeyTimeZone(), logger)
     {
         _serviceProvider = serviceProvider;
     }
@@ -34,11 +34,11 @@ public class DraftFormReminderBackgroundJob : CronJobService
             var parts = settings.DraftReminderTime.Split(':');
             if (parts.Length == 2 && int.TryParse(parts[0], out int hour) && int.TryParse(parts[1], out int minute))
             {
-                return $"{minute} {hour} * * *";
+                return $"{minute} {hour} * * 1-5";
             }
         }
         
-        return "0 9 * * *";
+        return "0 9 * * 1-5";
     }
 
     private static TimeZoneInfo GetTurkeyTimeZone()
@@ -56,6 +56,14 @@ public class DraftFormReminderBackgroundJob : CronJobService
     protected override async Task DoWork(CancellationToken cancellationToken)
     {
         Logger.LogInformation("Draft Form Reminder Background Job is running.");
+        
+        var turkeyTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, GetTurkeyTimeZone());
+        if (turkeyTime.DayOfWeek == DayOfWeek.Saturday || turkeyTime.DayOfWeek == DayOfWeek.Sunday)
+        {
+            Logger.LogInformation("Hafta sonu olduğu için taslak hatırlatma mailleri gönderilmiyor (Skipping weekend).");
+            return;
+        }
+
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IDynamicFormsDbContext>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();

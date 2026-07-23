@@ -504,6 +504,52 @@ public class EmailService : IEmailService
             Attachments = attachments ?? new List<EmailAttachment>()
         }, cancellationToken);
     }
+    // ══════════════════════════════════════════════════════════════════════════
+    // TASLAK FORM YÖNLENDİRİLDİ (DEVREDİLDİ)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendDraftReassignedEmailAsync(
+        string toEmail, string assigneeName, string formRequestNo, Guid formRequestId,
+        string formTypeName, string assignerName, string requesterCompany, 
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+
+        var bodyHtml = $"""
+            <p>
+              <strong style="color:#0284c7;">{assignerName}</strong> tarafından size bir
+              <strong style="color:#0284c7;">{formTypeName}</strong> taslağı yönlendirildi (devredildi).
+            </p>
+            <p style="margin-top:16px;">
+              Formu tamamlamak için aşağıdaki butona tıklayarak düzenlemeye devam edebilirsiniz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#0284c7",
+            accentDark: "#0369a1",
+            accentTextColor: "#ffffff",
+            accentLabel: "TASLAK YÖNLENDİRİLDİ",
+            statusIcon: "📤",
+            recipientName: assigneeName,
+            subject: $"Taslak Atandı: {formRequestNo}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: assignerName,
+            actionUrl: actionUrl,
+            actionLabel: "Talebi Düzenlemeye Devam Et",
+            actionBgColor: "#0ea5e9",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"📤 Taslak Atandı: {formRequestNo} — {formTypeName}",
+            HtmlBody = html,
+            Attachments = new List<EmailAttachment>()
+        }, cancellationToken);
+    }
 
     public async Task SendApprovalReminderEmailAsync(
         string toEmail, string assigneeName, string formRequestNo,
@@ -772,6 +818,148 @@ public class EmailService : IEmailService
         };
 
         await QueueEmailAsync(message, cancellationToken);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 10. DENEME SÜRESİ — Yöneticiye Doldurma Hatırlatması (Turuncu Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendProbationDraftEmailAsync(
+        List<string> toEmails, string managerName, string personelName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+        string formTypeName = $"{monthType} AYLIK DENEME DEĞERLENDİRME";
+
+        var bodyHtml = $"""
+            <p>
+              Ekibinizde görev yapan <strong style="color:#d97706;">{personelName}</strong> isimli personelin 
+              <strong style="color:#d97706;">{monthType} aylık</strong> deneme süresi dolmak üzeredir.
+            </p>
+            <p style="margin-top:16px;">
+              Lütfen Formfleks platformuna giriş yaparak personeliniz için otomatik olarak oluşturulan {formTypeName} formunu doldurunuz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#f59e0b",
+            accentDark: "#d97706",
+            accentTextColor: "#ffffff",
+            accentLabel: "İŞLEM BEKLİYOR",
+            statusIcon: "⏳",
+            recipientName: managerName,
+            subject: $"{monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: personelName,
+            actionUrl: actionUrl,
+            actionLabel: "Formu Doldur",
+            actionBgColor: "#f59e0b",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = toEmails,
+            Subject = $"{monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 11. DENEME SÜRESİ — Yönetici Bulunamadı (Kırmızı Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendProbationManagerMissingEmailAsync(
+        List<string> toEmails, string personelName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+        string formTypeName = $"{monthType} AYLIK DENEME DEĞERLENDİRME";
+
+        var bodyHtml = $"""
+            <p>
+              Sistem, <strong style="color:#dc2626;">{personelName}</strong> isimli personelin 
+              <strong style="color:#dc2626;">{monthType} aylık</strong> deneme süresi değerlendirme formu için 
+              sistemde kayıtlı bir üst yönetici bulamadı.
+            </p>
+            <p style="margin-top:16px;">
+              Form <strong>Taslak</strong> olarak oluşturulmuştur. Lütfen Formfleks platformuna giriş yaparak <strong>Taslaklarım</strong> menüsünden bu formu ilgili yöneticiye manuel olarak atayınız (Yetki/Sahip değiştirme işlemi) veya formu manuel iletiniz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#ef4444",
+            accentDark: "#dc2626",
+            accentTextColor: "#ffffff",
+            accentLabel: "YÖNETİCİ BULUNAMADI",
+            statusIcon: "⚠️",
+            recipientName: "Global İK Yetkilisi",
+            subject: $"DİKKAT: Yönetici Bulunamadı - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: personelName,
+            actionUrl: actionUrl,
+            actionLabel: "Taslaklara Git ve Manuel Ata",
+            actionBgColor: "#ef4444",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = toEmails,
+            Subject = $"DİKKAT: Yönetici Bulunamadı - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 12. DENEME SÜRESİ — Yöneticinin E-Postası Yok (Turuncu/Uyarı Tema)
+    // ══════════════════════════════════════════════════════════════════════════
+    public async Task SendProbationManagerEmailMissingEmailAsync(
+        List<string> toEmails, string personelName, string managerName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany,
+        CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/forms/{formRequestId}";
+        string formTypeName = $"{monthType} AYLIK DENEME DEĞERLENDİRME";
+
+        var bodyHtml = $"""
+            <p>
+              Sistem, <strong style="color:#d97706;">{personelName}</strong> isimli personelin deneme süresi değerlendirme formunu üst yöneticisi olan 
+              <strong style="color:#d97706;">{managerName}</strong> üzerine atamıştır.
+            </p>
+            <p style="margin-top:16px;">
+              Ancak yöneticinin sistemde (QDMS ve AppUser) tanımlı bir e-posta adresi bulunmadığı için kendisine e-posta bildirimi gönderilememiştir.
+            </p>
+            <p style="margin-top:16px;">
+              Lütfen yöneticiyi manuel olarak uyarınız veya sistemden e-posta adresini güncelleyiniz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#f59e0b",
+            accentDark: "#d97706",
+            accentTextColor: "#ffffff",
+            accentLabel: "E-POSTA EKSİK",
+            statusIcon: "⚠️",
+            recipientName: "Global İK Yetkilisi",
+            subject: $"DİKKAT: Yöneticinin E-Postası Yok - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            bodyHtml: bodyHtml,
+            formRequestNo: formRequestNo,
+            formTypeName: formTypeName,
+            requesterName: personelName,
+            actionUrl: actionUrl,
+            actionLabel: "Formfleks'e Git",
+            actionBgColor: "#f59e0b",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: requesterCompany);
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = toEmails,
+            Subject = $"DİKKAT: Yöneticinin E-Postası Yok - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
+            HtmlBody = html
+        }, cancellationToken);
     }
 
     public async Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default)

@@ -5,6 +5,7 @@ import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/
 import { PremiumInput, PremiumCheckbox } from '@/components/forms';
 import toast from 'react-hot-toast';
 import { settingsService, type AppSettingsDto, type EmailSettingsDto, type JwtSettingsDto, type WorkflowSettingsDto, type LdapSettingsDto } from '@/services/settings.service';
+import { apiClient } from '@/lib/axios';
 import { Save, Server, Mail, ShieldAlert, CheckCircle, RefreshCcw, Key, GitMerge } from 'lucide-react';
 
 export const ApplicationSettings: React.FC = () => {
@@ -158,6 +159,19 @@ export const ApplicationSettings: React.FC = () => {
 
 const IntegrationForm = ({ data, mutation }: { data: any, mutation: any }) => {
   const { control, handleSubmit } = useForm<any>({ defaultValues: data });
+  const [triggerLoading, setTriggerLoading] = useState(false);
+
+  const handleTestProbation = async () => {
+    try {
+      setTriggerLoading(true);
+      const res = await apiClient.post('/admin/integrations/trigger-probation-test');
+      toast.success(res.data?.message || 'Tetiklendi!');
+    } catch (e: any) {
+      toast.error('Hata: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setTriggerLoading(false);
+    }
+  };
 
   return (
     <GlassCard noPadding className="overflow-hidden">
@@ -197,6 +211,17 @@ const IntegrationForm = ({ data, mutation }: { data: any, mutation: any }) => {
             />
           </div>
         </form>
+
+        <div className="mt-8 pt-6 border-t border-surface-muted">
+          <h4 className="text-md font-semibold text-brand-dark mb-2 flex items-center gap-2">
+             <RefreshCcw className="h-5 w-5 text-brand-primary" />
+             Manuel Tetikleyiciler (Test & Debug)
+          </h4>
+          <p className="text-sm text-brand-gray mb-4">Sadece 2. veya 6. ayı gelmiş olan personeller için otomatik değerlendirme formlarını hemen şimdi oluşturun.</p>
+          <FfButton type="button" variant="outline" onClick={handleTestProbation} isLoading={triggerLoading}>
+            2/6 Ay Deneme Süresi Kontrolünü Tetikle
+          </FfButton>
+        </div>
       </div>
       <div className="px-6 py-4 bg-surface-muted/30 border-t border-surface-muted flex justify-end">
         <FfButton form="integration-settings-form" type="submit" variant="primary" leftIcon={<Save className="h-4 w-4" />} isLoading={mutation.isPending}>Kaydet</FfButton>

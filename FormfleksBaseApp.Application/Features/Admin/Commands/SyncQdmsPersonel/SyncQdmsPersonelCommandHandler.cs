@@ -62,6 +62,8 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
         }
         catch (Exception ex)
         {
+            var logPath = @"C:\ErkurtProjeler\FormfleksBaseApp\oracle_error.log";
+            System.IO.File.WriteAllText(logPath, ex.ToString());
             var errorLog = new QdmsPersonelSyncLog
             {
                 Id = Guid.NewGuid(),
@@ -108,6 +110,37 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
             return null;
         }
 
+        DateTime? ParseDate(string? dateStr)
+        {
+            if (string.IsNullOrWhiteSpace(dateStr)) return null;
+            
+            var cleanStr = dateStr.Trim();
+            
+            // If it contains a space (e.g. "27.09.2000 00:00:00"), we can try parsing just the date part first
+            var dateOnly = cleanStr.Split(' ')[0];
+            
+            var formats = new[] { 
+                "dd.MM.yyyy", "d.MM.yyyy", "dd.M.yyyy", "d.M.yyyy",
+                "dd/MM/yyyy", "d/MM/yyyy", "dd/M/yyyy", "d/M/yyyy",
+                "MM/dd/yyyy", "M/d/yyyy", "MM.dd.yyyy", "M.d.yyyy",
+                "dd-MM-yyyy", "dd-MMM-yyyy", "dd-MMM-yy", "dd-MMM-yy", "yyyy-MM-dd", "yyyy/MM/dd"
+            };
+            
+            if (DateTime.TryParseExact(dateOnly, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt1))
+                return DateTime.SpecifyKind(dt1, DateTimeKind.Utc);
+                
+            if (DateTime.TryParseExact(cleanStr, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dt2))
+                return DateTime.SpecifyKind(dt2, DateTimeKind.Utc);
+                
+            if (DateTime.TryParse(cleanStr, new System.Globalization.CultureInfo("tr-TR"), System.Globalization.DateTimeStyles.None, out var trDt))
+                return DateTime.SpecifyKind(trDt, DateTimeKind.Utc);
+                
+            if (DateTime.TryParse(cleanStr, out var fallbackDt))
+                return DateTime.SpecifyKind(fallbackDt, DateTimeKind.Utc);
+                
+            return null;
+        }
+
         int inserted = 0, updated = 0, deactivated = 0;
 
         foreach (var p in distinctOracleData)
@@ -128,6 +161,10 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
                 existing.Ust_Pozisyon_Kodu = p.Ust_Pozisyon_Kodu;
                 existing.Departman_Kodu = p.Departman_Kodu;
                 existing.Departman_Adi = p.Departman_Adi;
+                existing.Baslama_Tarihi = ParseDate(p.Baslama_Tarihi);
+                existing.Dogum_Tarihi = ParseDate(p.Dogum_Tarihi);
+                existing.Deneme2Ay_Trh = ParseDate(p.Deneme2Ay_Trh);
+                existing.Deneme6Ay_Trh = ParseDate(p.Deneme6Ay_Trh);
                 existing.IsActive = true;
                 existing.LastSyncDate = startTime;
                 
@@ -161,6 +198,10 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
                     Ust_Pozisyon_Kodu = p.Ust_Pozisyon_Kodu,
                     Departman_Kodu = p.Departman_Kodu,
                     Departman_Adi = p.Departman_Adi,
+                    Baslama_Tarihi = ParseDate(p.Baslama_Tarihi),
+                    Dogum_Tarihi = ParseDate(p.Dogum_Tarihi),
+                    Deneme2Ay_Trh = ParseDate(p.Deneme2Ay_Trh),
+                    Deneme6Ay_Trh = ParseDate(p.Deneme6Ay_Trh),
                     IsActive = true,
                     LastSyncDate = startTime,
                     LinkedUserId = ResolveLinkedUserId(p.Email)
@@ -194,7 +235,18 @@ public sealed class SyncQdmsPersonelCommandHandler : IRequestHandler<SyncQdmsPer
         };
         _context.QdmsPersonelSyncLogs.Add(log);
 
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            var logPath = @"C:\ErkurtProjeler\FormfleksBaseApp\sync_error.log";
+            var errMsg = ex.ToString();
+            if (ex.InnerException != null) errMsg += "\n\nINNER EXCEPTION:\n" + ex.InnerException.ToString();
+            System.IO.File.WriteAllText(logPath, errMsg);
+            throw;
+        }
 
         return new SyncQdmsPersonelResponseDto { Success = true, Message = $"Senkronizasyon tamamlandı: {inserted} Eklendi, {updated} Güncellendi, {deactivated} Pasife Alındı." };
     }

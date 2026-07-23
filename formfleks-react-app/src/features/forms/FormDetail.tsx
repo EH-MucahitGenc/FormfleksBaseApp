@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import SelectBox from 'devextreme-react/select-box';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useRef } from 'react';
@@ -12,6 +13,8 @@ import { PrintableFormDetail } from './components/PrintableFormDetail';
 import { useFormDetail, usePendingApprovals, useApprovalAction, useCancelRequest } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
+import { adminService } from '@/services/admin.service';
+import { formService } from '@/services/form.service';
 
 const formatFieldValue = (val: any): string => {
   if (!val) return '';
@@ -85,6 +88,17 @@ export const FormDetail: React.FC = () => {
   const [comment, setComment] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
+  // Reassign Modal State
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [selectedReassignUserId, setSelectedReassignUserId] = useState<string>('');
+  const [reassignMessage, setReassignMessage] = useState<string | null>(null);
+  
+  const { data: usersList } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => adminService.getUsers(),
+    enabled: isReassignModalOpen,
+  });
+
   const cancelMutation = useCancelRequest();
 
   const activeApproval = pendingApprovals?.find(p => p.requestId === id);
@@ -124,6 +138,27 @@ export const FormDetail: React.FC = () => {
   const closeModal = () => {
     setModalState({ isOpen: false, actionType: 1 });
     setComment('');
+  };
+
+  const closeReassignModal = () => {
+    setIsReassignModalOpen(false);
+    setSelectedReassignUserId('');
+    setReassignMessage(null);
+  };
+
+  const handleReassign = async () => {
+    if (!selectedReassignUserId) return;
+    try {
+      await formService.reassignRequest(id!, selectedReassignUserId);
+      setReassignMessage('Form başarıyla devredildi.');
+      queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
+      setTimeout(() => {
+        closeReassignModal();
+        navigate('/forms');
+      }, 1500);
+    } catch (err: any) {
+      setReassignMessage('Devretme işlemi başarısız oldu.');
+    }
   };
 
   const handleAction = async () => {
@@ -395,13 +430,23 @@ export const FormDetail: React.FC = () => {
             </FfButton>
           )}
           {(data.status === 1 || data.status === 7) && data.formTypeCode && (
-            <FfButton 
-              variant="primary" 
-              leftIcon={<Edit className="h-4 w-4" />}
-              onClick={() => navigate(`/forms/d/${data.formTypeCode}?draftId=${data.requestId}`)}
-            >
-              Düzenlemeye Devam Et
-            </FfButton>
+            <>
+              <FfButton 
+                variant="outline" 
+                leftIcon={<FastForward className="h-4 w-4" />}
+                onClick={() => setIsReassignModalOpen(true)}
+                className="bg-surface-base hover:bg-surface-muted"
+              >
+                Başka Birine Yönlendir
+              </FfButton>
+              <FfButton 
+                variant="primary" 
+                leftIcon={<Edit className="h-4 w-4" />}
+                onClick={() => navigate(`/forms/d/${data.formTypeCode}?draftId=${data.requestId}`)}
+              >
+                Düzenlemeye Devam Et
+              </FfButton>
+            </>
           )}
           {(data.status === 2 || data.status === 3) && data.requestorUserId === user?.id && (
             <FfButton 
@@ -589,7 +634,7 @@ export const FormDetail: React.FC = () => {
       
       {/* Action Modal with React Portal */}
       {modalState.isOpen && typeof window !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f172a]/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#0f172a]/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-surface-base rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             <div className={`px-6 py-4 border-b flex items-center gap-3 ${
               modalState.actionType === 1 ? 'bg-status-success/5 border-status-success/20' :
@@ -650,6 +695,57 @@ export const FormDetail: React.FC = () => {
                 {approvalMutation.isPending || cancelMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
               </FfButton>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {isReassignModalOpen && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#0f172a]/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface-base rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            <div className="px-6 py-4 border-b flex items-center gap-3 bg-brand-primary/5 border-brand-primary/20">
+              <div className="p-2 rounded-full bg-brand-primary/20 text-brand-primary">
+                <FastForward className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-brand-dark">Başka Birine Yönlendir</h3>
+                <p className="text-xs text-brand-gray">{data.requestNo} numaralı talep</p>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {reassignMessage ? (
+                <div className={`p-4 rounded-lg flex items-center gap-2 ${reassignMessage.includes('başarı') ? 'bg-status-success/10 text-status-success' : 'bg-status-danger/10 text-status-danger'}`}>
+                  {reassignMessage.includes('başarı') ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                  <span className="font-medium text-sm">{reassignMessage}</span>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-brand-dark">Devredilecek Kullanıcı</label>
+                  <SelectBox
+                    items={usersList || []}
+                    valueExpr="id"
+                    displayExpr="name"
+                    value={selectedReassignUserId}
+                    onValueChanged={(e) => setSelectedReassignUserId(e.value)}
+                    placeholder="Lütfen Bir Kişi Seçin"
+                    searchEnabled={true}
+                    width="100%"
+                    height={40}
+                    stylingMode="outlined"
+                    dropDownOptions={{ zIndex: 99999 }}
+                    className="border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-primary/20 focus-within:border-brand-primary transition-all"
+                  />
+                </div>
+              )}
+            </div>
+
+            {!reassignMessage && (
+              <div className="px-6 py-4 bg-surface-muted/50 border-t flex justify-end gap-3">
+                <FfButton variant="outline" onClick={closeReassignModal}>Vazgeç</FfButton>
+                <FfButton variant="primary" onClick={handleReassign} disabled={!selectedReassignUserId}>Devret</FfButton>
+              </div>
+            )}
           </div>
         </div>,
         document.body

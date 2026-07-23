@@ -73,9 +73,10 @@ public class EmailSenderBackgroundWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            EmailMessage emailMessage = null;
             try
             {
-                var emailMessage = await _emailQueue.DequeueEmailAsync(stoppingToken);
+                emailMessage = await _emailQueue.DequeueEmailAsync(stoppingToken);
                 var currentSettings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
                 
                 // Poliçeyi her seferinde güncel ayarlara göre kurmak (performans etkisi çok düşüktür)
@@ -103,11 +104,21 @@ public class EmailSenderBackgroundWorker : BackgroundService
             }
             catch (BrokenCircuitException bce)
             {
-                _logger.LogError(bce, "Email transmission skipped. SMTP Circuit is currently broken. Discarding mail from queue...");
+                _logger.LogError(bce, "Email transmission skipped. SMTP Circuit is currently broken. Re-queuing mail...");
+                if (emailMessage != null)
+                {
+                    await _emailQueue.QueueEmailAsync(emailMessage, stoppingToken);
+                    await Task.Delay(5000, stoppingToken);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "A fatal error occurred in the resilient Email Worker execution loop.");
+                _logger.LogError(ex, "A fatal error occurred in the resilient Email Worker execution loop. Re-queuing mail...");
+                if (emailMessage != null)
+                {
+                    await _emailQueue.QueueEmailAsync(emailMessage, stoppingToken);
+                    await Task.Delay(5000, stoppingToken);
+                }
             }
         }
 

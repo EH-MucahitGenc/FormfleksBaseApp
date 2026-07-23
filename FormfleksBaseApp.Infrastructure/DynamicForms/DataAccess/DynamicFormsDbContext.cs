@@ -285,6 +285,10 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.LinkedUserId).HasColumnName("linked_user_id").HasColumnType("uuid");
             e.Property(x => x.IsActive).HasColumnName("is_active").HasColumnType("boolean");
             e.Property(x => x.LastSyncDate).HasColumnName("last_sync_date").HasColumnType("timestamp with time zone");
+            e.Property(x => x.Baslama_Tarihi).HasColumnName("baslama_tarihi").HasColumnType("date");
+            e.Property(x => x.Dogum_Tarihi).HasColumnName("dogum_tarihi").HasColumnType("date");
+            e.Property(x => x.Deneme2Ay_Trh).HasColumnName("deneme2ay_trh").HasColumnType("date");
+            e.Property(x => x.Deneme6Ay_Trh).HasColumnName("deneme6ay_trh").HasColumnType("date");
 
             e.HasIndex(x => x.Sicil_No).IsUnique();
             e.HasIndex(x => x.Pozisyon_Kodu);

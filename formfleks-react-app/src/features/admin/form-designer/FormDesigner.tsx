@@ -77,6 +77,7 @@ export const FormDesigner: React.FC = () => {
   const [sections, setSections] = useState<SectionState[]>([]);
   const [allowedCreateRoleCodes, setAllowedCreateRoleCodes] = useState<string[]>([]);
   const [allowedReportRoleCodes, setAllowedReportRoleCodes] = useState<string[]>([]);
+  const [systemUsageType, setSystemUsageType] = useState<string>('');
   
   // UI State
   const [saveMessage, setSaveMessage] = useState<{ type: 'success'|'error', text: string } | null>(null);
@@ -208,6 +209,7 @@ export const FormDesigner: React.FC = () => {
       
       setCode(detailed.code || template.code);
       setName(detailed.name || template.name);
+      setSystemUsageType(detailed.systemUsageType || '');
       if (detailed.allowedCreateRoleCodes) setAllowedCreateRoleCodes(detailed.allowedCreateRoleCodes);
       
       if (detailed.sections && detailed.sections.length > 0) {
@@ -242,6 +244,7 @@ export const FormDesigner: React.FC = () => {
   const handleReset = () => {
     setCode('');
     setName('');
+    setSystemUsageType('');
     setIsActive(true);
     setAllowedCreateRoleCodes([]);
     setAllowedReportRoleCodes([]);
@@ -449,7 +452,8 @@ export const FormDesigner: React.FC = () => {
         }))
       ),
       allowedCreateRoleCodes: allowedCreateRoleCodes.length > 0 ? allowedCreateRoleCodes : undefined,
-      allowedReportRoleCodes: allowedReportRoleCodes.length > 0 ? allowedReportRoleCodes : undefined
+      allowedReportRoleCodes: allowedReportRoleCodes.length > 0 ? allowedReportRoleCodes : undefined,
+      systemUsageType: systemUsageType || undefined
     };
 
     saveMutation.mutate(payload);
@@ -616,6 +620,22 @@ export const FormDesigner: React.FC = () => {
                             <div className="w-11 h-6 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-status-success"></div>
                             <span className="ml-3 text-sm font-bold text-brand-dark">Kullanıma Açık Mı?</span>
                         </label>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mt-4">
+                    <div className="md:col-span-12">
+                        <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Sistem Otomasyonu (Arka Plan Görevi) Tetiklemesi</label>
+                        <select 
+                            value={systemUsageType} 
+                            onChange={e => setSystemUsageType(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-surface-base border border-surface-muted rounded-lg text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm"
+                        >
+                            <option value="">(Yok) Manuel Doldurulacak Standart Form</option>
+                            <option value="2_AY_DENEME">2 Aylık Deneme Süresi Değerlendirme Formu</option>
+                            <option value="6_AY_DENEME">6 Aylık Deneme Süresi Değerlendirme Formu</option>
+                        </select>
+                        <p className="text-[11px] text-brand-gray mt-1">Eğer bu şablon sistem tarafından (ikinci/altıncı ay vb.) personellere otomatik atanacaksa, lütfen buradan ilgili senaryoyu seçiniz.</p>
                     </div>
                 </div>
             </div>

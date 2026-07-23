@@ -245,6 +245,7 @@ builder.Services.AddHealthChecks()
 
 // Background Jobs (Cron)
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.PersonnelSyncBackgroundJob>();
+builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.ProbationTrackingCronJob>();
 
 var app = builder.Build();
 

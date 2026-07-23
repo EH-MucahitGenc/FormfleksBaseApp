@@ -16,20 +16,29 @@ public sealed class QdmsPersonelAktarimRepository : IQdmsPersonelAktarimReposito
 
     public async Task<List<QdmsPersonelAktarimOracleDto>> GetAllActivePersonnelAsync(CancellationToken ct)
     {
+        using var conn = _factory.Create();
+        
+        try {
+            using var reader = await conn.ExecuteReaderAsync("SELECT * FROM ERKURT_QDMS_PERSONEL_AKTARIM WHERE ROWNUM = 1");
+            var columns = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < reader.FieldCount; i++) { columns.Add(reader.GetName(i)); }
+            System.IO.File.WriteAllText(@"C:\ErkurtProjeler\FormfleksBaseApp\oracle_columns.txt", string.Join(", ", columns));
+        } catch { }
+
         const string sql = @"
-SELECT Sirket, isyeri_kodu, Isyeri_Tanimi, grup_kodu, grup_kodu_aciklama, 
-       Sicil_No, Adi, Soyadi, Email, Pozisyon_Kodu, Pozisyon_Aciklamasi, 
-       Ust_Pozisyon_Kodu, Departman_Kodu, Departman_Adi
+SELECT SIRKET, ISYERI_KODU, ISYERI_TANIMI, GRUP_KODU, GRUP_KODU_ACIKLAMA, 
+       SICIL_NO, ADI, SOYADI, EMAIL, POZISYON_KODU, POZISYON_ACIKLAMASI, 
+       UST_POZISYON_KODU, DEPARTMAN_KODU, DEPARTMAN_ADI,
+       BASLAMA_TARIHI, DOGUM_TARIHI, DENEME2AY_TRH, DENEME6AY_TRH
 FROM ERKURT_QDMS_PERSONEL_AKTARIM";
 
-        using var conn = _factory.Create();
         try
         {
             conn.Open();
 
-            var cmd = new CommandDefinition(sql, cancellationToken: ct);
-            var res = await conn.QueryAsync<QdmsPersonelAktarimOracleDto>(cmd);
-            return res.AsList();
+            var cmd = new Dapper.CommandDefinition(sql, cancellationToken: ct);
+            var oracleData = await conn.QueryAsync<QdmsPersonelAktarimOracleDto>(cmd);
+            return oracleData.AsList();
         }
         finally
         {
