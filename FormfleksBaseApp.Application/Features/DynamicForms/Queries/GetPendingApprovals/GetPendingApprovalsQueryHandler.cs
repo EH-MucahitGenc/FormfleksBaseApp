@@ -63,6 +63,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                           app.AssigneeUserId == request.ActorUserId 
                           || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value))
                           || (ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (person != null && lr.LocationName == person.Isyeri_Tanimi))))
+                          || (ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))
                       )
                       orderby app.StepNo ascending, r.CreatedAt ascending
                       select new PendingApprovalListItemDto

@@ -295,6 +295,30 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 }
             }
         }
+        else if (assigneeType == (short)WorkflowAssigneeType.GlobalRole && targetLocationRoleId.HasValue)
+        {
+            var globalManagerUserIds = await _db.UserLocationRoles
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.IsGlobalManager)
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var hrUserId in globalManagerUserIds)
+            {
+                var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
+                if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                {
+                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
+                }
+                else
+                {
+                    var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
+                    if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
+                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen YK Sorumlusu", hrUserId));
+                }
+            }
+        }
         else if (assignedUserId.HasValue)
         {
             var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);

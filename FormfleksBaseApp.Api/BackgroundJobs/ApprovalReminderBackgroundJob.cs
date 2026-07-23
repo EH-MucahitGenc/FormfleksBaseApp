@@ -201,6 +201,30 @@ public class ApprovalReminderBackgroundJob : CronJobService
                 }
             }
         }
+        else if (assigneeType == (short)WorkflowAssigneeType.GlobalRole && targetLocationRoleId.HasValue)
+        {
+            var globalManagerUserIds = await db.UserLocationRoles
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.IsGlobalManager)
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var hrUserId in globalManagerUserIds)
+            {
+                var hrPers = await db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
+                if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                {
+                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
+                }
+                else
+                {
+                    var baseUser = await userRepository.GetByIdAsync(hrUserId, ct, false);
+                    if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
+                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen Sistem Yöneticisi", hrUserId));
+                }
+            }
+        }
         else if (assignedUserId.HasValue)
         {
             var assgnPers = await db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);

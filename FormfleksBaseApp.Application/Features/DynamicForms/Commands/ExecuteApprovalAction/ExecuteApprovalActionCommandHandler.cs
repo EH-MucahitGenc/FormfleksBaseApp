@@ -102,7 +102,15 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             hasBranchHrAuth = locationRoles.Any(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
         }
 
-        if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth)
+        bool hasGlobalRoleAuth = false;
+        if (currentStep.AssigneeType == (short)WorkflowAssigneeType.GlobalRole && currentStep.TargetLocationRoleId.HasValue)
+        {
+            hasGlobalRoleAuth = await _db.UserLocationRoles
+                .AsNoTracking()
+                .AnyAsync(x => x.UserId == reqDto.ActorUserId && x.RoleId == currentStep.TargetLocationRoleId.Value && x.IsActive && x.IsGlobalManager, ct);
+        }
+
+        if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth && !hasGlobalRoleAuth)
             throw new BusinessException("Bu dokümanı şu anki kademede onaylama/reddetme yetkiniz bulunmuyor.");
 
         approval.ActionByUserId = reqDto.ActorUserId;
@@ -319,6 +327,30 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
                     if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
                         targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen İK Sorumlusu", hrUserId));
+                }
+            }
+        }
+        else if (assigneeType == (short)WorkflowAssigneeType.GlobalRole && targetLocationRoleId.HasValue)
+        {
+            var globalManagerUserIds = await _db.UserLocationRoles
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value && x.IsGlobalManager)
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var hrUserId in globalManagerUserIds)
+            {
+                var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
+                if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                {
+                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
+                }
+                else
+                {
+                    var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
+                    if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
+                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen YK Sorumlusu", hrUserId));
                 }
             }
         }

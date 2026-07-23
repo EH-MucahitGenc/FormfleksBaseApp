@@ -113,7 +113,7 @@ public class ApprovalEngineService : IApprovalEngineService
             // 2) Is it an ENTERPRISE OGRANIZATIONAL ROLE?
             if (nextStep.AssigneeType >= 10 && nextStep.AssigneeType <= 20)
             {
-                if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole)
+                if (nextStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole || nextStep.AssigneeType == (short)WorkflowAssigneeType.GlobalRole)
                 {
                     // LocationBasedRole (Lokasyon Bazlı Rol) çalışma zamanında (runtime) dinamik olarak
                     // GetPendingApprovalsQuery içerisinde filtrelenir.

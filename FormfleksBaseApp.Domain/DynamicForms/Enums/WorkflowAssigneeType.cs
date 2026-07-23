@@ -14,7 +14,8 @@ public enum WorkflowAssigneeType : short
 
     SectionLeader = 12,
     UpperManager = 13,
-    LocationBasedRole = 15 // Lokasyon Bazlı Dinamik Rol (Sistemde atanmış şube bazlı rolleri kullanır)
+    LocationBasedRole = 15, // Lokasyon Bazlı Dinamik Rol (Sistemde atanmış şube bazlı rolleri kullanır)
+    GlobalRole = 16 // Sadece Global Yöneticilere atanan (Örn: Global IK, Global IT) onay adımı
 }
 
 /// <summary>
