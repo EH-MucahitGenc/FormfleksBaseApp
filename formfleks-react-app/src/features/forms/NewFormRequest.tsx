@@ -9,7 +9,10 @@ export const NewFormRequest: React.FC = () => {
   const { authorizedForms, isLoading: isFormsLoading } = useNavigationStore();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredForms = authorizedForms.filter(f => f.name.toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')));
+  const filteredForms = authorizedForms.filter(f => 
+    f.name.toLocaleLowerCase('tr-TR').includes(searchTerm.toLocaleLowerCase('tr-TR')) &&
+    !['2AYLIKDENEME', '6AYLIKDENEME'].includes(f.code)
+  );
 
   return (
     <PageContainer>

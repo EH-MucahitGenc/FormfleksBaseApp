@@ -208,7 +208,7 @@ export const Users: React.FC = () => {
                    displayExpr: "name",
                    valueExpr: "id"
                  }}
-                 className="col-span-full"
+                 containerClassName="col-span-full"
               />
             </FormSection>
           </form>

@@ -733,7 +733,7 @@ export const FormDetail: React.FC = () => {
                     width="100%"
                     height={40}
                     stylingMode="outlined"
-                    dropDownOptions={{ zIndex: 99999 }}
+                    dropDownOptions={{ zIndex: 99999 } as any}
                     className="border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-primary/20 focus-within:border-brand-primary transition-all"
                   />
                 </div>

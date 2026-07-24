@@ -172,6 +172,7 @@ builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IPdfGe
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IFormAttachmentCollectorService, FormfleksBaseApp.Infrastructure.Services.FormAttachmentCollectorService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IAppNotificationService, FormfleksBaseApp.Api.Services.AppNotificationService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIntegrationExecutionService, FormfleksBaseApp.Infrastructure.Services.IntegrationExecutionService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIfsIntegrationService, FormfleksBaseApp.Infrastructure.Services.IfsIntegrationService>();
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIntegrationQueryService, FormfleksBaseApp.Infrastructure.Services.IntegrationQueryService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService, FormfleksBaseApp.Infrastructure.Services.SystemSettingsService>();

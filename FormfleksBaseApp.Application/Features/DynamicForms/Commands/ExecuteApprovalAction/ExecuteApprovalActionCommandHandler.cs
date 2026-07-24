@@ -31,6 +31,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
     private readonly IFormAttachmentCollectorService _attachmentCollector;
     private readonly FormfleksBaseApp.Application.Auth.Interfaces.ITokenService _tokens;
     private readonly IAppNotificationService _notificationService;
+    private readonly IIfsIntegrationService _ifsIntegrationService;
 
     public ExecuteApprovalActionCommandHandler(
         IDynamicFormsDbContext db, 
@@ -40,7 +41,8 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         IPdfGeneratorService pdfGenerator,
         IFormAttachmentCollectorService attachmentCollector,
         FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens,
-        IAppNotificationService notificationService)
+        IAppNotificationService notificationService,
+        IIfsIntegrationService ifsIntegrationService)
     {
         _db = db;
         _engine = engine;
@@ -50,6 +52,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         _attachmentCollector = attachmentCollector;
         _tokens = tokens;
         _notificationService = notificationService;
+        _ifsIntegrationService = ifsIntegrationService;
     }
 
     public async Task<ApprovalActionResponseDto> Handle(ExecuteApprovalActionCommand request, CancellationToken ct)
@@ -236,6 +239,21 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 {
                     await NotifyRequesterFinalStatusAsync(req.RequestorUserId, req.RequestNo, req.Id, req.FormTypeId, true, atts, ct);
                     await NotifyGlobalManagersCompletedAsync(req.Id, req.FormTypeId, req.RequestorUserId, req.RequestNo, atts, ct);
+                    
+                    try
+                    {
+                        var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(t => t.Id == req.FormTypeId, ct);
+                        if (formType != null && (formType.SystemUsageType == "2_AY_DENEME" || formType.SystemUsageType == "6_AY_DENEME"))
+                        {
+                            string sicilNoValue = req.RequestNo.Split('-').LastOrDefault();
+                            await _ifsIntegrationService.SendProbationApprovalSignatureAsync(formType.SystemUsageType, sicilNoValue, req.Id, ct);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log errors but do not fail the email notification flow
+                        Console.WriteLine($"IFS Integration error: {ex.Message}");
+                    }
                 };
             }
             else
