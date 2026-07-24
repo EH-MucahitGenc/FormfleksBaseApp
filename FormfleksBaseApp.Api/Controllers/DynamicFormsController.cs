@@ -43,7 +43,7 @@ public sealed class DynamicFormsController : ControllerBase
     /// Belirtilen form koduna göre form şablonunun tanımlarını (alanlar, kurallar vb.) getirir.
     /// </summary>
     [HttpGet("{formCode}")]
-    public async Task<ActionResult<FormDefinitionDto>> GetDefinition(string formCode, CancellationToken ct)
+    public async Task<ActionResult<FormDefinitionDto>> GetDefinition(string formCode, [FromQuery] Guid? draftId, CancellationToken ct)
     {
         var result = await _mediator.Send(new GetFormDefinitionQuery(formCode), ct);
         if (result is null)
@@ -55,12 +55,39 @@ public sealed class DynamicFormsController : ControllerBase
             .ToList();
 
         var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || r.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+        var isIK = userRoles.Any(r => r.Equals("IK", StringComparison.OrdinalIgnoreCase) || r.Equals("HR", StringComparison.OrdinalIgnoreCase));
+
+        // Block system forms if not Admin/IK and not accessing an existing draft
+        if (!string.IsNullOrEmpty(result.SystemUsageType) && !isAdmin && !isIK)
+        {
+            if (draftId.HasValue)
+            {
+                // Check if the user has access to this draft
+                if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+                var requestQuery = await _mediator.Send(new GetRequestDetailedQuery(draftId.Value, userId), ct);
+                if (requestQuery == null) return Forbid(); // They don't have access to the draft
+            }
+            else
+            {
+                return Forbid(); // Not creating a draft, just trying to access the URL
+            }
+        }
 
         if (!isAdmin && result.AllowedCreateRoleCodes != null && result.AllowedCreateRoleCodes.Any())
         {
             if (!result.AllowedCreateRoleCodes.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any())
             {
-                return Forbid();
+                if (draftId.HasValue)
+                {
+                    // Check if the user has access to this draft
+                    if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+                    var requestQuery = await _mediator.Send(new GetRequestDetailedQuery(draftId.Value, userId), ct);
+                    if (requestQuery == null) return Forbid(); // They don't have access to the draft
+                }
+                else
+                {
+                    return Forbid(); // Not creating a draft, just trying to access the URL
+                }
             }
         }
 
@@ -288,7 +315,8 @@ public sealed class DynamicFormsController : ControllerBase
             .Select(c => c.Value)
             .ToList();
 
-        var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+        var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || r.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+        var isIK = userRoles.Any(r => r.Equals("IK", StringComparison.OrdinalIgnoreCase) || r.Equals("HR", StringComparison.OrdinalIgnoreCase));
 
         if (isAdmin)
         {
@@ -296,10 +324,18 @@ public sealed class DynamicFormsController : ControllerBase
         }
 
         var filteredTemplates = activeTemplates.Where(t => 
-            t.AllowedCreateRoleCodes == null || 
-            !t.AllowedCreateRoleCodes.Any() || 
-            t.AllowedCreateRoleCodes.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any()
-        ).ToList();
+        {
+            // If it's a system form (has SystemUsageType), only IK can see it (Admin is already handled above)
+            if (!string.IsNullOrEmpty(t.SystemUsageType))
+            {
+                return isIK;
+            }
+
+            // Normal form logic
+            return t.AllowedCreateRoleCodes == null || 
+                   !t.AllowedCreateRoleCodes.Any() || 
+                   t.AllowedCreateRoleCodes.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any();
+        }).ToList();
 
         return Ok(filteredTemplates);
     }

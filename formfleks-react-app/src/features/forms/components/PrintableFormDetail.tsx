@@ -55,7 +55,7 @@ export const PrintableFormDetail = forwardRef<HTMLDivElement, PrintableFormDetai
     
     const { data: fetchedTemplate } = useQuery({
       queryKey: ['dynamic-form-schema', data.formTypeCode],
-      queryFn: () => dynamicFormService.getTemplateByCode(data.formTypeCode),
+      queryFn: () => dynamicFormService.getTemplateByCode(data.formTypeCode, data?.requestId),
       enabled: !!data.formTypeCode && !externalTemplate,
     });
 

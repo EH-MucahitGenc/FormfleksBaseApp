@@ -66,8 +66,9 @@ export interface FormDefinitionDto {
  * Arka yüz (Backend) veri modellerini, ön yüz (Frontend) UI bileşenlerinin beklediği yapıya çeviren Adapter metodlarını (mapBackendToFrontend) barındırır.
  */
 class DynamicFormService {
-  async getTemplateByCode(code: string): Promise<DynamicFormTemplateDto> {
-    const { data } = await apiClient.get<FormDefinitionDto>(`/dynamic-forms/${code}`);
+  async getTemplateByCode(code: string, draftId?: string): Promise<DynamicFormTemplateDto> {
+    const url = draftId ? `/dynamic-forms/${code}?draftId=${draftId}` : `/dynamic-forms/${code}`;
+    const { data } = await apiClient.get<FormDefinitionDto>(url);
     return this.mapBackendToFrontend(data);
   }
 

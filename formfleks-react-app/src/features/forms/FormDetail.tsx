@@ -70,7 +70,7 @@ export const FormDetail: React.FC = () => {
 
   const { data: template } = useQuery({
     queryKey: ['dynamic-form-schema', data?.formTypeCode],
-    queryFn: () => dynamicFormService.getTemplateByCode(data!.formTypeCode),
+    queryFn: () => dynamicFormService.getTemplateByCode(data!.formTypeCode, data?.requestId),
     enabled: !!data?.formTypeCode,
   });
 
@@ -429,7 +429,7 @@ export const FormDetail: React.FC = () => {
               PDF İndir / Yazdır
             </FfButton>
           )}
-          {(data.status === 1 || data.status === 7) && data.formTypeCode && (
+          {(data.status === 1 || data.status === 3 || data.status === 7) && data.formTypeCode && data.requestorUserId === user?.id && (
             <>
               <FfButton 
                 variant="outline" 

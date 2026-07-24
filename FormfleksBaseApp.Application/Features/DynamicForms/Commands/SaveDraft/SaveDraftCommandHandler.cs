@@ -44,6 +44,42 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
         }
         else
         {
+            var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == dto.FormTypeId, ct)
+                ?? throw new BusinessException("Form şablonu bulunamadı.");
+
+            var allowedRoles = string.IsNullOrWhiteSpace(formType.AllowedCreateRoleCodesJson)
+                ? null
+                : System.Text.Json.JsonSerializer.Deserialize<List<string>>(formType.AllowedCreateRoleCodesJson);
+
+            var userRoleIds = await _db.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.UserId == dto.RequestorUserId)
+                .Select(ur => ur.RoleId)
+                .ToListAsync(ct);
+                
+            var userRoles = await _db.Roles
+                .AsNoTracking()
+                .Where(r => userRoleIds.Contains(r.Id))
+                .Select(r => r.Code)
+                .ToListAsync(ct);
+
+            var isAdmin = userRoles.Any(r => r.Equals("Admin", StringComparison.OrdinalIgnoreCase) || r.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+            var isIK = userRoles.Any(r => r.Equals("IK", StringComparison.OrdinalIgnoreCase) || r.Equals("HR", StringComparison.OrdinalIgnoreCase));
+
+            // System forms can only be manually created by IK or Admin
+            if (!string.IsNullOrEmpty(formType.SystemUsageType) && !isAdmin && !isIK)
+            {
+                throw new BusinessException("Sistem formlarını manuel olarak başlatma yetkiniz bulunmamaktadır.");
+            }
+
+            if (!isAdmin && allowedRoles != null && allowedRoles.Any())
+            {
+                if (!allowedRoles.Intersect(userRoles, StringComparer.OrdinalIgnoreCase).Any())
+                {
+                    throw new BusinessException("Bu formu başlatma yetkiniz bulunmamaktadır.");
+                }
+            }
+
             req = new FormRequestEntity
             {
                 FormTypeId = dto.FormTypeId,

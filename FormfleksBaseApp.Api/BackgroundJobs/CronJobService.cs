@@ -29,7 +29,18 @@ public abstract class CronJobService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var cronStr = await GetCronExpressionAsync(stoppingToken);
+            string cronStr;
+            try
+            {
+                cronStr = await GetCronExpressionAsync(stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error getting cron expression. Retrying in 1 minute.");
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(cronStr)) cronStr = _defaultCronExpression;
             
             var expression = CronExpression.Parse(cronStr, CronFormat.Standard);

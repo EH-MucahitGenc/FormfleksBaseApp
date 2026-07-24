@@ -58,7 +58,8 @@ public sealed class GetRequestDetailedQueryHandler
                                          a.AssigneeUserId == query.RequestorUserId || 
                                          a.ActionByUserId == query.RequestorUserId ||
                                          (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value)) ||
-                                         (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (formCreatorPerson != null && lr.LocationName == formCreatorPerson.Isyeri_Tanimi))))
+                                         (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (formCreatorPerson != null && lr.LocationName == formCreatorPerson.Isyeri_Tanimi)))) ||
+                                         (ws != null && ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))
                                      )
                                      select a).AnyAsync(ct);
             

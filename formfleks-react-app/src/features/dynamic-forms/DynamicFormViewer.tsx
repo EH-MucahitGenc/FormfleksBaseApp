@@ -97,7 +97,7 @@ export const DynamicFormViewer: React.FC = () => {
 
   const { data: template, isLoading, isError } = useQuery({
     queryKey: ['dynamic-form-schema', formCode],
-    queryFn: () => dynamicFormService.getTemplateByCode(formCode || ''),
+    queryFn: () => dynamicFormService.getTemplateByCode(formCode || '', searchParams.get('draftId') || undefined),
     enabled: !!formCode,
   });
 
