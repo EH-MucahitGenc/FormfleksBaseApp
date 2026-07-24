@@ -150,145 +150,267 @@ public class PdfGeneratorService : IPdfGeneratorService
                     });
 
                     // Values Section
-                    col.Item().Background(Colors.Black).Padding(4).Text("1. FORM İÇERİK BİLGİLERİ").FontColor(Colors.White).Bold();
-                    col.Item().PaddingBottom(15).Table(table => 
+                    if (dto.Values == null || !dto.Values.Any())
                     {
-                        table.ColumnsDefinition(columns => 
+                        col.Item().Background(Colors.Black).Padding(4).Text("1. FORM İÇERİK BİLGİLERİ").FontColor(Colors.White).Bold();
+                        col.Item().PaddingBottom(15).Table(table => 
                         {
-                            columns.RelativeColumn(3);
-                            columns.RelativeColumn(7);
-                        });
-
-                        table.Header(header => 
-                        {
-                            header.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).Padding(4).Text("VERİ ALANI").FontSize(8).Bold();
-                            header.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).Padding(4).Text("SİSTEME GİRİLEN DEĞER").FontSize(8).Bold();
-                        });
-
-                        if (dto.Values == null || !dto.Values.Any())
-                        {
-                            table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black).Padding(10).AlignCenter().Text("Form verisi bulunamadı.").Italic().FontColor(Colors.Grey.Darken1);
-                        }
-                        else
-                        {
-                            foreach (var field in dto.Values)
+                            table.ColumnsDefinition(columns => 
                             {
-                                if (field.FieldType == 11 && !string.IsNullOrWhiteSpace(field.ValueText)) // Grid
+                                columns.RelativeColumn(3);
+                                columns.RelativeColumn(7);
+                            });
+                            table.Header(header => 
+                            {
+                                header.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).Padding(4).Text("VERİ ALANI").FontSize(8).Bold();
+                                header.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).Padding(4).Text("SİSTEME GİRİLEN DEĞER").FontSize(8).Bold();
+                            });
+                            table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black).Padding(10).AlignCenter().Text("Form verisi bulunamadı.").Italic().FontColor(Colors.Grey.Darken1);
+                        });
+                    }
+                    else
+                    {
+                        var groupedSections = dto.Values.GroupBy(v => new { v.SectionSortOrder, v.SectionName }).OrderBy(g => g.Key.SectionSortOrder).ToList();
+                        int sectionCounter = 1;
+
+                        foreach (var section in groupedSections)
+                        {
+                            string sectionTitle = string.IsNullOrWhiteSpace(section.Key.SectionName) ? "DİĞER BİLGİLER" : section.Key.SectionName.ToUpper();
+                            string displayTitle = System.Text.RegularExpressions.Regex.IsMatch(sectionTitle, @"^\d+\s*\.") ? sectionTitle : $"{sectionCounter}. {sectionTitle}";
+                            col.Item().Background(Colors.Black).Padding(4).Text(displayTitle).FontColor(Colors.White).Bold();
+                            
+                            col.Item().PaddingBottom(15).Table(table => 
+                            {
+                                table.ColumnsDefinition(columns => 
                                 {
-                                    table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black).Padding(0).Column(c => 
+                                    columns.RelativeColumn(3);
+                                    columns.RelativeColumn(7);
+                                });
+                                
+                                foreach (var field in section)
+                                {
+                                    if (field.FieldType == 11 && !string.IsNullOrWhiteSpace(field.ValueText)) // Grid
                                     {
-                                        c.Item().Background(Colors.Grey.Lighten3).Padding(4).Text($"{field.Label} (Liste Verisi)").Bold();
-                                        
-                                        try
+                                        table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black).Padding(0).Column(c => 
                                         {
-                                            var jsonArray = JsonNode.Parse(field.ValueText) as JsonArray;
-                                            if (jsonArray != null)
+                                            c.Item().Background(Colors.Grey.Lighten3).Padding(4).Text($"{field.Label} (Liste Verisi)").Bold();
+                                            
+                                            try
                                             {
-                                                var columnMap = new Dictionary<string, string>();
-                                                if (!string.IsNullOrWhiteSpace(field.OptionsJson))
+                                                var jsonArray = JsonNode.Parse(field.ValueText) as JsonArray;
+                                                if (jsonArray != null)
                                                 {
-                                                    var options = JsonNode.Parse(field.OptionsJson);
-                                                    var cols = options is JsonObject jo && jo.ContainsKey("columns") ? jo["columns"] as JsonArray : options as JsonArray;
-                                                    if (cols != null)
+                                                    var columnMap = new Dictionary<string, string>();
+                                                    var orderedKeys = new List<string>();
+                                                    var summaryDict = new Dictionary<string, List<string>>();
+                                                    if (!string.IsNullOrWhiteSpace(field.OptionsJson))
                                                     {
-                                                        foreach (var col in cols)
-                                                        {
-                                                            var dField = col?["dataField"]?.ToString() ?? col?["name"]?.ToString();
-                                                            var cCaption = col?["caption"]?.ToString() ?? col?["label"]?.ToString();
-                                                            if (!string.IsNullOrWhiteSpace(dField))
+                                                        try {
+                                                            var options = JsonNode.Parse(field.OptionsJson);
+                                                            var optObj = options as JsonObject;
+                                                            var cols = optObj != null && optObj.ContainsKey("columns") ? optObj["columns"] as JsonArray : options as JsonArray;
+                                                            
+                                                            var numericCols = new List<string>();
+
+                                                            if (cols != null)
                                                             {
-                                                                columnMap[dField] = string.IsNullOrWhiteSpace(cCaption) ? dField : cCaption;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-
-                                                var firstItem = jsonArray.FirstOrDefault() as JsonObject;
-                                                var rawKeys = firstItem?.Select(x => x.Key).Where(k => !k.Contains("KEY")).ToList() ?? new List<string>();
-
-                                                c.Item().Table(innerTable => 
-                                                {
-                                                    innerTable.ColumnsDefinition(ic => 
-                                                    {
-                                                        ic.ConstantColumn(20);
-                                                        foreach (var key in rawKeys) ic.RelativeColumn();
-                                                    });
-
-                                                    innerTable.Header(ih => 
-                                                    {
-                                                        ih.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2).Text("#").FontSize(8).Bold().AlignCenter();
-                                                        foreach (var key in rawKeys)
-                                                        {
-                                                            string headerCaption = columnMap.ContainsKey(key) ? columnMap[key] : key;
-                                                            ih.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2).Text(headerCaption).FontSize(8).Bold();
-                                                        }
-                                                    });
-
-                                                    if (jsonArray.Count == 0)
-                                                    {
-                                                        innerTable.Cell().ColumnSpan((uint)(rawKeys.Count + 1)).Padding(4).AlignCenter().Text("Veri girilmemiş").Italic().FontColor(Colors.Grey.Darken1);
-                                                    }
-                                                    else
-                                                    {
-                                                        int rowIndex = 1;
-                                                        foreach (var rowItem in jsonArray)
-                                                        {
-                                                            var obj = rowItem as JsonObject;
-                                                            innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(rowIndex.ToString()).FontSize(8).AlignCenter();
-                                                            foreach (var key in rawKeys)
-                                                            {
-                                                                var valNode = obj?[key];
-                                                                string val = "-";
-                                                                if (valNode != null)
+                                                                if (optObj != null && optObj.ContainsKey("fixedRows"))
                                                                 {
-                                                                    if (valNode.GetValueKind() == JsonValueKind.True) val = "Evet";
-                                                                    else if (valNode.GetValueKind() == JsonValueKind.False) val = "Hayır";
-                                                                    else 
+                                                                    orderedKeys.Add("_fixedRow");
+                                                                    columnMap["_fixedRow"] = !string.IsNullOrWhiteSpace(field.Label) ? field.Label : "Değerlendirme Kriterleri";
+                                                                }
+
+                                                                foreach (var cCol in cols)
+                                                                {
+                                                                    var dField = cCol?["dataField"]?.ToString() ?? cCol?["name"]?.ToString();
+                                                                    var cCaption = cCol?["caption"]?.ToString() ?? cCol?["label"]?.ToString();
+                                                                    var eType = cCol?["editorType"]?.ToString();
+                                                                    if (!string.IsNullOrWhiteSpace(dField))
                                                                     {
-                                                                        string rawStr = valNode.ToString().Trim('\"');
-                                                                        if (rawStr.Length >= 10 && rawStr.Length <= 35 && rawStr.Contains("T") && DateTimeOffset.TryParse(rawStr, out var dtoff))
-                                                                        {
-                                                                            if (!rawStr.EndsWith("Z") && !rawStr.Contains("+") && !rawStr.Contains("-"))
-                                                                            {
-                                                                                dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
-                                                                            }
-                                                                            var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
-                                                                            val = turkeyTime.ToString("dd.MM.yyyy");
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            val = rawStr;
-                                                                        }
+                                                                        columnMap[dField] = string.IsNullOrWhiteSpace(cCaption) ? dField : cCaption;
+                                                                        orderedKeys.Add(dField);
+                                                                        if (eType == "number") numericCols.Add(dField);
                                                                     }
                                                                 }
-                                                                
-                                                                innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(val).FontSize(8);
                                                             }
-                                                            rowIndex++;
-                                                        }
+                                                            
+                                                            var summaryNode = optObj != null && optObj.ContainsKey("summary") ? optObj["summary"] as JsonObject : null;
+                                                            var totalItems = summaryNode != null && summaryNode.ContainsKey("totalItems") ? summaryNode["totalItems"] as JsonArray : null;
+                                                            if (totalItems != null)
+                                                            {
+                                                                foreach (var sItem in totalItems)
+                                                                {
+                                                                    var sCol = sItem?["column"]?.ToString() ?? sItem?["showInColumn"]?.ToString();
+                                                                    var sType = sItem?["summaryType"]?.ToString();
+                                                                    var dFmt = sItem?["displayFormat"]?.ToString() ?? "{0}";
+                                                                    
+                                                                    if (!string.IsNullOrEmpty(sCol) && !string.IsNullOrEmpty(sType))
+                                                                    {
+                                                                        double sum = 0; int count = 0;
+                                                                        foreach (var row in jsonArray)
+                                                                        {
+                                                                            var rObj = row as JsonObject;
+                                                                            if (rObj != null && rObj.ContainsKey(sCol))
+                                                                            {
+                                                                                var rVal = rObj[sCol];
+                                                                                if (rVal != null && rVal.GetValueKind() == JsonValueKind.Number) { sum += rVal.GetValue<double>(); count++; }
+                                                                                else if (rVal != null && rVal.GetValueKind() == JsonValueKind.String && double.TryParse(rVal.ToString(), out double d)) { sum += d; count++; }
+                                                                            }
+                                                                        }
+                                                                        double val = 0;
+                                                                        if (sType == "sum") val = sum; else if (sType == "avg") val = count > 0 ? sum / count : 0; else if (sType == "count") val = count;
+                                                                        string resStr = dFmt.Contains("{0}") ? string.Format(dFmt, val) : $"{dFmt} {val}";
+                                                                        if (!summaryDict.ContainsKey(sCol)) summaryDict[sCol] = new List<string>();
+                                                                        summaryDict[sCol].Add(resStr);
+                                                                    }
+                                                                }
+                                                            }
+                                                            else if (numericCols.Any())
+                                                            {
+                                                                foreach(var numCol in numericCols)
+                                                                {
+                                                                    double sum = 0; int count = 0;
+                                                                    foreach (var row in jsonArray)
+                                                                    {
+                                                                        var rObj = row as JsonObject;
+                                                                        if (rObj != null && rObj.ContainsKey(numCol))
+                                                                        {
+                                                                            var rVal = rObj[numCol];
+                                                                            if (rVal != null && rVal.GetValueKind() == JsonValueKind.Number) { sum += rVal.GetValue<double>(); count++; }
+                                                                            else if (rVal != null && rVal.GetValueKind() == JsonValueKind.String && double.TryParse(rVal.ToString(), out double d)) { sum += d; count++; }
+                                                                        }
+                                                                    }
+                                                                    if (count > 0)
+                                                                    {
+                                                                        summaryDict[numCol] = new List<string> { $"Top: {sum}", $"Ort: {(sum/(double)count).ToString("0.##")}" };
+                                                                    }
+                                                                }
+                                                            }
+                                                        } catch {}
                                                     }
-                                                });
+
+                                                    var hiddenExact = new[] { "uuid", "listOrder", "KEY" };
+                                                    var hiddenContains = new[] { "_fixedRow" };
+                                                    var rawKeys = new List<string>();
+                                                    if (orderedKeys.Any()) {
+                                                        rawKeys = orderedKeys.ToList();
+                                                    } else {
+                                                        var firstItem = jsonArray.FirstOrDefault() as JsonObject;
+                                                        rawKeys = firstItem?.Select(x => x.Key).Where(k => !hiddenExact.Any(hk => k.Equals(hk, StringComparison.OrdinalIgnoreCase)) && !hiddenContains.Any(hk => k.Contains(hk, StringComparison.OrdinalIgnoreCase)) && !k.Equals("id", StringComparison.OrdinalIgnoreCase)).ToList() ?? new List<string>();
+                                                    }
+
+                                                    c.Item().Table(innerTable => 
+                                                    {
+                                                        innerTable.ColumnsDefinition(ic => 
+                                                        {
+                                                            ic.ConstantColumn(20);
+                                                            foreach (var key in rawKeys) ic.RelativeColumn();
+                                                        });
+
+                                                        innerTable.Header(ih => 
+                                                        {
+                                                            ih.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2).Text("#").FontSize(8).Bold().AlignCenter();
+                                                            foreach (var key in rawKeys)
+                                                            {
+                                                                string headerCaption = columnMap.ContainsKey(key) ? columnMap[key] : key;
+                                                                ih.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2).Text(headerCaption).FontSize(8).Bold();
+                                                            }
+                                                        });
+
+                                                        if (jsonArray.Count == 0)
+                                                        {
+                                                            innerTable.Cell().ColumnSpan((uint)(rawKeys.Count + 1)).Padding(4).AlignCenter().Text("Veri girilmemiş").Italic().FontColor(Colors.Grey.Darken1);
+                                                        }
+                                                        else
+                                                        {
+                                                            int rowIndex = 1;
+                                                            foreach (var rowItem in jsonArray)
+                                                            {
+                                                                var obj = rowItem as JsonObject;
+                                                                innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(rowIndex.ToString()).FontSize(8).AlignCenter();
+                                                                foreach (var key in rawKeys)
+                                                                {
+                                                                    var valNode = obj?[key];
+                                                                    string val = "-";
+                                                                    if (valNode != null)
+                                                                    {
+                                                                        if (valNode.GetValueKind() == JsonValueKind.True || (valNode.GetValueKind() == JsonValueKind.String && valNode.ToString().Equals("true", StringComparison.OrdinalIgnoreCase))) val = "☑";
+                                                                        else if (valNode.GetValueKind() == JsonValueKind.False || (valNode.GetValueKind() == JsonValueKind.String && valNode.ToString().Equals("false", StringComparison.OrdinalIgnoreCase))) val = "☐";
+                                                                        else 
+                                                                        {
+                                                                            string rawStr = valNode.ToString().Trim('\"');
+                                                                            if (rawStr.Length >= 10 && rawStr.Length <= 35 && rawStr.Contains("T") && DateTimeOffset.TryParse(rawStr, out var dtoff))
+                                                                            {
+                                                                                if (!rawStr.EndsWith("Z") && !rawStr.Contains("+") && !rawStr.Contains("-"))
+                                                                                {
+                                                                                    dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
+                                                                                }
+                                                                                var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
+                                                                                val = turkeyTime.ToString("dd.MM.yyyy");
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                val = rawStr;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(val).FontSize(8);
+                                                                }
+                                                                rowIndex++;
+                                                            }
+                                                            
+                                                            if (summaryDict.Any())
+                                                            {
+                                                                innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2).Text("Sonuçlar").FontSize(8).Bold();
+                                                                foreach (var key in rawKeys)
+                                                                {
+                                                                    var cell = innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(2);
+                                                                    if (summaryDict.ContainsKey(key))
+                                                                    {
+                                                                        cell.Text(string.Join("\n", summaryDict[key])).FontSize(8).Bold();
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        cell.Text("");
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    });
+                                                }
                                             }
-                                        }
-                                        catch
-                                        {
-                                            c.Item().Padding(4).Text("[Tablo Verisi Çözümlenemedi]");
-                                        }
-                                    });
+                                            catch
+                                            {
+                                                c.Item().Padding(4).Text("[Tablo Verisi Çözümlenemedi]");
+                                            }
+                                        });
+                                    }
+                                    else if (field.FieldType == 10 && !string.IsNullOrWhiteSpace(field.ValueText)) // File
+                                    {
+                                        table.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(4).Text(field.Label).Bold();
+                                        table.Cell().Border(1).BorderColor(Colors.Black).Padding(4).Text($"[Eklenmiş Dosya: {Path.GetFileName(field.ValueText)}]").Italic().FontColor(Colors.Grey.Darken3);
+                                    }
+                                    else if (field.FieldType == 13) // Subheader / Label
+                                    {
+                                        table.Cell().ColumnSpan(2).Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).Padding(4).Text(field.Label).Bold();
+                                    }
+                                    else
+                                    {
+                                        table.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(4).Text(field.Label).Bold();
+                                        
+                                        string displayVal = string.IsNullOrWhiteSpace(field.ValueText) ? "-" : field.ValueText;
+                                        if (displayVal.Equals("true", StringComparison.OrdinalIgnoreCase)) displayVal = "☑";
+                                        if (displayVal.Equals("false", StringComparison.OrdinalIgnoreCase)) displayVal = "☐";
+                                        
+                                        table.Cell().Border(1).BorderColor(Colors.Black).Padding(4).Text(displayVal);
+                                    }
                                 }
-                                else if (field.FieldType == 10 && !string.IsNullOrWhiteSpace(field.ValueText)) // File
-                                {
-                                    table.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(4).Text(field.Label).Bold();
-                                    table.Cell().Border(1).BorderColor(Colors.Black).Padding(4).Text($"[Eklenmiş Dosya: {Path.GetFileName(field.ValueText)}]").Italic().FontColor(Colors.Grey.Darken3);
-                                }
-                                else
-                                {
-                                    table.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(4).Text(field.Label).Bold();
-                                    table.Cell().Border(1).BorderColor(Colors.Black).Padding(4).Text(string.IsNullOrWhiteSpace(field.ValueText) ? "-" : field.ValueText);
-                                }
-                            }
+                            });
+                            
+                            sectionCounter++;
                         }
-                    });
+                    }
 
                     // Approval History Section
                     col.Item().Background(Colors.Black).Padding(4).Text("2. ONAY / RED TARİHÇESİ VE DİJİTAL İZLER").FontColor(Colors.White).Bold();

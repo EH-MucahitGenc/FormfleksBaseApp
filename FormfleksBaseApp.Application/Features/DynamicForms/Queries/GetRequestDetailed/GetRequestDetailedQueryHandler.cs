@@ -405,7 +405,9 @@ public sealed class GetRequestDetailedQueryHandler
                         FieldType = f.FieldType,
                         OptionsJson = f.OptionsJson,
                         AutoFillJson = f.AutoFillJson,
-                        ValueText = computedValue
+                        ValueText = computedValue,
+                        SectionName = formSections.FirstOrDefault(s => s.Id == f.SectionId)?.Title ?? "DİĞER BİLGİLER",
+                        SectionSortOrder = formSections.FirstOrDefault(s => s.Id == f.SectionId)?.SortOrder ?? 9999
                     };
                 }).ToList(),
             Workflow = timeline

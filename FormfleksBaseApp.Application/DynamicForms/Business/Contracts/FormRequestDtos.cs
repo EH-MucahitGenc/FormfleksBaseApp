@@ -88,6 +88,8 @@ public sealed class FormRequestValueDto
     public string? OptionsJson { get; set; }
     public string? AutoFillJson { get; set; }
     public string? ValueText { get; set; }
+    public string? SectionName { get; set; }
+    public int SectionSortOrder { get; set; }
 }
 
 public sealed class FormRequestDetailedDto
