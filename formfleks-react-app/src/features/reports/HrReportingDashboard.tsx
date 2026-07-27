@@ -84,10 +84,15 @@ export const HrReportingDashboard = () => {
     try {
       const dateLabel = dateMode === 'all' ? undefined : dateMode === 'thisMonth' ? 'Bu Ay' : dateMode === 'lastMonth' ? 'Geçen Ay' : `${customStart} — ${customEnd}`;
       const personName = personnelList.find(p => p.userId === selUserId)?.fullName;
+      const startDate = start;
+      const endDate = end;
+      const detailedData = await reportService.getAllHrFormDetails(startDate, endDate);
+      
       await exportHrReportToExcel({
         summaryData,
         trendData: advancedData?.trendMetrics ?? [],
-        filters: { location: selLocation || undefined, department: selDepartment || undefined, personName, dateLabel }
+        filters: { location: selLocation || undefined, department: selDepartment || undefined, personName, dateLabel },
+        detailedData
       });
     } finally {
       setExporting(false);

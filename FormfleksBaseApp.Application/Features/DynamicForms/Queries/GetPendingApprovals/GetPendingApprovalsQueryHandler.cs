@@ -99,6 +99,35 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
             }
         }
 
+        // Fetch Subject Person Name from FormRequestValues
+        if (result.Any())
+        {
+            var requestIds = result.Select(r => r.RequestId).ToList();
+            var formValues = await (from v in _db.FormRequestValues.AsNoTracking()
+                                    join f in _db.FormFields.AsNoTracking() on v.FieldId equals f.Id
+                                    where requestIds.Contains(v.RequestId)
+                                    select new { v.RequestId, v.ValueText, f.FieldKey, f.Label }).ToListAsync(ct);
+
+            var groupedValues = formValues.GroupBy(x => x.RequestId).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var item in result)
+            {
+                if (groupedValues.TryGetValue(item.RequestId, out var values))
+                {
+                    var subjectField = values.FirstOrDefault(v => 
+                        (v.FieldKey == "adi_soyadi" || v.FieldKey == "ad_soyad" || v.FieldKey == "personel_adi" || v.FieldKey == "calisan_adi" || v.FieldKey == "personel")
+                        || (v.Label != null && (
+                            v.Label.Contains("Adı", StringComparison.OrdinalIgnoreCase) && v.Label.Contains("Soyadı", StringComparison.OrdinalIgnoreCase) ||
+                            v.Label.Contains("İlgili Kişi", StringComparison.OrdinalIgnoreCase) ||
+                            v.Label.Contains("Personel Ad", StringComparison.OrdinalIgnoreCase) ||
+                            v.Label.Contains("Çalışan Ad", StringComparison.OrdinalIgnoreCase)
+                        ))
+                    );
+                    item.SubjectPersonName = subjectField?.ValueText;
+                }
+            }
+        }
+
         _logger.LogWarning("DIAGNOSTICS: Returning {Count} mapped list items to ActorUserId: {ActorId}.", result.Count, request.ActorUserId);
         return result;
     }

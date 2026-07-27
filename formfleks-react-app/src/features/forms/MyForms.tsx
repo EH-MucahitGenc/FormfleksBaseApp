@@ -66,6 +66,7 @@ export const MyForms: React.FC = () => {
   const columns = [
     { dataField: 'requestNo', caption: 'Talep No', minWidth: 150, cellRender: requestNoRenderer },
     { dataField: 'formTypeName', caption: 'Form Tipi', minWidth: 200 },
+    { dataField: 'subjectPersonName', caption: 'İlgili Kişi / Konu', minWidth: 150 },
     { dataField: 'status', caption: 'Durum', minWidth: 120, cellRender: statusRenderer, filterValue: defaultStatusFilter ?? undefined, dataType: 'number' as const },
     { dataField: 'currentStepNo', caption: 'Adım', minWidth: 100, cellRender: stepRenderer, allowFiltering: false },
     { dataField: 'createdAt', caption: 'Tarih', minWidth: 150, cellRender: dateRenderer, dataType: 'date' as const }

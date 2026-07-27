@@ -117,6 +117,7 @@ export const PendingApprovals: React.FC = () => {
     { dataField: 'requestNo', caption: 'Talep No', minWidth: 150, cellRender: requestNoRenderer },
     { dataField: 'formTypeName', caption: 'Form Tipi', minWidth: 180 },
     { dataField: 'requestorName', caption: 'Talep Eden', minWidth: 180 },
+    { dataField: 'subjectPersonName', caption: 'İlgili Kişi / Konu', minWidth: 150 },
     { dataField: 'stepNo', caption: 'Adım', minWidth: 100, cellRender: stepRenderer, allowFiltering: false },
     { dataField: 'createdAt', caption: 'Tarih', minWidth: 150, cellRender: dateRenderer, dataType: 'date' as const },
     { dataField: 'actions', caption: 'İşlem', minWidth: 280, cellRender: actionRenderer, allowFiltering: false, allowSorting: false }

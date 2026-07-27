@@ -63,6 +63,7 @@ public sealed class MyFormRequestListItemDto
     public FormRequestStatus Status { get; set; }
     public int? CurrentStepNo { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? SubjectPersonName { get; set; }
 }
 
 public sealed class PendingApprovalListItemDto
@@ -78,6 +79,7 @@ public sealed class PendingApprovalListItemDto
     public string FormTypeName { get; set; } = default!;
     public long ApprovalConcurrencyToken { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? SubjectPersonName { get; set; }
 }
 
 public sealed class FormRequestValueDto

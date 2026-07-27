@@ -11,4 +11,8 @@ public sealed class HrFormDetailItemDto
     public DateTime CreatedAt { get; set; }
     public int Status { get; set; } // 1: Draft, 2: InProgress, 3: Completed, 4: Rejected, 5: Cancelled
     public DateTime? CompletedAt { get; set; }
+    public string? SubjectPersonName { get; set; }
+    public Dictionary<string, string> FormValues { get; set; } = new();
+    public Dictionary<string, string> GridColumnLabels { get; set; } = new();
+    public List<string> OrderedFieldLabels { get; set; } = new();
 }

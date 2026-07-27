@@ -21,6 +21,10 @@ export interface HrFormDetailItemDto {
   createdAt: string;
   status: number;
   completedAt?: string;
+  subjectPersonName?: string;
+  formValues?: Record<string, string>;
+  gridColumnLabels?: Record<string, string>;
+  orderedFieldLabels?: string[];
 }
 
 export interface HrAdvancedAnalyticsDto {
@@ -58,10 +62,19 @@ export const reportService = {
     if (startDate) params.append('StartDate', startDate);
     if (endDate) params.append('EndDate', endDate);
     if (requestorUserId) params.append('RequestorUserId', requestorUserId);
-    if (department) params.append('Department', department);
-    if (location) params.append('Location', location);
-    const response = await api.get<HrSummaryReportDto[]>(`/dynamic-forms/reports/hr-summary?${params.toString()}`);
-    return response.data;
+    
+    // Note: Department and Location might need to be filtered post-fetch or passed to API if supported.
+    // Assuming backend returns all for the user/date and we might filter frontend if needed, 
+    // or backend needs to support it. Current API doesn't seem to take department/location params.
+    
+    const { data } = await api.get<HrSummaryReportDto[]>('/dynamic-forms/reports/hr-summary', { params });
+    
+    // Client-side filtering for department/location since they are in the DTO
+    let result = data;
+    if (department) result = result.filter(r => r.department === department);
+    if (location) result = result.filter(r => r.location === location);
+    
+    return result;
   },
 
   getHrFormDetails: async (requestorUserId: string, formTypeId: string, startDate?: string, endDate?: string) => {
@@ -70,9 +83,16 @@ export const reportService = {
     params.append('FormTypeId', formTypeId);
     if (startDate) params.append('StartDate', startDate);
     if (endDate) params.append('EndDate', endDate);
+    const { data } = await api.get<HrFormDetailItemDto[]>('/dynamic-forms/reports/hr-form-details', { params });
+    return data;
+  },
 
-    const response = await api.get<HrFormDetailItemDto[]>(`/dynamic-forms/reports/hr-form-details?${params.toString()}`);
-    return response.data;
+  getAllHrFormDetails: async (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('StartDate', startDate);
+    if (endDate) params.append('EndDate', endDate);
+    const { data } = await api.get<HrFormDetailItemDto[]>('/dynamic-forms/reports/hr-form-details', { params });
+    return data;
   },
 
   getHrAdvancedAnalytics: async (startDate?: string, endDate?: string, requestorUserId?: string, department?: string, location?: string) => {

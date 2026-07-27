@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import type { HrSummaryReportDto, TrendMetricDto } from '@/services/report.service';
+import type { HrSummaryReportDto, TrendMetricDto, HrFormDetailItemDto } from '@/services/report.service';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const BRAND = {
@@ -334,6 +334,226 @@ function buildTrendSheet(wb: ExcelJS.Workbook, trendData: TrendMetricDto[]) {
   });
 }
 
+// ─── Date Formatting Utility ─────────────────────────────────────────────────
+function formatDateValue(value: string): string {
+  if (!value || value === '-') return '-';
+
+  // ISO date pattern: 2026-08-02T21:00:00.000Z or 2026-08-02T21:00:00
+  const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  if (isoMatch) {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      if (hours === '00' && mins === '00') return `${day}.${month}.${year}`;
+      return `${day}.${month}.${year} ${hours}:${mins}`;
+    }
+  }
+
+  // Short date pattern: 7/24/26 → DD.MM.YYYY
+  const shortMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (shortMatch) {
+    const m = shortMatch[1].padStart(2, '0');
+    const d = shortMatch[2].padStart(2, '0');
+    let y = shortMatch[3];
+    if (y.length === 2) y = '20' + y;
+    return `${d}.${m}.${y}`;
+  }
+
+  return value;
+}
+
+function isJsonArray(value: string): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return trimmed.startsWith('[') && trimmed.endsWith(']');
+}
+
+function tryParseJsonArray(value: string): Record<string, string>[] | null {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+      // Filter out rows that only have __KEY__ or are empty objects
+      return parsed.filter((row: Record<string, string>) => {
+        const keys = Object.keys(row).filter(k => k !== '__KEY__');
+        return keys.length > 0;
+      });
+    }
+  } catch { /* not valid JSON */ }
+  return null;
+}
+
+function getStatusLabel(status: number): string {
+  switch (status) {
+    case 1: return 'Taslak';
+    case 2: return 'Onay Bekliyor';
+    case 3: return 'Onay Bekliyor';
+    case 4: return 'Onaylandı';
+    case 5: return 'Reddedildi';
+    case 6: return 'İptal Edildi';
+    case 7: return 'Revizyon Bekliyor';
+    default: return `Durum ${status}`;
+  }
+}
+
+// ─── Build Per-FormType Sheets ───────────────────────────────────────────────
+function buildDetailedRequestsSheet(wb: ExcelJS.Workbook, data: HrFormDetailItemDto[]) {
+  // Group data by formTypeName
+  const grouped = new Map<string, HrFormDetailItemDto[]>();
+  data.forEach(item => {
+    const key = item.formTypeName || 'Diğer';
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(item);
+  });
+
+  // Create a sheet per form type
+  for (const [formTypeName, items] of grouped.entries()) {
+    // Excel sheet names max 31 chars, no special chars
+    let sheetName = formTypeName.substring(0, 28).replace(/[\\/*?[\]:]/g, '');
+    // Ensure unique sheet name
+    let suffix = 1;
+    let candidateName = sheetName;
+    while (wb.getWorksheet(candidateName)) {
+      candidateName = `${sheetName.substring(0, 25)} (${suffix++})`;
+    }
+    sheetName = candidateName;
+
+    buildFormTypeSheet(wb, sheetName, formTypeName, items);
+  }
+}
+
+function buildFormTypeSheet(wb: ExcelJS.Workbook, sheetName: string, formTypeName: string, items: HrFormDetailItemDto[]) {
+  const ws = wb.addWorksheet(sheetName);
+  ws.views = [{ state: 'frozen', ySplit: 2, showGridLines: false }];
+
+  // Determine which form values are "simple" (scalar) vs "grid" (JSON array)
+  const scalarKeys = new Set<string>();
+  let hasGridData = false;
+  const allGridRows: { parentIndex: number; gridRow: Record<string, string> }[] = [];
+  const gridColumnLabels = new Map<string, string>(); // col_280 -> actual label from first row keys
+
+  items.forEach((item, idx) => {
+    if (!item.formValues) return;
+    Object.entries(item.formValues).forEach(([label, value]) => {
+      if (isJsonArray(value)) {
+        hasGridData = true;
+        const parsed = tryParseJsonArray(value);
+        if (parsed) {
+          parsed.forEach(gridRow => {
+            allGridRows.push({ parentIndex: idx, gridRow });
+            Object.keys(gridRow).forEach(k => {
+              if (k !== '__KEY__' && !gridColumnLabels.has(k)) {
+                // If backend provided the real label for this col_XXX, use it, otherwise fallback to k
+                const realLabel = item.gridColumnLabels?.[k] || k;
+                gridColumnLabels.set(k, realLabel);
+              }
+            });
+          });
+        }
+      } else {
+        scalarKeys.add(label);
+      }
+    });
+  });
+
+  let scalarKeyArray = Array.from(scalarKeys);
+  
+  // Sort scalar keys based on the order defined in the first item that provides it
+  const referenceItem = items.find(i => i.orderedFieldLabels && i.orderedFieldLabels.length > 0);
+  if (referenceItem?.orderedFieldLabels) {
+    const orderList = referenceItem.orderedFieldLabels;
+    scalarKeyArray.sort((a, b) => {
+      let idxA = orderList.indexOf(a);
+      let idxB = orderList.indexOf(b);
+      // If a key is not found, put it at the end
+      if (idxA === -1) idxA = 9999;
+      if (idxB === -1) idxB = 9999;
+      return idxA - idxB;
+    });
+  }
+
+  // Build headers
+  const baseHeaders = [
+    { header: 'Talep No', key: 'requestNo', width: 22 },
+    { header: 'Talebi Oluşturan', key: 'requestor', width: 24 },
+    { header: 'İlgili Kişi', key: 'subject', width: 24 },
+    { header: 'Oluşturma Tarihi', key: 'created', width: 20 },
+    { header: 'Tamamlanma Tarihi', key: 'completed', width: 20 },
+    { header: 'Durum', key: 'status', width: 16 },
+  ];
+
+  const scalarHeaders = scalarKeyArray.map(k => ({ header: k, key: k, width: 25 }));
+
+  // If grid data exists, add grid columns after scalar columns
+  const gridKeys = Array.from(gridColumnLabels.keys());
+  const gridHeaders = gridKeys.map(k => ({ header: gridColumnLabels.get(k) || k, key: k, width: 22 }));
+
+  const allHeaders = [...baseHeaders, ...scalarHeaders, ...(hasGridData ? gridHeaders : [])];
+
+  sectionTitle(ws, 1, `  ${formTypeName.toUpperCase()} — DETAY LİSTESİ (${items.length} Talep)`, allHeaders.length);
+  colHeader(ws, 2, allHeaders);
+
+  let currentRow = 3;
+
+  items.forEach((item, itemIdx) => {
+    const createdAt = formatDateValue(item.createdAt);
+    const completedAt = item.completedAt ? formatDateValue(item.completedAt) : '-';
+
+    const baseData: (string | number)[] = [
+      item.formRequestNo,
+      item.requestorName,
+      item.subjectPersonName || '-',
+      createdAt,
+      completedAt,
+      getStatusLabel(item.status),
+    ];
+
+    // Scalar values
+    const scalarData = scalarKeyArray.map(k => {
+      const val = item.formValues?.[k];
+      if (!val) return '-';
+      return formatDateValue(val);
+    });
+
+    if (hasGridData) {
+      // Find grid rows for this item
+      const itemGridRows = allGridRows.filter(r => r.parentIndex === itemIdx);
+
+      if (itemGridRows.length > 0) {
+          // Write one row per grid entry, repeating the base+scalar data on every row for better filtering
+          itemGridRows.forEach((gr) => {
+            const isZebra = (currentRow - 3) % 2 === 0;
+            const gridData = gridKeys.map(k => {
+              const val = gr.gridRow[k];
+              if (!val) return '-';
+              return formatDateValue(val);
+            });
+
+            dataRow(ws, currentRow, [...baseData, ...scalarData, ...gridData], isZebra);
+            currentRow++;
+          });
+      } else {
+        // No grid rows, just base + scalar
+        const emptyGrid = gridKeys.map(() => '-');
+        const isZebra = (currentRow - 3) % 2 === 0;
+        dataRow(ws, currentRow, [...baseData, ...scalarData, ...emptyGrid], isZebra);
+        currentRow++;
+      }
+    } else {
+      // No grid data at all for this form type
+      const isZebra = (currentRow - 3) % 2 === 0;
+      dataRow(ws, currentRow, [...baseData, ...scalarData], isZebra);
+      currentRow++;
+    }
+  });
+
+  // Summary footer
+  totalRow(ws, currentRow, [`Toplam: ${items.length} Talep`, '', '', '', '', ''], allHeaders.length);
+}
+
 // ─── Export Params Interface ───────────────────────────────────────────────────
 export interface FilterInfo {
   location?:   string;
@@ -346,6 +566,7 @@ export interface ExcelExportParams {
   summaryData:  HrSummaryReportDto[];
   trendData:    TrendMetricDto[];
   filters:      FilterInfo;
+  detailedData?: HrFormDetailItemDto[];
 }
 
 // ─── Main Export Function ──────────────────────────────────────────────────────
@@ -363,6 +584,10 @@ export async function exportHrReportToExcel(params: ExcelExportParams): Promise<
   buildDepartmentSheet(wb, summaryData);
   buildLocationSheet(wb, summaryData);
   buildTrendSheet(wb, trendData);
+
+  if (params.detailedData && params.detailedData.length > 0) {
+    buildDetailedRequestsSheet(wb, params.detailedData);
+  }
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

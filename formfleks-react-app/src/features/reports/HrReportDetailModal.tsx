@@ -59,6 +59,7 @@ export const HrReportDetailModal = ({ isOpen, onClose, requestorUserId, formType
                 <tr>
                   <th className="px-4 py-3">Form No</th>
                   <th className="px-4 py-3">Tarih</th>
+                  <th className="px-4 py-3">İlgili Kişi</th>
                   <th className="px-4 py-3">Durum</th>
                   <th className="px-4 py-3 text-right">İşlem</th>
                 </tr>
@@ -68,6 +69,7 @@ export const HrReportDetailModal = ({ isOpen, onClose, requestorUserId, formType
                   <tr key={item.formRequestId} className="bg-surface-base border-b border-surface-muted hover:bg-surface-hover/50">
                     <td className="px-4 py-3 font-medium text-brand-primary">{item.formRequestNo}</td>
                     <td className="px-4 py-3">{new Date(item.createdAt).toLocaleDateString('tr-TR')}</td>
+                    <td className="px-4 py-3">{item.subjectPersonName || '-'}</td>
                     <td className="px-4 py-3">
                       <FfStatusBadge 
                         status={getStatusProps(item.status).status} 
