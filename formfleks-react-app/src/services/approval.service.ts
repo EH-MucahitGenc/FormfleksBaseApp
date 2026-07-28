@@ -15,8 +15,9 @@ export interface ApprovalActionRequestDto {
   approvalId: string;
   actorUserId: string;
   approvalConcurrencyToken: string;
-  actionType: number; // 1: Approve, 2: Reject, 3: Return
+  actionType: number; // 1: Approve, 2: Reject, 3: Return, 4: Reassign
   comment: string;
+  newAssigneeUserId?: string;
 }
 
 /**

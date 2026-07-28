@@ -90,6 +90,7 @@ export const FormDetail: React.FC = () => {
 
   // Reassign Modal State
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [isApprovalReassign, setIsApprovalReassign] = useState(false);
   const [selectedReassignUserId, setSelectedReassignUserId] = useState<string>('');
   const [reassignMessage, setReassignMessage] = useState<string | null>(null);
   
@@ -142,6 +143,7 @@ export const FormDetail: React.FC = () => {
 
   const closeReassignModal = () => {
     setIsReassignModalOpen(false);
+    setIsApprovalReassign(false);
     setSelectedReassignUserId('');
     setReassignMessage(null);
   };
@@ -149,13 +151,32 @@ export const FormDetail: React.FC = () => {
   const handleReassign = async () => {
     if (!selectedReassignUserId) return;
     try {
-      await formService.reassignRequest(id!, selectedReassignUserId);
-      setReassignMessage('Form başarıyla devredildi.');
-      queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
-      setTimeout(() => {
-        closeReassignModal();
-        navigate('/forms');
-      }, 1500);
+      if (isApprovalReassign && activeApproval) {
+        await approvalMutation.mutateAsync({
+          requestId: activeApproval.requestId,
+          approvalId: activeApproval.approvalId,
+          actorUserId: user?.id || '',
+          approvalConcurrencyToken: activeApproval.approvalConcurrencyToken,
+          actionType: 4, // 4: Reassign
+          comment: 'Devredildi',
+          newAssigneeUserId: selectedReassignUserId
+        });
+        setReassignMessage('Onay başarıyla devredildi.');
+        queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
+        queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
+        setTimeout(() => {
+          closeReassignModal();
+          navigate('/forms/pending-approvals');
+        }, 1500);
+      } else {
+        await formService.reassignRequest(id!, selectedReassignUserId);
+        setReassignMessage('Form başarıyla devredildi.');
+        queryClient.invalidateQueries({ queryKey: ['form-request', id!] });
+        setTimeout(() => {
+          closeReassignModal();
+          navigate('/forms');
+        }, 1500);
+      }
     } catch (err: any) {
       setReassignMessage('Devretme işlemi başarısız oldu.');
     }
@@ -429,12 +450,12 @@ export const FormDetail: React.FC = () => {
               PDF İndir / Yazdır
             </FfButton>
           )}
-          {(data.status === 1 || data.status === 3 || data.status === 7) && data.formTypeCode && data.requestorUserId === user?.id && (
+          {(data.status === 1 || data.status === 7) && data.formTypeCode && (
             <>
               <FfButton 
                 variant="outline" 
                 leftIcon={<FastForward className="h-4 w-4" />}
-                onClick={() => setIsReassignModalOpen(true)}
+                onClick={() => { setIsApprovalReassign(false); setIsReassignModalOpen(true); }}
                 className="bg-surface-base hover:bg-surface-muted"
               >
                 Başka Birine Yönlendir
@@ -623,6 +644,15 @@ export const FormDetail: React.FC = () => {
                       disabled={approvalMutation.isPending}
                     >
                       İade Et
+                    </FfButton>
+                    <FfButton 
+                      variant="outline" 
+                      className="flex-1 justify-center"
+                      leftIcon={<FastForward className="h-4 w-4" />}
+                      onClick={() => { setIsApprovalReassign(true); setIsReassignModalOpen(true); }}
+                      disabled={approvalMutation.isPending}
+                    >
+                      Yönlendir
                     </FfButton>
                   </div>
                 </div>

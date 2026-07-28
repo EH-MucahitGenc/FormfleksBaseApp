@@ -17,9 +17,22 @@ public sealed class GetMyRequestsQueryHandler : IRequestHandler<GetMyRequestsQue
 
     public async Task<IReadOnlyList<MyFormRequestListItemDto>> Handle(GetMyRequestsQuery request, CancellationToken ct)
     {
+        var isCurrentUserGlobalIk = await _db.UserLocationRoles
+            .AnyAsync(lr => lr.UserId == request.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+
+        List<Guid> globalIkUserIds = new();
+        if (isCurrentUserGlobalIk)
+        {
+             globalIkUserIds = await _db.UserLocationRoles
+                .Where(lr => lr.IsActive && lr.IsGlobalManager)
+                .Select(lr => lr.UserId)
+                .ToListAsync(ct);
+        }
+
         var query = from r in _db.FormRequests.AsNoTracking()
                     join t in _db.FormTypes.AsNoTracking() on r.FormTypeId equals t.Id
-                    where r.RequestorUserId == request.RequestorUserId
+                    where r.RequestorUserId == request.RequestorUserId ||
+                          (isCurrentUserGlobalIk && globalIkUserIds.Contains(r.RequestorUserId) && r.Status == (short)FormRequestStatus.Draft)
                     orderby r.CreatedAt descending
                     select new MyFormRequestListItemDto
                     {

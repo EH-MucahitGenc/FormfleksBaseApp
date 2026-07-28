@@ -136,7 +136,7 @@ public class ApprovalEngineService : IApprovalEngineService
                     }
                     else
                     {
-                        return (nextStep, fallbackRes.FallbackUserId, null, skippedSteps);
+                        return (nextStep, fallbackRes.FallbackUserId, fallbackRes.FallbackRoleId, skippedSteps);
                     }
                 }
 
@@ -168,7 +168,7 @@ public class ApprovalEngineService : IApprovalEngineService
                 }
                 else
                 {
-                    return (nextStep, finalFallback.FallbackUserId, null, skippedSteps);
+                    return (nextStep, finalFallback.FallbackUserId, finalFallback.FallbackRoleId, skippedSteps);
                 }
             }
 
@@ -185,20 +185,25 @@ public class ApprovalEngineService : IApprovalEngineService
         }
     }
 
-    private async Task<(bool ShouldSkip, Guid? FallbackUserId)> HandleFallbackActionAsync(WorkflowStepEntity failedStep)
+    private async Task<(bool ShouldSkip, Guid? FallbackUserId, Guid? FallbackRoleId)> HandleFallbackActionAsync(WorkflowStepEntity failedStep)
     {
         if (failedStep.FallbackAction == (short)WorkflowFallbackAction.Skip)
         {
-            return (true, null);
+            return (true, null, null);
         }
         else if (failedStep.FallbackAction == (short)WorkflowFallbackAction.FallToFixedUser && failedStep.FallbackUserId.HasValue)
         {
             var finalFallbackId = await ResolveDelegationAsync(failedStep.FallbackUserId.Value, CancellationToken.None);
-            return (false, finalFallbackId);
+            return (false, finalFallbackId, null);
+        }
+        else if (failedStep.FallbackAction == (short)WorkflowFallbackAction.FallToRoleGroup && failedStep.FallbackUserId.HasValue)
+        {
+            // Note: FallbackUserId actually holds the RoleId if FallbackAction is FallToRoleGroup
+            return (false, null, failedStep.FallbackUserId.Value);
         }
         
         // Default Skip
-        return (true, null);
+        return (true, null, null);
     }
 
     private async Task<Guid?> ResolveDirectManagerAsync(FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim requestor, CancellationToken ct)

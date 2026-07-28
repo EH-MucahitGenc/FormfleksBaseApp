@@ -116,6 +116,45 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth && !hasGlobalRoleAuth)
             throw new BusinessException("Bu dokümanı şu anki kademede onaylama/reddetme yetkiniz bulunmuyor.");
 
+        if (reqDto.ActionType == ApprovalActionType.Reassign)
+        {
+            if (!reqDto.NewAssigneeUserId.HasValue)
+                throw new BusinessException("Devredilecek kullanıcı seçilmelidir.");
+
+            approval.AssigneeUserId = reqDto.NewAssigneeUserId;
+            // approval.AssigneeRoleId = null; // Explicitly removing role assignment since it's now specifically assigned to a person
+            
+            _db.AuditLogs.Add(new AuditLogEntity
+            {
+                EntityType = "FormRequestApproval",
+                EntityId = req.Id,
+                ActionType = "Reassigned",
+                ActorUserId = reqDto.ActorUserId,
+                DetailJson = System.Text.Json.JsonSerializer.Serialize(new { Comment = reqDto.Comment, NewOwner = reqDto.NewAssigneeUserId, StepNo = req.CurrentStepNo }),
+                CreatedAt = DateTime.UtcNow
+            });
+            
+            await _db.SaveChangesAsync(ct);
+            
+            // Reassigned user notification
+            var reassignAttachments = await GenerateAttachmentsSafeAsync(req.Id, ct);
+            await NotifyNextAssigneeAsync(
+                approval.Id, 
+                req.Id, 
+                reqDto.NewAssigneeUserId, 
+                null, 
+                req.RequestorUserId, 
+                req.RequestNo, 
+                req.FormTypeId, 
+                1, // WorkflowAssigneeType.User
+                null, 
+                false, 
+                reassignAttachments, 
+                ct);
+            
+            return new ApprovalActionResponseDto { Success = true };
+        }
+
         approval.ActionByUserId = reqDto.ActorUserId;
         approval.ActionComment = reqDto.Comment;
         approval.ActionAt = DateTime.UtcNow;

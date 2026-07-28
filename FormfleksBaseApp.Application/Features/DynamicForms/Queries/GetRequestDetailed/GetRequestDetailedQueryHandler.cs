@@ -37,6 +37,19 @@ public sealed class GetRequestDetailedQueryHandler
 
         bool isAuthorized = request.RequestorUserId == query.RequestorUserId;
 
+        if (!isAuthorized)
+        {
+            var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+            if (isCurrentUserGlobalIk && request.Status == (short)FormRequestStatus.Draft)
+            {
+                var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == request.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+                if (isFormRequestorGlobalIk)
+                {
+                    isAuthorized = true;
+                }
+            }
+        }
+
         var formCreatorPerson = await _db.QdmsPersoneller
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId && p.IsActive, ct);

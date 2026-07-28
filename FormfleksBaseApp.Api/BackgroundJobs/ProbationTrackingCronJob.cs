@@ -79,7 +79,7 @@ public class ProbationTrackingCronJob : CronJobService
                 var targetDate = baslamaTarihi.AddMonths(6);
                 var daysLeft = (targetDate - today).TotalDays;
                 
-                if (daysLeft <= 15 && daysLeft >= -15)
+                if (daysLeft <= 20 && daysLeft >= -20)
                 {
                     await TriggerFormAsync(p, sixMonthTemplate, dynamicFormsDb, mediator, logger, scope.ServiceProvider, 6, cancellationToken);
                 }

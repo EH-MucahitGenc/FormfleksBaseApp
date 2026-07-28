@@ -63,6 +63,19 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             .FirstOrDefaultAsync(r => r.Id == dto.RequestId, ct)
             ?? throw new BusinessException("Kayıt bulunamadı.");
 
+        if (req.RequestorUserId != dto.ActorUserId)
+        {
+            var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == dto.ActorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+            var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == req.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk && req.Status == (short)FormRequestStatus.Draft))
+            {
+                throw new BusinessException("Bu talebi onaya sunma yetkiniz yok.");
+            }
+            
+            // Re-assign ownership to the Global IK who actually submitted it
+            req.RequestorUserId = dto.ActorUserId;
+        }
+
         // PRE-VALIDATION: Check and save manual assignments if they exist
         if (dto.ManualAssignments != null && dto.ManualAssignments.Any())
         {

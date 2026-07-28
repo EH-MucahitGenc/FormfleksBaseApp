@@ -33,9 +33,16 @@ public sealed class ReassignRequestCommandHandler : IRequestHandler<ReassignRequ
         if (formRequest.Status != (short)FormRequestStatus.Draft)
             throw new BusinessException("Sadece taslak statüsündeki formlar devredilebilir.");
 
-        // Yetki Kontrolü (Form sahibi veya Admin devredebilir)
+        // Yetki Kontrolü (Form sahibi veya Admin devredebilir, ya da iki taraf da Global İK ise devredebilir)
         if (!request.IsAdmin && formRequest.RequestorUserId != request.CurrentUserId)
-            throw new BusinessException("Bu formu devretme yetkiniz bulunmuyor.");
+        {
+            var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == request.CurrentUserId && lr.IsActive && lr.IsGlobalManager, ct);
+            var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == formRequest.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk))
+            {
+                throw new BusinessException("Bu formu devretme yetkiniz bulunmuyor.");
+            }
+        }
 
         // Yeni kullanıcının bilgilerini al (mail göndermek için)
         var newOwner = await _userRepository.GetUserByIdWithRolesAsync(request.NewOwnerUserId, ct);

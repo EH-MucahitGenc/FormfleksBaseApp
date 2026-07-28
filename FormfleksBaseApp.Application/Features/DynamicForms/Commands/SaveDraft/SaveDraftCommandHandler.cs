@@ -35,7 +35,14 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
             if (req.Status != (short)FormRequestStatus.Draft && req.Status != (short)FormRequestStatus.ReturnedForRevision)
                 throw new BusinessException("Sadece taslak (Draft) veya iade edilmiş durumundaki talepler güncellenebilir.");
             if (req.RequestorUserId != dto.RequestorUserId)
-                throw new BusinessException("Bu talebi güncelleme yetkiniz yok.");
+            {
+                var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == dto.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+                var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == req.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
+                if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk && req.Status == (short)FormRequestStatus.Draft))
+                {
+                    throw new BusinessException("Bu talebi güncelleme yetkiniz yok.");
+                }
+            }
 
             // Eski değerleri sil
             var oldValues = await _db.FormRequestValues

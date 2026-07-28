@@ -7,5 +7,6 @@ public enum ApprovalActionType
 {
     Approve = 1,
     Reject = 2,
-    ReturnForRevision = 3
+    ReturnForRevision = 3,
+    Reassign = 4
 }

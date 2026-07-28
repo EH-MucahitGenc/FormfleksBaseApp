@@ -43,6 +43,7 @@ public sealed class ApprovalActionRequestDto
     public long ApprovalConcurrencyToken { get; set; }
     public ApprovalActionType ActionType { get; set; }
     public string? Comment { get; set; }
+    public Guid? NewAssigneeUserId { get; set; }
     public IReadOnlyList<ManualWorkflowAssignmentDto>? ManualAssignments { get; set; }
 }
 

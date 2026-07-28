@@ -32,6 +32,15 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
             .Select(ur => ur.RoleId)
             .ToListAsync(ct);
 
+        var userLocationRoleIds = await _db.UserLocationRoles
+            .AsNoTracking()
+            .Where(lr => lr.UserId == request.ActorUserId && lr.IsActive)
+            .Select(lr => lr.RoleId)
+            .ToListAsync(ct);
+
+        userRoleIds.AddRange(userLocationRoleIds);
+        userRoleIds = userRoleIds.Distinct().ToList();
+
         // We do NOT return empty here if userRoleIds.Count == 0!
         // A user might have 0 application-level roles but STILL have pending forms 
         // assigned to them directly via their Organizational Hierarchy (AssigneeUserId).
