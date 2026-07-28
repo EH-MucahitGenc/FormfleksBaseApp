@@ -129,7 +129,7 @@ class DynamicFormService {
          const fieldKey = f.key || f.Key || f.fieldKey || f.FieldKey || `field_${Math.random().toString(36).substr(2, 5)}`;
          const label = f.label || f.Label || fieldKey;
          const isRequired = f.isRequired || f.IsRequired || false;
-         const optionsJson = f.optionsJson || f.OptionsJson;
+         let optionsJson = f.optionsJson || f.OptionsJson;
          const backendColSpan = f.colSpan || f.ColSpan;
 
          let editorType: DynamicFieldSchema['editorType'] = 'text';
@@ -184,7 +184,17 @@ class DynamicFormService {
              }
              break;
            case 12: editorType = 'calculation'; break;
-           case 13: editorType = 'statichtml'; break;
+           case 13: 
+             editorType = 'statichtml'; 
+             if (optionsJson) {
+               try {
+                 const parsed = JSON.parse(optionsJson);
+                 if (parsed && typeof parsed === 'object' && parsed.html !== undefined) {
+                   optionsJson = parsed.html;
+                 }
+               } catch {}
+             }
+             break;
          }
 
          let defaultColSpan = 12;

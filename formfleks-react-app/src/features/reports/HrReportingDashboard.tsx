@@ -4,13 +4,14 @@ import { reportService } from '@/services/report.service';
 import { PageHeader, FfButton } from '@/components/ui/index';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
-import DataGrid, { Column, SearchPanel, Paging, Pager, FilterRow, HeaderFilter, Summary, TotalItem, GroupPanel, Grouping } from 'devextreme-react/data-grid';
+import DataGrid, { Column, SearchPanel, Paging, Pager, FilterRow, HeaderFilter, Summary, TotalItem, GroupPanel, Grouping, ColumnChooser } from 'devextreme-react/data-grid';
 import { Download, FileText, Filter, PieChart as PieChartIcon, BarChart as BarChartIcon, Printer, TrendingUp, Clock, CheckCircle, XCircle, Building2, MapPin, Users } from 'lucide-react';
 import { HrReportDetailModal } from './HrReportDetailModal';
-import { exportHrReportToExcel } from './useExcelExport';
 import { HrPrintDocument } from './HrPrintDocument';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from 'recharts';
 import { useReactToPrint } from 'react-to-print';
+import { HrDynamicFormReport } from './HrDynamicFormReport';
+import { HrExportModal } from './HrExportModal';
 
 const COLORS = ['#F97316','#3B82F6','#10B981','#8B5CF6','#EC4899','#14B8A6','#F43F5E','#EAB308','#6366F1','#84CC16'];
 const STATUS_COLORS: Record<string,string> = { 'Taslak':'#94A3B8','Onay Bekliyor':'#F59E0B','Onaylandı':'#10B981','Reddedildi':'#EF4444','İptal':'#64748B' };
@@ -28,9 +29,12 @@ export const HrReportingDashboard = () => {
   const [selLocation, setSelLocation] = useState('');
   const [selDepartment, setSelDepartment] = useState('');
   const [selUserId, setSelUserId] = useState('');
+  
+  const [scorecardFormType, setScorecardFormType] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'summary'|'advanced'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary'|'scorecard'|'form_details'>('summary');
   const [selectedRow, setSelectedRow] = useState<{requestorUserId:string;formTypeId:string;title:string}|null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const { start, end } = useMemo(() => {
     const today = new Date();
@@ -67,37 +71,16 @@ export const HrReportingDashboard = () => {
   const { data: advancedData, isLoading: isAdvancedLoading } = useQuery({
     queryKey: ['hr-advanced', start, end, requestorId, deptFilter, locFilter],
     queryFn: () => reportService.getHrAdvancedAnalytics(start, end, requestorId, deptFilter, locFilter),
-    enabled: activeTab === 'advanced'
+    enabled: activeTab === 'summary' // Advanced data is now merged into summary tab
   });
 
-  const isLoading = isSummaryLoading || (activeTab === 'advanced' && isAdvancedLoading);
+  const isLoading = isSummaryLoading || (activeTab === 'summary' && isAdvancedLoading);
 
   // Cascade reset handlers
   const onLocationChange = (val: string) => { setSelLocation(val); setSelDepartment(''); setSelUserId(''); };
   const onDepartmentChange = (val: string) => { setSelDepartment(val); setSelUserId(''); };
   const clearAll = () => { setSelLocation(''); setSelDepartment(''); setSelUserId(''); setDateMode('all'); };
 
-  const [exporting, setExporting] = useState(false);
-  const handleExcelExport = async () => {
-    if (!summaryData?.length) return;
-    setExporting(true);
-    try {
-      const dateLabel = dateMode === 'all' ? undefined : dateMode === 'thisMonth' ? 'Bu Ay' : dateMode === 'lastMonth' ? 'Geçen Ay' : `${customStart} — ${customEnd}`;
-      const personName = personnelList.find(p => p.userId === selUserId)?.fullName;
-      const startDate = start;
-      const endDate = end;
-      const detailedData = await reportService.getAllHrFormDetails(startDate, endDate);
-      
-      await exportHrReportToExcel({
-        summaryData,
-        trendData: advancedData?.trendMetrics ?? [],
-        filters: { location: selLocation || undefined, department: selDepartment || undefined, personName, dateLabel },
-        detailedData
-      });
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const onRowClick = (e: any) => {
     if (e.rowType === 'data' && e.data) setSelectedRow({ requestorUserId: e.data.requestorUserId, formTypeId: e.data.formTypeId, title: `${e.data.fullName} - ${e.data.formTypeName} Detayları` });
@@ -136,12 +119,27 @@ export const HrReportingDashboard = () => {
     </div>
   );
 
+  const scorecardFormTypes = useMemo(() => {
+    if (!summaryData) return [];
+    return Array.from(new Set(summaryData.map(d => d.formTypeName))).sort();
+  }, [summaryData]);
+
+  const filteredScorecardData = useMemo(() => {
+    if (!summaryData || !scorecardFormType) return [];
+    return summaryData.filter(d => d.formTypeName === scorecardFormType);
+  }, [summaryData, scorecardFormType]);
+
   return (
     <div className="flex flex-col h-full gap-5 pb-12">
       {/* HEADER */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         <PageHeader title="Yönetici Özeti (İK Paneli)" description="Şube → Departman → Personel hiyerarşik analiz platformu." />
-        <FfButton variant="primary" size="sm" leftIcon={<Printer className="h-4 w-4"/>} onClick={() => handlePrint()}>PDF / Yazdır</FfButton>
+        <div className="flex items-center gap-2">
+          <FfButton variant="outline" size="sm" leftIcon={<Printer className="h-4 w-4"/>} onClick={handlePrint}>Yazdır</FfButton>
+          <FfButton variant="outline" size="sm" leftIcon={<Download className="h-4 w-4"/>} onClick={() => setIsExportModalOpen(true)}>
+            Excel'e Aktar
+          </FfButton>
+        </div>
       </div>
 
       {/* FILTER BAR */}
@@ -198,44 +196,53 @@ export const HrReportingDashboard = () => {
 
       {/* TABS */}
       <div className="flex items-center gap-1 bg-surface-muted/30 p-1 rounded-xl border border-surface-muted/50 w-fit">
-        {[{id:'summary',label:'📊 Genel Özet & Tablo'},{id:'advanced',label:'🔬 İleri Seviye Analitikler'}].map(t=>(
-          <button key={t.id} onClick={()=>setActiveTab(t.id as any)} className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab===t.id?'bg-surface-base shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}>{t.label}</button>
+        {[
+          { id: 'summary', label: '📊 Grafiksel Analizler', icon: <PieChartIcon className="h-4 w-4" /> },
+          { id: 'scorecard', label: '👥 Personel Karnesi', icon: <Users className="h-4 w-4" /> },
+          { id: 'form_details', label: '📋 Form Detay Raporları', icon: <FileText className="h-4 w-4" /> }
+        ].map(t=>(
+          <button 
+            key={t.id} 
+            onClick={()=>setActiveTab(t.id as any)} 
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab===t.id?'bg-surface-base shadow text-brand-primary':'text-brand-gray hover:text-brand-dark'}`}
+          >
+            {t.icon} {t.label}
+          </button>
         ))}
       </div>
 
       {isLoading ? <FfSkeletonLoader type="grid" count={3}/> : (
         <div ref={printRef} className="flex flex-col gap-6">
-          {/* KPI CARDS */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {[
-              {icon:<FileText className="h-5 w-5"/>, label:'Toplam Form', value:totalForms, color:'from-blue-500 to-blue-700'},
-              {icon:<Users className="h-5 w-5"/>, label:'Aktif Personel', value:selUserId?1:uniqueUsers, color:'from-emerald-400 to-emerald-600'},
-              {icon:<CheckCircle className="h-5 w-5"/>, label:'Onaylanan', value:totalApproved, color:'from-green-500 to-teal-600'},
-              {icon:<XCircle className="h-5 w-5"/>, label:'Reddedilen', value:totalRejected, color:'from-red-500 to-rose-600'},
-              {icon:<span className="text-base font-bold">%</span>, label:'Onay Oranı', value:`%${approvalRate}`, color:'from-violet-500 to-purple-700'},
-            ].map((k,i)=>(
-              <GlassCard key={i} className="flex items-center gap-4 py-4 relative overflow-hidden group">
-                <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${k.color} flex items-center justify-center text-white shadow-lg shrink-0`}>{k.icon}</div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-medium text-brand-gray truncate">{k.label}</span>
-                  <span className="text-2xl font-bold text-brand-dark tracking-tight">{k.value}</span>
-                </div>
-              </GlassCard>
-            ))}
-          </div>
-
-          {topForm && (
-            <div className="flex items-center gap-3 bg-gradient-to-r from-brand-primary/10 to-violet-500/10 border border-brand-primary/20 rounded-xl px-4 py-3">
-              <span className="text-lg">🏆</span>
-              <span className="text-sm font-medium text-brand-dark">En çok doldurulan form:</span>
-              <span className="text-sm font-bold text-brand-primary">{topForm[0]}</span>
-              <span className="ml-auto text-xs bg-brand-primary text-white rounded-full px-3 py-1 font-bold">{topForm[1]} adet</span>
-            </div>
-          )}
-
-          {/* SUMMARY TAB */}
+          {/* SUMMARY TAB: Charts only */}
           {activeTab==='summary' && (
             <div className="flex flex-col gap-6">
+              {/* KPI CARDS */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                {[
+                  {icon:<FileText className="h-5 w-5"/>, label:'Toplam Form', value:totalForms, color:'from-blue-500 to-blue-700'},
+                  {icon:<Users className="h-5 w-5"/>, label:'Aktif Personel', value:selUserId?1:uniqueUsers, color:'from-emerald-400 to-emerald-600'},
+                  {icon:<CheckCircle className="h-5 w-5"/>, label:'Onaylanan', value:totalApproved, color:'from-green-500 to-teal-600'},
+                  {icon:<XCircle className="h-5 w-5"/>, label:'Reddedilen', value:totalRejected, color:'from-red-500 to-rose-600'},
+                  {icon:<span className="text-base font-bold">%</span>, label:'Onay Oranı', value:`%${approvalRate}`, color:'from-violet-500 to-purple-700'},
+                ].map((k,i)=>(
+                  <GlassCard key={i} className="flex items-center gap-4 py-4 relative overflow-hidden group">
+                    <div className={`h-12 w-12 rounded-2xl bg-gradient-to-br ${k.color} flex items-center justify-center text-white shadow-lg shrink-0`}>{k.icon}</div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-medium text-brand-gray truncate">{k.label}</span>
+                      <span className="text-2xl font-bold text-brand-dark tracking-tight">{k.value}</span>
+                    </div>
+                  </GlassCard>
+                ))}
+              </div>
+
+              {topForm && (
+                <div className="flex items-center gap-3 bg-gradient-to-r from-brand-primary/10 to-violet-500/10 border border-brand-primary/20 rounded-xl px-4 py-3 shadow-sm">
+                  <span className="text-lg">🏆</span>
+                  <span className="text-sm font-medium text-brand-dark">En çok doldurulan form:</span>
+                  <span className="text-sm font-bold text-brand-primary">{topForm[0]}</span>
+                  <span className="ml-auto text-xs bg-brand-primary text-white rounded-full px-3 py-1 font-bold">{topForm[1]} adet</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <GlassCard className="lg:col-span-2 flex flex-col">
                   <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><PieChartIcon className="h-4 w-4 text-brand-primary"/> Form Tipi Dağılımı</h3>
@@ -274,94 +281,142 @@ export const HrReportingDashboard = () => {
                 </GlassCard>
               </div>
 
-              <GlassCard noPadding={false}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-brand-dark flex items-center gap-2"><FileText className="h-4 w-4 text-brand-primary"/> Detaylı Personel Karnesi</h3>
-                  <FfButton variant="outline" size="sm" leftIcon={<Download className="h-4 w-4"/>} onClick={handleExcelExport} disabled={exporting || !summaryData?.length}>
-                    {exporting ? 'Hazırlanıyor...' : 'Excel\'e Aktar'}
-                  </FfButton>
-                </div>
-                <DataGrid dataSource={summaryData||[]} showBorders={false} columnAutoWidth={true} allowColumnResizing={true} rowAlternationEnabled={true} onExporting={(e:any)=>{e.cancel=true;}} onRowClick={onRowClick} hoverStateEnabled={true} className="w-full h-[420px] font-sans border border-surface-muted rounded-xl overflow-hidden">
-                  <GroupPanel visible={true} emptyPanelText="Gruplamak istediğiniz sütunu sürükleyin"/>
-                  <Grouping autoExpandAll={false}/>
-                  <SearchPanel visible={true} width={240} placeholder="Ara..."/>
-                  <FilterRow visible={true}/>
-                  <HeaderFilter visible={true}/>
-                  <Paging defaultPageSize={15}/>
-                  <Pager showPageSizeSelector={true} allowedPageSizes={[10,15,30,50]} showInfo={true}/>
-                  <Column dataField="fullName" caption="Personel" minWidth={150}/>
-                  <Column dataField="department" caption="Departman" minWidth={130}/>
-                  <Column dataField="location" caption="Şube"/>
-                  <Column dataField="formTypeName" caption="Form Tipi" groupIndex={0}/>
-                  <Column dataField="totalForms" caption="Toplam" alignment="center" dataType="number" cssClass="font-bold"/>
-                  <Column dataField="totalApproved" caption="✅ Onaylanan" alignment="center" dataType="number" cssClass="text-emerald-600 font-medium"/>
-                  <Column dataField="totalRejected" caption="❌ Reddedilen" alignment="center" dataType="number" cssClass="text-red-500 font-medium"/>
-                  <Summary>
-                    <TotalItem column="totalForms" summaryType="sum" displayFormat="Toplam: {0}"/>
-                    <TotalItem column="totalApproved" summaryType="sum" displayFormat="✅ {0}"/>
-                    <TotalItem column="totalRejected" summaryType="sum" displayFormat="❌ {0}"/>
-                  </Summary>
-                </DataGrid>
-              </GlassCard>
+              {/* Advanced charts moved here */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <GlassCard className="flex flex-col">
+                  <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><Clock className="h-4 w-4 text-brand-primary"/> Süreç Hızı — Ortalama Onay Günleri</h3>
+                  <div style={{width:'100%',height:260}}>
+                    {advancedData?.slaMetrics?.length ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={advancedData.slaMetrics} layout="vertical" margin={{top:5,right:30,left:10,bottom:5}}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
+                          <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
+                          <YAxis dataKey="formTypeName" type="category" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-dark, #374151)'}} width={130}/>
+                          <RechartsTooltip content={renderTooltip} cursor={{fill:'var(--app-surface-muted, #F1F5F9)'}}/>
+                          <Bar dataKey="averageCompletionDays" radius={[0,6,6,0]} maxBarSize={26}>
+                            {advancedData.slaMetrics.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="flex flex-col">
+                  <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><PieChartIcon className="h-4 w-4 text-brand-primary"/> Form Durum Dağılımı</h3>
+                  <div style={{width:'100%',height:260}}>
+                    {advancedData?.statusDistributions?.length ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={advancedData.statusDistributions} cx="50%" cy="45%" outerRadius={90} dataKey="count" nameKey="statusName">
+                            {advancedData.statusDistributions.map((e,i)=><Cell key={i} fill={STATUS_COLORS[e.statusName]||COLORS[i%COLORS.length]}/>)}
+                          </Pie>
+                          <RechartsTooltip content={renderTooltip}/>
+                          <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize:'10px'}}/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="lg:col-span-2 flex flex-col">
+                  <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand-primary"/> Zaman Çizelgesi — Günlük Aktivite Trendi</h3>
+                  <div style={{width:'100%',height:260}}>
+                    {advancedData?.trendMetrics?.length ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={advancedData.trendMetrics} margin={{top:5,right:30,left:10,bottom:30}}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
+                          <XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-gray, #64748B)'}} angle={-45} textAnchor="end" interval="preserveStartEnd"/>
+                          <YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
+                          <RechartsTooltip content={renderTooltip}/>
+                          <Line type="monotone" dataKey="requestCount" name="Talep" stroke="#10B981" strokeWidth={3} dot={{r:4,fill:'#10B981',strokeWidth:2,stroke:'#FFF'}} activeDot={{r:6}}/>
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
+                  </div>
+                </GlassCard>
+              </div>
             </div>
           )}
 
-          {/* ADVANCED TAB */}
-          {activeTab==='advanced' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <GlassCard className="flex flex-col">
-                <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><Clock className="h-4 w-4 text-brand-primary"/> Süreç Hızı — Ortalama Onay Günleri</h3>
-                <div style={{width:'100%',height:260}}>
-                  {advancedData?.slaMetrics?.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={advancedData.slaMetrics} layout="vertical" margin={{top:5,right:30,left:10,bottom:5}}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
-                        <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
-                        <YAxis dataKey="formTypeName" type="category" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-dark, #374151)'}} width={130}/>
-                        <RechartsTooltip content={renderTooltip} cursor={{fill:'var(--app-surface-muted, #F1F5F9)'}}/>
-                        <Bar dataKey="averageCompletionDays" radius={[0,6,6,0]} maxBarSize={26}>
-                          {advancedData.slaMetrics.map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]}/>)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
+          {/* SCORECARD TAB: DataGrid Full Page */}
+          {activeTab==='scorecard' && (
+            <div className="flex flex-col gap-4">
+              <div className="bg-surface-base border border-surface-muted rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-brand-dark">Personel Karnesi</h3>
+                    <p className="text-xs text-brand-gray">İncelemek istediğiniz form tipini seçin.</p>
+                  </div>
                 </div>
-              </GlassCard>
+                <select
+                  value={scorecardFormType}
+                  onChange={(e) => setScorecardFormType(e.target.value)}
+                  className="bg-surface-muted/50 border border-surface-muted rounded-lg px-4 py-2 text-sm font-medium text-brand-dark min-w-[250px] outline-none"
+                >
+                  <option value="">-- Form Tipi Seçiniz --</option>
+                  {scorecardFormTypes.map(ft => (
+                    <option key={ft} value={ft}>{ft}</option>
+                  ))}
+                </select>
+              </div>
 
-              <GlassCard className="flex flex-col">
-                <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><PieChartIcon className="h-4 w-4 text-brand-primary"/> Form Durum Dağılımı</h3>
-                <div style={{width:'100%',height:260}}>
-                  {advancedData?.statusDistributions?.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={advancedData.statusDistributions} cx="50%" cy="45%" outerRadius={90} dataKey="count" nameKey="statusName">
-                          {advancedData.statusDistributions.map((e,i)=><Cell key={i} fill={STATUS_COLORS[e.statusName]||COLORS[i%COLORS.length]}/>)}
-                        </Pie>
-                        <RechartsTooltip content={renderTooltip}/>
-                        <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize:'10px'}}/>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
+              {scorecardFormType ? (
+                <GlassCard noPadding={false} className="flex-1 min-h-[500px]">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-brand-dark flex items-center gap-2"><Users className="h-4 w-4 text-brand-primary"/> Detaylı Personel Karnesi</h3>
+                  </div>
+                  <DataGrid 
+                    dataSource={filteredScorecardData} 
+                    showBorders={true} 
+                    columnAutoWidth={true} 
+                    allowColumnResizing={true} 
+                    allowColumnReordering={true}
+                    wordWrapEnabled={true}
+                    rowAlternationEnabled={true} 
+                    onExporting={(e:any)=>{e.cancel=true;}} 
+                    onRowClick={onRowClick} 
+                    hoverStateEnabled={true} 
+                    className="w-full h-[calc(100vh-280px)] font-sans"
+                  >
+                    <ColumnChooser enabled={true} mode="select" />
+                    <GroupPanel visible={true} emptyPanelText="Gruplamak istediğiniz sütunu sürükleyin"/>
+                    <Grouping autoExpandAll={false}/>
+                    <SearchPanel visible={true} width={240} placeholder="Ara..."/>
+                    <FilterRow visible={true}/>
+                    <HeaderFilter visible={true}/>
+                    <Paging defaultPageSize={15}/>
+                    <Pager showPageSizeSelector={true} allowedPageSizes={[10,15,30,50]} showInfo={true}/>
+                    <Column dataField="fullName" caption="Personel" minWidth={150}/>
+                    <Column dataField="department" caption="Departman" minWidth={130}/>
+                    <Column dataField="location" caption="Şube"/>
+                    <Column dataField="formTypeName" caption="Form Tipi" visible={false} />
+                    <Column dataField="totalForms" caption="Toplam" alignment="center" dataType="number" cssClass="font-bold"/>
+                    <Column dataField="totalApproved" caption="✅ Onaylanan" alignment="center" dataType="number" cssClass="text-emerald-600 font-medium"/>
+                    <Column dataField="totalRejected" caption="❌ Reddedilen" alignment="center" dataType="number" cssClass="text-red-500 font-medium"/>
+                    <Summary>
+                      <TotalItem column="totalForms" summaryType="sum" displayFormat="Toplam: {0}"/>
+                      <TotalItem column="totalApproved" summaryType="sum" displayFormat="✅ {0}"/>
+                      <TotalItem column="totalRejected" summaryType="sum" displayFormat="❌ {0}"/>
+                    </Summary>
+                  </DataGrid>
+                </GlassCard>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 bg-surface-base/50 border border-dashed border-surface-muted rounded-xl">
+                  <Users className="h-12 w-12 text-brand-gray/30 mb-4" />
+                  <h4 className="text-base font-semibold text-brand-gray">Lütfen Bir Form Tipi Seçin</h4>
+                  <p className="text-sm text-brand-gray/70">Karneleri görebilmek için yukarıdan bir form tipi seçmelisiniz.</p>
                 </div>
-              </GlassCard>
-
-              <GlassCard className="lg:col-span-2 flex flex-col">
-                <h3 className="text-sm font-semibold text-brand-dark mb-4 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-brand-primary"/> Zaman Çizelgesi — Günlük Aktivite Trendi</h3>
-                <div style={{width:'100%',height:260}}>
-                  {advancedData?.trendMetrics?.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={advancedData.trendMetrics} margin={{top:5,right:30,left:10,bottom:30}}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--app-surface-muted, #E2E8F0)"/>
-                        <XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'var(--app-brand-gray, #64748B)'}} angle={-45} textAnchor="end" interval="preserveStartEnd"/>
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize:11,fill:'var(--app-brand-gray, #64748B)'}}/>
-                        <RechartsTooltip content={renderTooltip}/>
-                        <Line type="monotone" dataKey="requestCount" name="Talep" stroke="#10B981" strokeWidth={3} dot={{r:4,fill:'#10B981',strokeWidth:2,stroke:'#FFF'}} activeDot={{r:6}}/>
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : <div className="flex h-full items-center justify-center text-sm text-brand-gray italic">Veri bulunamadı.</div>}
-                </div>
-              </GlassCard>
+              )}
             </div>
+          )}
+
+          {/* FORM DETAILS TAB */}
+          {activeTab==='form_details' && (
+            <HrDynamicFormReport startDate={start} endDate={end} />
           )}
         </div>
       )}
@@ -382,9 +437,25 @@ export const HrReportingDashboard = () => {
       </div>
 
       {selectedRow && (
-        <HrReportDetailModal isOpen={true} onClose={()=>setSelectedRow(null)}
-          requestorUserId={selectedRow.requestorUserId} formTypeId={selectedRow.formTypeId}
-          title={selectedRow.title} startDate={start} endDate={end}/>
+        <HrReportDetailModal 
+          isOpen={!!selectedRow} 
+          onClose={()=>setSelectedRow(null)} 
+          requestorUserId={selectedRow.requestorUserId} 
+          formTypeId={selectedRow.formTypeId} 
+          title={selectedRow.title} 
+          startDate={start} 
+          endDate={end}
+        />
+      )}
+
+      {isExportModalOpen && (
+        <HrExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          defaultStartDate={start}
+          defaultEndDate={end}
+          availableFormTypes={scorecardFormTypes}
+        />
       )}
     </div>
   );

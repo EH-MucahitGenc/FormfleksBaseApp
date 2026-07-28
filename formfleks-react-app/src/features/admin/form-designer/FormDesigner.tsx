@@ -222,7 +222,7 @@ export const FormDesigner: React.FC = () => {
             label: f.label,
             fieldType: f.fieldType,
             isRequired: f.isRequired,
-            optionsJson: f.fieldType === 4 ? formatOptionsToCsv(f.optionsJson) : f.optionsJson,
+            optionsJson: f.fieldType === 4 ? formatOptionsToCsv(f.optionsJson) : (f.fieldType === 13 && f.optionsJson ? (() => { try { const p = JSON.parse(f.optionsJson); return p && p.html !== undefined ? p.html : f.optionsJson; } catch { return f.optionsJson; } })() : f.optionsJson),
             autoFillJson: f.autoFillJson,
             placeholder: f.placeholder,
             colSpan: f.colSpan || f.ColSpan || 12
@@ -446,7 +446,7 @@ export const FormDesigner: React.FC = () => {
           active: true,
           colSpan: f.colSpan,
           calculationRuleJson: f.calculationRuleJson,
-          optionsJson: f.fieldType === 4 && f.optionsJson ? JSON.stringify(f.optionsJson.split(',').map(x => ({ Value: x.trim(), Text: x.trim() }))) : (f.fieldType === 11 || f.fieldType === 10 ? f.optionsJson : undefined),
+          optionsJson: f.fieldType === 4 && f.optionsJson ? JSON.stringify(f.optionsJson.split(',').map(x => ({ Value: x.trim(), Text: x.trim() }))) : (f.fieldType === 13 ? JSON.stringify({ html: f.optionsJson }) : ([10, 11].includes(f.fieldType) ? f.optionsJson : undefined)),
           autoFillJson: f.autoFillJson,
           placeholder: f.placeholder
         }))
@@ -853,7 +853,7 @@ export const FormDesigner: React.FC = () => {
                                                             ) : f.fieldType === 12 ? (
                                                                 <input type="text" value={f.calculationRuleJson || ''} onChange={e => updateField(section.id, f.id, { calculationRuleJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs font-mono" placeholder="Örn: (not1 + not2)/2" />
                                                             ) : f.fieldType === 13 ? (
-                                                                <input type="text" value={f.optionsJson || ''} onChange={e => updateField(section.id, f.id, { optionsJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="<p>HTML İçerik</p>" />
+                                                                <input type="text" value={f.optionsJson || ''} onChange={e => updateField(section.id, f.id, { optionsJson: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="Metin veya <p>HTML</p>" />
                                                             ) : (
                                                                 <input type="text" value={f.placeholder || ''} onChange={e => updateField(section.id, f.id, { placeholder: e.target.value })} className="w-full bg-surface-hover border-none rounded px-2 py-1.5 focus:ring-1 focus:ring-brand-primary text-brand-dark text-xs" placeholder="Placeholder..." />
                                                             )}
