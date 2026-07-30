@@ -1,10 +1,12 @@
 import type { HrFormDetailItemDto } from '@/services/report.service';
 
-export function formatDateValue(value: string | null | undefined): string {
-  if (!value) return '-';
+export function formatDateValue(value: any): string {
+  if (value === null || value === undefined || value === '') return '-';
+  
+  const strValue = String(value);
 
   // Check if it's an ISO date string like 2026-08-02T21:00:00.000Z
-  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(value);
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(strValue);
   if (isoMatch) {
     const [, year, month, day, hour, min] = isoMatch;
     if (hour === '00' && min === '00') {
@@ -14,7 +16,7 @@ export function formatDateValue(value: string | null | undefined): string {
   }
 
   // Short format matching (M/D/YY or M/D/YY H:MM) - typical JS/C# short date
-  const shortMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?: (\d{1,2}):(\d{2}))?/.exec(value);
+  const shortMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?: (\d{1,2}):(\d{2}))?/.exec(strValue);
   if (shortMatch) {
     const m = shortMatch[1].padStart(2, '0');
     const d = shortMatch[2].padStart(2, '0');
@@ -30,14 +32,14 @@ export function formatDateValue(value: string | null | undefined): string {
     return `${d}.${m}.${y}`;
   }
   // Standalone time matching (H:MM or HH:MM or HH.MM)
-  const timeMatch = /^(\d{1,2})[:.](\d{2})$/.exec(value.trim());
+  const timeMatch = /^(\d{1,2})[:.](\d{2})$/.exec(strValue.trim());
   if (timeMatch) {
     const h = timeMatch[1].padStart(2, '0');
     const m = timeMatch[2];
     return `${h}:${m}`;
   }
 
-  return value;
+  return strValue;
 }
 
 export function isJsonArray(value: string): boolean {

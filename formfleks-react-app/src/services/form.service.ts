@@ -40,8 +40,9 @@ export type ApprovalActionRequestDto = {
   approvalId: string;
   actorUserId: string;
   approvalConcurrencyToken: string;
-  actionType: 1 | 2 | 3; // 1: Approve, 2: Reject, 3: Return
+  actionType: 1 | 2 | 3 | 4; // 1: Approve, 2: Reject, 3: Return, 4: Reassign
   comment?: string;
+  newAssigneeUserId?: string;
 };
 
 export type FormRequestValueDto = {
