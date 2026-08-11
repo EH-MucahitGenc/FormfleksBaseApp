@@ -149,7 +149,7 @@ public class EmailSenderBackgroundWorker : BackgroundService
 
         using var mailMessage = new MailMessage
         {
-            From = new MailAddress(string.IsNullOrWhiteSpace(smtpSettings.DefaultFrom) ? smtpSettings.Username : smtpSettings.DefaultFrom),
+            From = new MailAddress(string.IsNullOrWhiteSpace(smtpSettings.DefaultFrom) ? smtpSettings.Username : smtpSettings.DefaultFrom, "Erkurt Holding-Formfleks Kurumsal Form ve Onay Platformu"),
             Subject = message.Subject,
             Body = message.HtmlBody,
             IsBodyHtml = true

@@ -92,8 +92,10 @@ public class DraftFormReminderBackgroundJob : CronJobService
             var formType = await db.FormTypes.FirstOrDefaultAsync(f => f.Id == draft.FormTypeId, cancellationToken);
             string formTypeName = formType?.Name ?? draft.FormTypeId.ToString();
             string requesterName = user.DisplayName ?? user.Email;
+            
+            bool isProbationForm = formType != null && (formType.SystemUsageType == "2_AY_DENEME" || formType.SystemUsageType == "6_AY_DENEME");
 
-            if (draft.CreatedAt <= autoDeleteThresholdDate)
+            if (draft.CreatedAt <= autoDeleteThresholdDate && !isProbationForm)
             {
                 Logger.LogInformation($"Deleting draft {draft.RequestNo} because it's older than {autoDeleteThresholdDays} days.");
                 

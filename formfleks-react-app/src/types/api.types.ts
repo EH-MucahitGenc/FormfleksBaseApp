@@ -41,6 +41,9 @@ export interface PendingApprovalListItemDto {
   approvalId: string;
   approvalConcurrencyToken: string;
   stepNo: number;
+  requestorName: string;
+  requestorLocation?: string;
+  subjectPersonName?: string;
   createdAt: string;
 }
 

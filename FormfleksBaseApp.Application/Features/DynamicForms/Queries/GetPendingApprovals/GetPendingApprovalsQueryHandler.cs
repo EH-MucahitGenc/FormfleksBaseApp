@@ -48,19 +48,6 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
         var dbApprovals = await _db.FormRequestApprovals.AsNoTracking()
             .Where(a => a.Status == (short)ApprovalStatus.Pending)
             .ToListAsync(ct);
-
-        _logger.LogWarning("DIAGNOSTICS: Fetching pending approvals for ActorUserId: {ActorId}. Total Pending in entire DB: {DbCount}", request.ActorUserId, dbApprovals.Count);
-        
-        foreach (var appTest in dbApprovals)
-        {
-            _logger.LogWarning("DIAGNOSTICS: Found Pending Approval ID: {AppId}, RequestId: {ReqId}, AssigneeUserId: {AssigneeUserId}", appTest.Id, appTest.RequestId, appTest.AssigneeUserId);
-            if (appTest.AssigneeUserId == request.ActorUserId) {
-                _logger.LogWarning("DIAGNOSTICS: -> MATCH FOUND for Actor {ActorId} on Approval {AppId}!", request.ActorUserId, appTest.Id);
-            }
-        }
-
-
-
         var result = await (from app in _db.FormRequestApprovals.AsNoTracking()
                       join r in _db.FormRequests.AsNoTracking() on app.RequestId equals r.Id
                       join ws in _db.WorkflowSteps.AsNoTracking() on app.WorkflowStepId equals ws.Id
@@ -85,6 +72,11 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                           AssigneeRoleId = app.AssigneeRoleId,
                           RequestorUserId = r.RequestorUserId,
                           RequestorName = person != null ? person.Adi + " " + person.Soyadi : "Bilinmiyor",
+                          RequestorLocation = _db.QdmsPersoneller
+                              .Where(q => q.Isyeri_Tanimi != null && q.Isyeri_Tanimi != "" && q.LinkedUserId == r.RequestorUserId)
+                              .Select(q => q.Isyeri_Tanimi)
+                              .FirstOrDefault()
+                              ?? (person != null ? person.Isyeri_Tanimi : null),
                           FormTypeName = t.Name,
                           ApprovalConcurrencyToken = app.ConcurrencyToken,
                           CreatedAt = r.CreatedAt
@@ -104,6 +96,33 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                     {
                         item.RequestorName = fallbackName;
                     }
+                }
+            }
+        }
+
+        // Location Fallback with Turkish character support
+        var itemsMissingLocation = result.Where(x => string.IsNullOrEmpty(x.RequestorLocation)).ToList();
+        if (itemsMissingLocation.Any())
+        {
+            var allQdmsWithLocation = await _db.QdmsPersoneller.AsNoTracking()
+                .Where(q => q.Isyeri_Tanimi != null && q.Isyeri_Tanimi != "")
+                .Select(q => new { FullName = q.Adi + " " + q.Soyadi, q.Isyeri_Tanimi })
+                .ToListAsync(ct);
+
+            var trCulture = new System.Globalization.CultureInfo("tr-TR");
+
+            foreach (var item in itemsMissingLocation)
+            {
+                if (string.IsNullOrEmpty(item.RequestorName)) continue;
+                
+                var requestorNameUpper = item.RequestorName.Trim().ToUpper(trCulture);
+                
+                var match = allQdmsWithLocation.FirstOrDefault(q =>
+                    q.FullName != null && q.FullName.Trim().ToUpper(trCulture) == requestorNameUpper);
+                    
+                if (match != null)
+                {
+                    item.RequestorLocation = match.Isyeri_Tanimi;
                 }
             }
         }
