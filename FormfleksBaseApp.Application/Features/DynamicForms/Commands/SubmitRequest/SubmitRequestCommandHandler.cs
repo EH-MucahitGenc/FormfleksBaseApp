@@ -319,51 +319,56 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
             foreach (var hrUserId in globalManagerUserIds)
             {
-                var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
-                if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
+                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
                 {
-                    targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
+                    targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen İK Sorumlusu", hrUserId));
                 }
                 else
                 {
-                    var baseUser = await _userRepository.GetByIdAsync(hrUserId, ct, false);
-                    if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
-                        targetList.Add((baseUser.Email, baseUser.DisplayName ?? "Bilinmeyen YK Sorumlusu", hrUserId));
+                    var hrPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == hrUserId && p.IsActive, ct);
+                    if (hrPers != null && !string.IsNullOrWhiteSpace(hrPers.Email))
+                        targetList.Add((hrPers.Email, $"{hrPers.Adi} {hrPers.Soyadi}", hrUserId));
                 }
             }
         }
         else if (assignedUserId.HasValue)
         {
-            var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
-            string? targetEmail = assgnPers?.Email;
-            string assgnName = assgnPers != null ? $"{assgnPers.Adi} {assgnPers.Soyadi}" : "Bilinmeyen Sistem Kullanıcısı";
+            var baseUser = await _userRepository.GetByIdAsync(assignedUserId.Value, ct, false);
+            string? targetEmail = baseUser?.Email;
+            string assgnName = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName) ? baseUser.DisplayName : "Bilinmeyen Sistem Kullanıcısı";
 
             if (string.IsNullOrWhiteSpace(targetEmail))
             {
-                var baseUser = await _userRepository.GetByIdAsync(assignedUserId.Value, ct, false);
-                targetEmail = baseUser?.Email;
-                if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName))
-                    assgnName = baseUser.DisplayName;
+                var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == assignedUserId.Value && p.IsActive, ct);
+                targetEmail = assgnPers?.Email;
+                if (assgnPers != null)
+                    assgnName = $"{assgnPers.Adi} {assgnPers.Soyadi}";
             }
             if (!string.IsNullOrWhiteSpace(targetEmail)) targetList.Add((targetEmail, assgnName, assignedUserId.Value));
         }
         else if (assignedRoleId.HasValue)
         {
             var roleUserIds = await _db.UserRoles.AsNoTracking().Where(r => r.RoleId == assignedRoleId.Value).Select(r => r.UserId).ToListAsync(ct);
-            var qdmsUsers = await _db.QdmsPersoneller.AsNoTracking().Where(p => p.LinkedUserId.HasValue && roleUserIds.Contains(p.LinkedUserId.Value) && p.IsActive).ToListAsync(ct);
+            var usersWithEmails = new List<Guid>();
             
-            foreach (var p in qdmsUsers)
+            foreach (var ruid in roleUserIds)
             {
-                if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}", p.LinkedUserId.Value));
-            }
-            
-            var missingEmailsUserIds = roleUserIds.Except(qdmsUsers.Where(p => !string.IsNullOrWhiteSpace(p.Email)).Select(p => p.LinkedUserId!.Value)).ToList();
-            foreach (var muid in missingEmailsUserIds)
-            {
-                var baseUser = await _userRepository.GetByIdAsync(muid, ct, false);
+                var baseUser = await _userRepository.GetByIdAsync(ruid, ct, false);
                 if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
                 {
-                    targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? "Bilinmeyen Sistem Kullanıcısı" : baseUser.DisplayName, muid));
+                    targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? "Bilinmeyen Sistem Kullanıcısı" : baseUser.DisplayName, ruid));
+                    usersWithEmails.Add(ruid);
+                }
+            }
+            
+            var missingEmailsUserIds = roleUserIds.Except(usersWithEmails).ToList();
+            if (missingEmailsUserIds.Any())
+            {
+                var qdmsUsers = await _db.QdmsPersoneller.AsNoTracking().Where(p => p.LinkedUserId.HasValue && missingEmailsUserIds.Contains(p.LinkedUserId.Value) && p.IsActive).ToListAsync(ct);
+                foreach (var p in qdmsUsers)
+                {
+                    if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}", p.LinkedUserId.Value));
                 }
             }
         }

@@ -90,15 +90,16 @@ public sealed class CancelRequestCommandHandler : IRequestHandler<CancelRequestC
         {
             if (approval.AssigneeUserId.HasValue)
             {
-                var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == approval.AssigneeUserId.Value && p.IsActive, cancellationToken);
-                string? email = assgnPers?.Email;
-                string name = assgnPers != null ? $"{assgnPers.Adi} {assgnPers.Soyadi}" : "";
+                var baseUser = await _userRepository.GetByIdAsync(approval.AssigneeUserId.Value, cancellationToken, false);
+                string? email = baseUser?.Email;
+                string name = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName) ? baseUser.DisplayName : "";
                 
                 if (string.IsNullOrWhiteSpace(email))
                 {
-                    var baseUser = await _userRepository.GetByIdAsync(approval.AssigneeUserId.Value, cancellationToken, false);
-                    email = baseUser?.Email;
-                    name = baseUser?.DisplayName ?? name;
+                    var assgnPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == approval.AssigneeUserId.Value && p.IsActive, cancellationToken);
+                    email = assgnPers?.Email;
+                    if (assgnPers != null)
+                        name = $"{assgnPers.Adi} {assgnPers.Soyadi}";
                 }
                 
                 if (!string.IsNullOrWhiteSpace(email))
@@ -107,20 +108,25 @@ public sealed class CancelRequestCommandHandler : IRequestHandler<CancelRequestC
             else if (approval.AssigneeRoleId.HasValue)
             {
                 var roleUserIds = await _db.UserRoles.AsNoTracking().Where(r => r.RoleId == approval.AssigneeRoleId.Value).Select(r => r.UserId).ToListAsync(cancellationToken);
-                var qdmsUsers = await _db.QdmsPersoneller.AsNoTracking().Where(p => p.LinkedUserId.HasValue && roleUserIds.Contains(p.LinkedUserId.Value) && p.IsActive).ToListAsync(cancellationToken);
+                var usersWithEmails = new List<Guid>();
                 
-                foreach (var p in qdmsUsers)
+                foreach (var ruid in roleUserIds)
                 {
-                    if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}"));
-                }
-                
-                var missingEmailsUserIds = roleUserIds.Except(qdmsUsers.Where(p => !string.IsNullOrWhiteSpace(p.Email)).Select(p => p.LinkedUserId!.Value)).ToList();
-                foreach (var muid in missingEmailsUserIds)
-                {
-                    var baseUser = await _userRepository.GetByIdAsync(muid, cancellationToken, false);
+                    var baseUser = await _userRepository.GetByIdAsync(ruid, cancellationToken, false);
                     if (baseUser != null && !string.IsNullOrWhiteSpace(baseUser.Email))
                     {
                         targetList.Add((baseUser.Email, string.IsNullOrWhiteSpace(baseUser.DisplayName) ? baseUser.Email : baseUser.DisplayName));
+                        usersWithEmails.Add(ruid);
+                    }
+                }
+                
+                var missingEmailsUserIds = roleUserIds.Except(usersWithEmails).ToList();
+                if (missingEmailsUserIds.Any())
+                {
+                    var qdmsUsers = await _db.QdmsPersoneller.AsNoTracking().Where(p => p.LinkedUserId.HasValue && missingEmailsUserIds.Contains(p.LinkedUserId.Value) && p.IsActive).ToListAsync(cancellationToken);
+                    foreach (var p in qdmsUsers)
+                    {
+                        if (!string.IsNullOrWhiteSpace(p.Email)) targetList.Add((p.Email, $"{p.Adi} {p.Soyadi}"));
                     }
                 }
             }
