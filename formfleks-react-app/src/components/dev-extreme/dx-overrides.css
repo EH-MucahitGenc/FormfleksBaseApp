@@ -6,44 +6,162 @@
 .formfleks-premium-grid {
   border: none !important;
   background-color: transparent !important;
+  font-family: inherit !important;
+}
+
+.formfleks-premium-grid .dx-datagrid,
+.formfleks-premium-grid .dx-datagrid-rowsview,
+.formfleks-premium-grid .dx-datagrid-content {
+  background-color: transparent !important;
+}
+
+.formfleks-premium-grid .dx-datagrid-header-panel {
+  border-bottom: 1px solid var(--app-surface-muted, #e7e7ea) !important;
+  background-color: #ffffff !important;
+  padding: 10px 12px !important;
+}
+
+.formfleks-premium-grid .dx-toolbar {
+  background-color: transparent !important;
+}
+
+.formfleks-premium-grid .dx-toolbar-items-container {
+  min-height: 42px !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-headers {
-  border-bottom: 2px solid rgba(0,0,0,0.03) !important;
+  border-bottom: 1px solid var(--app-surface-muted, #e7e7ea) !important;
   color: var(--brand-dark, #231f20) !important;
   font-weight: 700 !important;
-  background-color: transparent !important;
-  padding: 4px 0 !important;
+  background-color: #fbfbfc !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-headers .dx-datagrid-text-content {
   color: var(--brand-gray, #64748b) !important;
   font-size: 0.75rem !important;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row {
-  border-bottom: 1px solid rgba(0,0,0,0.03) !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(24, 24, 27, 0.06) !important;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row > td {
-  padding: 14px 12px !important;
+  padding: 16px 14px !important;
   vertical-align: middle !important;
+  color: var(--app-brand-dark, #18181b) !important;
+  font-size: 0.88rem !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row:hover {
-  background-color: rgba(246, 137, 76, 0.04) !important; /* Soft brand primary hover */
+  background-color: rgba(255, 122, 61, 0.045) !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-row-alt > td {
-  background-color: rgba(246, 137, 76, 0.015) !important; /* Extremely subtle primary tint */
+  background-color: rgba(247, 248, 250, 0.55) !important;
 }
 
 .formfleks-premium-grid .dx-datagrid-rowsview .dx-selection > td {
-  background-color: rgba(246, 137, 76, 0.1) !important; /* Primary Brand tint focus */
+  background-color: rgba(255, 122, 61, 0.1) !important;
   color: var(--brand-dark, #231f20) !important;
+}
+
+.formfleks-premium-grid .dx-datagrid-filter-row {
+  background-color: #ffffff !important;
+}
+
+.formfleks-premium-grid .dx-datagrid-filter-row > td {
+  border-bottom: 1px solid var(--app-surface-muted, #e7e7ea) !important;
+}
+
+.ff-grid-restored .dx-datagrid {
+  border-radius: 0 0 14px 14px !important;
+  overflow: hidden !important;
+}
+
+.ff-grid-restored .dx-datagrid-header-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 248, 250, 0.72)) !important;
+  padding: 12px !important;
+}
+
+.ff-grid-restored .dx-toolbar-items-container {
+  display: flex !important;
+  min-height: 44px !important;
+}
+
+.ff-grid-restored .dx-toolbar-after {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.ff-grid-restored .dx-toolbar-after .dx-toolbar-item {
+  padding-inline-start: 0 !important;
+}
+
+.ff-grid-restored .dx-datagrid-search-panel {
+  width: 300px !important;
+  margin-left: 0 !important;
+}
+
+.ff-grid-restored .dx-datagrid-search-panel.dx-texteditor.dx-editor-outlined {
+  border-radius: 12px !important;
+  background-color: var(--app-surface-ground, #f7f8fa) !important;
+  border-color: var(--app-surface-muted, #e7e7ea) !important;
+}
+
+.ff-grid-restored .dx-searchbox .dx-icon-search {
+  left: 12px !important;
+  margin-left: 0 !important;
+  width: 18px !important;
+}
+
+.ff-grid-restored .dx-searchbox .dx-texteditor-input {
+  min-height: 40px !important;
+  padding-left: 40px !important;
+  padding-right: 14px !important;
+  font-size: 0.875rem !important;
+}
+
+.ff-grid-restored .dx-searchbox .dx-placeholder::before {
+  min-height: 40px !important;
+  padding-left: 40px !important;
+  padding-right: 14px !important;
+  font-size: 0.875rem !important;
+}
+
+.ff-grid-restored .dx-button {
+  border-radius: 10px !important;
+}
+
+.ff-grid-restored .dx-datagrid-table {
+  min-width: 920px;
+}
+
+@media (max-width: 900px) {
+  .ff-grid-restored .dx-datagrid-header-panel {
+    padding: 10px !important;
+  }
+
+  .ff-grid-restored .dx-toolbar-items-container {
+    height: auto !important;
+    min-height: 92px !important;
+  }
+
+  .ff-grid-restored .dx-toolbar-after {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+
+  .ff-grid-restored .dx-datagrid-search-panel {
+    width: min(100%, 420px) !important;
+  }
 }
 
 /* Base dx overrides - Outlined Mode Focus */
@@ -496,4 +614,58 @@
 .dark input[type="text"]:not(.dx-texteditor-input) {
   background-color: var(--app-surface-base, #211c18) !important;
   color: var(--app-brand-dark, #ede8e1) !important;
+}
+
+/* Premium dynamic form filling surface */
+.ff-dynamic-form-canvas label {
+  color: var(--app-brand-dark, #0b0b0f) !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.01em;
+}
+
+.ff-dynamic-form-canvas .dx-texteditor {
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease !important;
+}
+
+.ff-dynamic-form-canvas .dx-texteditor.dx-state-hover {
+  background: #ffffff !important;
+  border-color: rgba(255, 122, 61, 0.28) !important;
+}
+
+.ff-dynamic-form-canvas .dx-texteditor.dx-state-focused,
+.ff-dynamic-form-canvas .dx-texteditor.dx-state-active {
+  background: #ffffff !important;
+  border-color: rgba(255, 122, 61, 0.58) !important;
+  box-shadow: 0 0 0 4px rgba(255, 122, 61, 0.09) !important;
+}
+
+.ff-dynamic-form-canvas .dx-texteditor-input {
+  min-height: 44px !important;
+  padding: 10px 14px !important;
+  color: var(--app-brand-dark, #0b0b0f) !important;
+  font-weight: 650 !important;
+}
+
+.ff-dynamic-form-canvas .dx-placeholder::before {
+  color: rgba(100, 116, 139, 0.72) !important;
+  font-weight: 500 !important;
+}
+
+.ff-dynamic-form-canvas .dx-invalid.dx-texteditor {
+  border-color: rgba(239, 68, 68, 0.58) !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08) !important;
+}
+
+.ff-dynamic-form-canvas .dx-datagrid {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.ff-dynamic-form-canvas .dx-datagrid-headers {
+  background: #f8fafc !important;
 }

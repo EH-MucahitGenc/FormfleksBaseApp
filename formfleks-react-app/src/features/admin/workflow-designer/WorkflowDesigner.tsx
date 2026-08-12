@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Route, Save, Plus, Trash2, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, GitMerge } from 'lucide-react';
-import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
+import { Route, Save, Plus, Trash2, ChevronUp, ChevronDown, CheckCircle2, AlertTriangle, GitMerge, Sparkles, Workflow, ShieldCheck, GitBranch, Users } from 'lucide-react';
+import { PageHeader, FfButton, PageContainer, GlassCard, cn } from '@/components/ui/index';
 import { FfSelectBox } from '@/components/dev-extreme';
 import { systemAdminService, type FormTemplateWorkflowStepUpsertDto, type FormTemplateSummaryDto } from '@/services/system-admin.service';
 import type { AdminUserDto, AdminRoleDto } from '@/services/admin.service';
@@ -11,6 +11,7 @@ export const WorkflowDesigner: React.FC = () => {
   
   // Selection State
   const [selectedFormId, setSelectedFormId] = useState<string>('');
+  const [isFormPickerOpen, setIsFormPickerOpen] = useState(false);
   
   // Workflow Steps State
   const [steps, setSteps] = useState<FormTemplateWorkflowStepUpsertDto[]>([]);
@@ -155,6 +156,18 @@ export const WorkflowDesigner: React.FC = () => {
   };
 
   const selectedTemplateDetails = templates.find(t => t.formTypeId === selectedFormId);
+  const activeTemplateCount = templates.filter(t => t.active).length;
+  const dynamicStepCount = steps.filter(step => step.assigneeType >= 10).length;
+  const fixedStepCount = steps.length - dynamicStepCount;
+  const revisionEnabledCount = steps.filter(step => step.allowReturnForRevision).length;
+  const missingAssigneeCount = steps.filter(step => (step.assigneeType === 2 && !step.assigneeRoleId) || (step.assigneeType === 1 && !step.assigneeUserId)).length;
+  const workflowReadiness = !selectedFormId
+    ? 'Form bekleniyor'
+    : steps.length === 0
+      ? 'Akış taslağı boş'
+      : missingAssigneeCount > 0
+        ? `${missingAssigneeCount} eksik hedef`
+        : 'Kayda hazır';
 
   return (
     <PageContainer>
@@ -162,7 +175,7 @@ export const WorkflowDesigner: React.FC = () => {
         <PageHeader 
         title="Onay Akışı (Workflow) Tasarımcısı" 
         description="Form bazlı onay/ret rotalarını oluşturun, sıralamayı belirleyin." 
-        className="shrink-0 mb-4"
+        className="hidden"
         breadcrumbs={[
           { label: 'Anasayfa', href: '/' },
           { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
@@ -176,6 +189,50 @@ export const WorkflowDesigner: React.FC = () => {
         }
       />
 
+      <div className="relative mb-5 shrink-0 overflow-hidden rounded-[1.75rem] border border-orange-100/80 bg-[radial-gradient(circle_at_top_left,rgba(255,122,61,0.18),transparent_34%),linear-gradient(135deg,#fffaf6_0%,#ffffff_48%,#f8fafc_100%)] p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] md:p-7">
+        <div className="pointer-events-none absolute right-8 top-6 h-24 w-24 rounded-full bg-brand-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-bold text-brand-gray">
+              <span>Anasayfa</span>
+              <span className="text-brand-gray/40">/</span>
+              <span>Sistem & Araçlar</span>
+              <span className="text-brand-gray/40">/</span>
+              <span className="text-brand-dark">Onay Akışı Tasarımcısı</span>
+            </div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-white/85 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-brand-primary shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Workflow Studio
+            </div>
+            <h1 className="max-w-3xl text-3xl font-black tracking-tight text-brand-dark md:text-4xl">Onay Akışı Tasarımcısı</h1>
+            <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-brand-gray">
+              Formların onay rotasını, dinamik rol atamalarını, fallback senaryolarını ve sıralı adım zincirini tek bir kontrollü alanda kurgulayın.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 xl:items-end">
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/80 bg-white/80 p-2 shadow-sm backdrop-blur">
+              <div className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-gray">Şablon</p>
+                <p className="mt-1 text-xl font-black text-brand-dark">{templates.length}</p>
+              </div>
+              <div className="rounded-xl bg-emerald-50 px-4 py-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Aktif</p>
+                <p className="mt-1 text-xl font-black text-emerald-700">{activeTemplateCount}</p>
+              </div>
+              <div className="rounded-xl bg-orange-50 px-4 py-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-primary">Adım</p>
+                <p className="mt-1 text-xl font-black text-brand-primary">{steps.length}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <FfButton variant="outline" leftIcon={<GitMerge className="h-4 w-4 text-brand-accent" />} onClick={loadDefaultPreset} disabled={!selectedFormId}>2 Adım Standart</FfButton>
+              <FfButton variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={handleSave} isLoading={saveMutation.isPending} disabled={!selectedFormId}>Akışı Kaydet</FfButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {message && (
         <div className={`mb-4 mx-2 p-3 rounded-lg flex items-center gap-2 border shadow-sm animate-in fade-in slide-in-from-top-2 ${message.type === 'success' ? 'bg-status-success/10 text-status-success border-status-success/20' : 'bg-status-danger/10 text-status-danger border-status-danger/20'}`}>
            {message.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
@@ -183,11 +240,60 @@ export const WorkflowDesigner: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row">
         
         {/* Left Panel: Form Selector & Overview */}
-        <div className="w-full md:w-80 flex flex-col gap-4">
-            <GlassCard noPadding className="p-5">
+        <div className="flex w-full flex-col gap-4 md:w-96">
+            <div className="relative z-50 overflow-visible rounded-3xl border border-surface-muted bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+                <div className="mb-4 flex items-start gap-3">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                        <Route className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h3 className="font-black text-brand-dark">Hedef Form Seçimi</h3>
+                        <p className="mt-1 text-xs font-semibold text-brand-gray">Akış tasarlamak istediğiniz form şablonunu seçin.</p>
+                    </div>
+                </div>
+
+                <label className="mb-2 block text-xs font-black uppercase tracking-wider text-brand-gray">Tasarım Şablonu</label>
+                <select
+                    value={selectedFormId}
+                    onChange={e => {
+                        setSelectedFormId(e.target.value);
+                        setIsFormPickerOpen(false);
+                    }}
+                    disabled={templatesLoading}
+                    style={{ display: 'block', minHeight: 48, width: '100%' }}
+                    className="relative z-50 block w-full rounded-2xl border border-surface-muted bg-white px-4 py-3 text-sm font-bold text-brand-dark shadow-sm outline-none transition-all focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 disabled:cursor-wait disabled:opacity-70"
+                >
+                    <option value="">{templatesLoading ? 'Yükleniyor...' : '-- Şablon Seçiniz --'}</option>
+                    {templates.map(t => (
+                        <option key={t.formTypeId} value={t.formTypeId}>{t.name} ({t.code})</option>
+                    ))}
+                </select>
+
+                {selectedTemplateDetails && (
+                    <div className="mt-4 rounded-2xl border border-surface-muted bg-slate-50 p-4">
+                        <div className="mb-3 text-xs font-black uppercase tracking-wider text-brand-gray">Seçili Form Özeti</div>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-brand-gray">Bağlı Alanlar:</span>
+                                <span className="font-bold text-brand-dark">{selectedTemplateDetails.fieldCount} Alan</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-brand-gray">Kayıtlı Adımlar:</span>
+                                <span className="font-bold text-brand-dark">{selectedTemplateDetails.workflowStepCount} Adım</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-brand-gray">Durum:</span>
+                                <span className={selectedTemplateDetails.active ? 'text-status-success font-bold' : 'text-brand-gray font-bold'}>{selectedTemplateDetails.active ? 'Aktif Form' : 'Pasif Form'}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <GlassCard noPadding className="hidden">
                 <h3 className="font-bold text-brand-dark mb-4 flex items-center gap-2">
                     <Route className="h-5 w-5 text-brand-primary" />
                     Hedef Form Seçimi
@@ -195,20 +301,57 @@ export const WorkflowDesigner: React.FC = () => {
                 
                 <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-brand-gray uppercase tracking-wider">Tasarım Şablonu</label>
-                    <select 
-                        value={selectedFormId} 
-                        onChange={e => setSelectedFormId(e.target.value)}
-                        className="w-full bg-surface-base border border-surface-muted rounded-lg px-3 py-2.5 text-sm text-brand-dark font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary appearance-none"
+                    <button
+                        type="button"
+                        onClick={() => !templatesLoading && setIsFormPickerOpen(open => !open)}
+                        disabled={templatesLoading}
+                        className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-surface-muted bg-white px-4 py-3 text-left text-sm font-bold text-brand-dark shadow-sm transition-all hover:border-brand-primary/40 focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/10 disabled:cursor-wait disabled:opacity-70"
                     >
-                        <option value="">-- Şablon Seçiniz --</option>
-                        {templatesLoading ? (
-                            <option value="">Yükleniyor...</option>
-                        ) : (
-                            templates.map(t => (
-                                <option key={t.formTypeId} value={t.formTypeId}>{t.name} ({t.code})</option>
-                            ))
-                        )}
-                    </select>
+                        <span className="min-w-0 truncate">
+                            {templatesLoading
+                                ? 'Yükleniyor...'
+                                : selectedTemplateDetails
+                                    ? `${selectedTemplateDetails.name} (${selectedTemplateDetails.code})`
+                                    : '-- Şablon Seçiniz --'}
+                        </span>
+                        <ChevronDown className={cn('h-4 w-4 shrink-0 text-brand-gray transition-transform', isFormPickerOpen && 'rotate-180')} />
+                    </button>
+
+                    {isFormPickerOpen && (
+                        <div className="mt-2 max-h-72 overflow-y-auto rounded-2xl border border-surface-muted bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.12)]">
+                            {templates.length === 0 ? (
+                                <div className="px-3 py-4 text-sm font-semibold text-brand-gray">Listelenecek form şablonu bulunamadı.</div>
+                            ) : (
+                                templates.map(t => {
+                                    const isSelected = selectedFormId === t.formTypeId;
+                                    return (
+                                        <button
+                                            key={t.formTypeId}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedFormId(t.formTypeId);
+                                                setIsFormPickerOpen(false);
+                                            }}
+                                            className={cn(
+                                                'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-all',
+                                                isSelected ? 'bg-brand-primary text-white shadow-sm' : 'text-brand-dark hover:bg-orange-50'
+                                            )}
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-sm font-black">{t.name}</span>
+                                                <span className={cn('block truncate font-mono text-[11px] font-bold', isSelected ? 'text-white/80' : 'text-brand-gray')}>
+                                                    {t.code}
+                                                </span>
+                                            </span>
+                                            <span className={cn('shrink-0 rounded-full px-2 py-1 text-[11px] font-black', isSelected ? 'bg-white/15 text-white' : 'bg-slate-100 text-brand-gray')}>
+                                                {t.workflowStepCount} adım
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {selectedTemplateDetails && (
@@ -232,12 +375,38 @@ export const WorkflowDesigner: React.FC = () => {
                 )}
             </GlassCard>
 
+            <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-brand-primary">Bu Akış</p>
+                    <p className="mt-2 text-2xl font-black text-brand-primary">{steps.length}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">adım</p>
+                </div>
+                <div className={cn(
+                    'rounded-2xl border p-4 shadow-sm',
+                    missingAssigneeCount > 0 ? 'border-red-100 bg-red-50/70' : 'border-emerald-100 bg-emerald-50/70'
+                )}>
+                    <p className={cn('text-[10px] font-black uppercase tracking-wider', missingAssigneeCount > 0 ? 'text-status-danger' : 'text-emerald-700')}>Durum</p>
+                    <p className={cn('mt-2 text-sm font-black', missingAssigneeCount > 0 ? 'text-status-danger' : 'text-emerald-700')}>{workflowReadiness}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">kontrol</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Dinamik</p>
+                    <p className="mt-2 text-2xl font-black text-brand-dark">{dynamicStepCount}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">rol adımı</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Sabit</p>
+                    <p className="mt-2 text-2xl font-black text-brand-dark">{fixedStepCount}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">hedef</p>
+                </div>
+            </div>
+
             {/* Quick Helper Panel */}
-            <div className="bg-status-info/10 rounded-xl border border-status-info/20 p-4">
-                <h4 className="text-sm font-bold text-status-info mb-2 flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4" /> Nelere Dikkat Etmeli?
+            <div className="rounded-3xl border border-surface-muted bg-white p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-black text-brand-dark">
+                    <ShieldCheck className="h-4 w-4 text-brand-primary" /> Akış Tasarım Rehberi
                 </h4>
-                <ul className="text-xs text-status-info/80 space-y-2 list-disc pl-4">
+                <ul className="space-y-2 pl-4 text-xs font-semibold leading-5 text-brand-gray">
                     <li>Akışlar sıralı yürütülür (1. Adımdan N. Adıma).</li>
                     <li>Atamalar sistem yetki rollerine (Departman Yöneticisi) veya spesifik kullanıcılara yapılabilir.</li>
                     <li>Sıra numaraları sağ taraftaki yukarı/aşağı butonları ile değiştirilebilir.</li>
@@ -246,8 +415,8 @@ export const WorkflowDesigner: React.FC = () => {
         </div>
 
         {/* Right Panel: Workflow Builder */}
-        <GlassCard noPadding className="flex-1 min-w-0 flex flex-col overflow-hidden">
-            <div className="bg-surface-hover border-b border-surface-muted px-6 py-4 flex justify-between items-center">
+        <GlassCard noPadding className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+            <div className="flex items-center justify-between border-b border-orange-100 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_55%,#f8fafc_100%)] px-6 py-4">
                 <div>
                    <h3 className="font-bold text-brand-dark">Akış Adımları Listesi</h3>
                    <p className="text-xs text-brand-gray mt-0.5">{selectedFormId ? "Seçilen forma ait zinciri aşağıdan yönetebilirsiniz." : "Önce sol taraftan form seçiniz."}</p>
@@ -257,7 +426,27 @@ export const WorkflowDesigner: React.FC = () => {
                 )}
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-surface-base scrollbar-thin">
+            <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 scrollbar-thin md:p-6">
+                {selectedFormId && (
+                    <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <div className="rounded-2xl border border-surface-muted bg-white p-4 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-brand-gray">Seçili Form</p>
+                            <p className="mt-2 truncate text-sm font-black text-brand-dark">{selectedTemplateDetails?.name || 'Form'}</p>
+                        </div>
+                        <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-brand-primary">Akış Adımı</p>
+                            <p className="mt-1 text-2xl font-black text-brand-primary">{steps.length}</p>
+                        </div>
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Revizyon Açık</p>
+                            <p className="mt-1 text-2xl font-black text-emerald-700">{revisionEnabledCount}</p>
+                        </div>
+                        <div className={cn('rounded-2xl border p-4 shadow-sm', missingAssigneeCount > 0 ? 'border-red-100 bg-red-50/70' : 'border-slate-200 bg-white')}>
+                            <p className={cn('text-[10px] font-black uppercase tracking-wider', missingAssigneeCount > 0 ? 'text-status-danger' : 'text-slate-600')}>Hazırlık</p>
+                            <p className={cn('mt-2 text-sm font-black', missingAssigneeCount > 0 ? 'text-status-danger' : 'text-brand-dark')}>{workflowReadiness}</p>
+                        </div>
+                    </div>
+                )}
                 {!selectedFormId ? (
                     <div className="h-full flex flex-col items-center justify-center text-center px-4">
                         <Route className="h-16 w-16 text-brand-gray/20 mb-4" />
@@ -274,17 +463,33 @@ export const WorkflowDesigner: React.FC = () => {
                         <p className="text-brand-gray text-sm mb-4">Yukarıdaki 'Adım Ekle' butonuna tıklayarak ilk onay adımını yaratın.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {steps.map((step, sIdx) => (
-                            <div key={`step_${sIdx}`} className="bg-surface-base border border-surface-muted rounded-xl p-4 shadow-sm flex items-center gap-4 transition-all hover:border-brand-primary/30">
+                            <div key={`step_${sIdx}`} className="flex items-center gap-4 rounded-3xl border border-surface-muted bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-brand-primary/30">
                                 
                                 <div className="flex flex-col gap-1 flex-shrink-0">
                                     <button onClick={() => handleMoveUp(sIdx)} disabled={sIdx === 0} className={`p-1 rounded ${sIdx === 0 ? 'text-surface-muted cursor-not-allowed' : 'text-brand-gray hover:bg-surface-hover hover:text-brand-primary'}`}><ChevronUp className="h-4 w-4" /></button>
-                                    <div className="w-6 h-6 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xs font-bold border border-brand-primary/20">{step.stepNo}</div>
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-brand-primary/20 bg-brand-primary/10 text-sm font-black text-brand-primary">{step.stepNo}</div>
                                     <button onClick={() => handleMoveDown(sIdx)} disabled={sIdx === steps.length - 1} className={`p-1 rounded ${sIdx === steps.length - 1 ? 'text-surface-muted cursor-not-allowed' : 'text-brand-gray hover:bg-surface-hover hover:text-brand-primary'}`}><ChevronDown className="h-4 w-4" /></button>
                                 </div>
 
                                 <div className="flex-1">
+                                    <div className="mb-4 flex flex-wrap items-center gap-2">
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-brand-primary">
+                                            <GitBranch className="h-3.5 w-3.5" />
+                                            Adım {step.stepNo}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-700">
+                                            {step.assigneeType >= 10 ? <Workflow className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+                                            {step.assigneeType >= 10 ? 'Dinamik atama' : 'Sabit hedef'}
+                                        </span>
+                                        {step.allowReturnForRevision && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+                                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                                Revizyon açık
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
                                         <div className="md:col-span-4">
                                             <label className="block text-xs font-bold text-brand-gray uppercase mb-1">Adım Adı</label>

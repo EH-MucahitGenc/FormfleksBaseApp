@@ -1,43 +1,44 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       colors: {
         brand: {
-          primary: '#f6894c',
-          dark: '#231f20',
-          gray: '#414042',
+          primary: '#ff7a3d',
+          accent: '#c65d2d',
+          dark: '#18181b',
+          gray: '#71717a',
         },
         surface: {
           base: '#ffffff',
-          ground: '#f8fafc',
-          muted: '#f1f5f9',
-          hover: '#f8f9fa'
+          ground: '#f7f8fa',
+          muted: '#e7e7ea',
+          hover: '#f2f3f5',
         },
         status: {
           success: '#10b981',
           warning: '#f59e0b',
           danger: '#ef4444',
           info: '#3b82f6',
-          draft: '#64748b'
-        }
+          draft: '#64748b',
+        },
       },
       fontFamily: {
-        sans: ['Outfit', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-        'premium': '0 8px 30px rgba(0,0,0,0.04)',
+        soft: '0 1px 2px rgba(24, 24, 27, 0.04)',
+        premium: '0 10px 30px rgba(24, 24, 27, 0.05)',
       },
       borderRadius: {
-        'lg': '12px',
-        'xl': '16px',
-      }
+        lg: '10px',
+        xl: '12px',
+      },
     },
   },
   plugins: [],
-}
+};

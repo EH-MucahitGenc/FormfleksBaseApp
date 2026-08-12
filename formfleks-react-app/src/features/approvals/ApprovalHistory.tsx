@@ -1,12 +1,11 @@
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { formService } from '@/services/form.service';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
 
 export const ApprovalHistory: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const statusQuery = searchParams.get('status');
   
@@ -15,12 +14,12 @@ export const ApprovalHistory: React.FC = () => {
   else if (statusQuery === 'rejected') defaultStatusFilter = 3;
 
   const requestNoRenderer = ({ data }: any) => (
-    <button 
-      onClick={() => navigate(`/forms/${data.requestId}`)}
+    <Link
+      to={`/forms/${data.requestId}`}
       className="font-bold text-brand-primary hover:text-brand-accent hover:underline transition-colors"
     >
       {data.requestNo}
-    </button>
+    </Link>
   );
 
   const statusRenderer = ({ data }: any) => {
@@ -46,12 +45,12 @@ export const ApprovalHistory: React.FC = () => {
   };
 
   const actionRenderer = ({ data }: any) => (
-    <button 
-      onClick={() => navigate(`/forms/${data.requestId}`)}
+    <Link
+      to={`/forms/${data.requestId}`}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-colors border border-brand-primary/20"
     >
       <Eye className="h-3.5 w-3.5" /> Görüntüle
-    </button>
+    </Link>
   );
 
   const columns = [

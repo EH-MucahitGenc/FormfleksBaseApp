@@ -43,20 +43,20 @@ export const HrDynamicFormReport = ({ startDate, endDate }: Props) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-surface-base border border-surface-muted rounded-xl p-4 flex items-center justify-between shadow-sm">
+      <div className="flex flex-col gap-4 rounded-2xl border border-surface-muted/80 bg-white p-5 shadow-[0_18px_55px_rgba(24,24,27,0.055)] lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-brand-primary">
             <FileText className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-brand-dark">Form Detay Raporu</h3>
-            <p className="text-xs text-brand-gray">Raporunu görüntülemek istediğiniz form tipini seçin.</p>
+            <h3 className="text-base font-extrabold text-brand-dark">Form Detay Raporu</h3>
+            <p className="text-xs text-brand-gray">Alan bazlı detayları görmek için bir form tipi seçin.</p>
           </div>
         </div>
         <select
           value={selectedFormType}
           onChange={(e) => setSelectedFormType(e.target.value)}
-          className="bg-surface-muted/50 border border-surface-muted rounded-lg px-4 py-2 text-sm font-medium text-brand-dark min-w-[250px] outline-none"
+          className="min-w-[260px] rounded-xl border border-surface-muted bg-surface-ground/45 px-4 py-2.5 text-sm font-semibold text-brand-dark outline-none transition-colors focus:border-brand-primary/45"
         >
           <option value="">-- Form Tipi Seçiniz --</option>
           {formTypes.map(ft => (
@@ -76,7 +76,7 @@ export const HrDynamicFormReport = ({ startDate, endDate }: Props) => {
             wordWrapEnabled={true}
             rowAlternationEnabled={true}
             hoverStateEnabled={true}
-            className="w-full h-[calc(100vh-280px)] font-sans"
+            className="formfleks-premium-grid ff-grid-restored h-[calc(100vh-280px)] w-full font-sans"
           >
             <ColumnChooser enabled={true} mode="select" />
             <GroupPanel visible={true} emptyPanelText="Sütunu buraya sürükleyerek gruplayın" />
@@ -97,10 +97,10 @@ export const HrDynamicFormReport = ({ startDate, endDate }: Props) => {
           </DataGrid>
         </GlassCard>
       ) : (
-        <div className="flex flex-col items-center justify-center py-24 bg-surface-base/50 border border-dashed border-surface-muted rounded-xl">
-          <FileText className="h-12 w-12 text-brand-gray/30 mb-4" />
-          <h4 className="text-base font-semibold text-brand-gray">Lütfen Bir Form Tipi Seçin</h4>
-          <p className="text-sm text-brand-gray/70">Detaylı tabloyu görebilmek için yukarıdan bir form tipi seçmelisiniz.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-surface-muted bg-white/70 py-24">
+          <FileText className="mb-4 h-12 w-12 text-brand-gray/30" />
+          <h4 className="text-base font-bold text-brand-dark">Form tipi seçerek başlayın</h4>
+          <p className="mt-1 text-sm text-brand-gray">Detaylı tabloyu görebilmek için yukarıdan bir form tipi seçmelisiniz.</p>
         </div>
       )}
     </div>

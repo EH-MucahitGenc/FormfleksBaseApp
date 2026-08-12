@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List, Search, Database } from 'lucide-react';
+import { Columns, Save, FileType, CheckCircle2, RotateCcw, AlertTriangle, Eye, Plus, Trash2, GripVertical, Settings, List, Search, Database, Layers3, PenTool, ShieldCheck, Sparkles, Workflow } from 'lucide-react';
 
 import { systemAdminService, type FormTemplateUpsertDto } from '@/services/system-admin.service';
 import { integrationQueryService, type IntegrationQueryLookupDto } from '@/services/integration-query.service';
-import { PageHeader, FfButton, PageContainer, GlassCard, FfModal } from '@/components/ui/index';
+import { PageHeader, FfButton, PageContainer, GlassCard, FfModal, cn } from '@/components/ui/index';
 import { generateUUID } from '@/lib/uuid';
 import { AutoFillMappingBuilder } from './components/AutoFillMappingBuilder';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -182,6 +182,19 @@ export const FormDesigner: React.FC = () => {
     t.name?.toLocaleLowerCase('tr-TR').includes(searchLower) || 
     t.code?.toLocaleLowerCase('tr-TR').includes(searchLower)
   );
+  const totalTemplateCount = templates.length;
+  const activeTemplateCount = templates.filter((t: any) => t.active).length;
+  const totalFieldCount = templates.reduce((sum: number, t: any) => sum + (Number(t.fieldCount) || 0), 0);
+  const totalWorkflowStepCount = templates.reduce((sum: number, t: any) => sum + (Number(t.workflowStepCount) || 0), 0);
+  const designedSectionCount = sections.length;
+  const designedFieldCount = sections.reduce((sum, section) => sum + section.fields.length, 0);
+  const requiredFieldCount = sections.reduce((sum, section) => sum + section.fields.filter(field => field.isRequired).length, 0);
+  const activeTabLabel = activeTab === 'list' ? 'Kayıtlı Formlar' : activeTab === 'designer' ? 'Form Mimarı' : 'Canlı Önizleme';
+  const activeTabDescription = activeTab === 'list'
+    ? 'Sistemdeki şablonları yönetin, aktiflik durumunu kontrol edin ve detaylarını inceleyin.'
+    : activeTab === 'designer'
+      ? 'Form kimliğini, yetkileri, bölümleri ve alanları tek çalışma alanında kurgulayın.'
+      : 'Tasarladığınız formun kullanıcıya nasıl görüneceğini yayınlamadan önce test edin.';
 
   const statusMutation = useMutation({
     mutationFn: ({ formTypeId, active }: { formTypeId: string, active: boolean }) => systemAdminService.setTemplateStatus(formTypeId, active),
@@ -470,7 +483,7 @@ export const FormDesigner: React.FC = () => {
         <PageHeader 
           title="Form Şablon Tasarımcısı" 
           description="Sürükle bırak benzeri mantıkla dinamik referans formlarınızı tasarlayın, eylem kurallarını belirleyin." 
-        className="shrink-0 mb-4"
+        className="hidden"
         breadcrumbs={[
           { label: 'Anasayfa', href: '/' },
           { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
@@ -485,6 +498,51 @@ export const FormDesigner: React.FC = () => {
         }
       />
 
+      <div className="relative mb-3 shrink-0 overflow-hidden rounded-3xl border border-orange-100/80 bg-[radial-gradient(circle_at_top_left,rgba(255,122,61,0.14),transparent_34%),linear-gradient(135deg,#fffaf6_0%,#ffffff_48%,#f8fafc_100%)] p-4 shadow-[0_18px_45px_rgba(15,23,42,0.07)] md:p-5">
+        <div className="pointer-events-none absolute right-8 top-6 h-24 w-24 rounded-full bg-brand-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-bold text-brand-gray">
+              <span>Anasayfa</span>
+              <span className="text-brand-gray/40">/</span>
+              <span>Sistem & Araçlar</span>
+              <span className="text-brand-gray/40">/</span>
+              <span className="text-brand-dark">Form Şablon Tasarımcısı</span>
+            </div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-white/85 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-primary shadow-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Formfleks Design Studio
+            </div>
+            <h1 className="max-w-3xl text-2xl font-black tracking-tight text-brand-dark md:text-3xl">Form Şablon Tasarımcısı</h1>
+            <p className="mt-2 max-w-3xl text-xs font-semibold leading-5 text-brand-gray md:text-sm">
+              Dinamik formları, yetki kurgusunu, otomasyon tetiklerini ve canlı önizlemeyi tek bir düzenli çalışma alanında yönetin.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 xl:items-end">
+            <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-white/80 bg-white/80 p-1.5 shadow-sm backdrop-blur">
+              <div className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-gray">Şablon</p>
+                <p className="mt-0.5 text-lg font-black text-brand-dark">{totalTemplateCount}</p>
+              </div>
+              <div className="rounded-xl bg-emerald-50 px-3 py-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Aktif</p>
+                <p className="mt-0.5 text-lg font-black text-emerald-700">{activeTemplateCount}</p>
+              </div>
+              <div className="rounded-xl bg-orange-50 px-3 py-2">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-primary">Alan</p>
+                <p className="mt-0.5 text-lg font-black text-brand-primary">{totalFieldCount}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <FfButton variant="outline" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={handleReset}>Temizle</FfButton>
+              <FfButton variant="outline" leftIcon={<FileType className="h-4 w-4 text-brand-accent" />} onClick={loadPreset}>Örnek Yükle</FfButton>
+              <FfButton variant="primary" leftIcon={<Save className="h-4 w-4" />} onClick={handleSave} isLoading={saveMutation.isPending}>Şablonu Kaydet</FfButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {saveMessage && (
         <div className={`mb-4 mx-2 p-3 rounded-lg flex items-center gap-2 border shadow-sm animate-in fade-in slide-in-from-top-2 ${saveMessage.type === 'success' ? 'bg-status-success/10 text-status-success border-status-success/20' : 'bg-status-danger/10 text-status-danger border-status-danger/20'}`}>
            {saveMessage.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
@@ -493,7 +551,7 @@ export const FormDesigner: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-4 px-2">
+      <div className="hidden">
         <button 
           onClick={() => setActiveTab('list')}
           className={`px-4 py-2 font-semibold text-sm rounded-lg transition-all ${activeTab === 'list' ? 'bg-brand-primary text-white shadow-md' : 'bg-surface-base text-brand-gray hover:bg-surface-hover hover:text-brand-dark'}`}
@@ -514,17 +572,54 @@ export const FormDesigner: React.FC = () => {
         </button>
       </div>
 
+      <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-surface-muted bg-white/85 p-1.5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: 'list' as const, label: 'Kayıtlı Formlar', icon: List, count: filteredTemplates.length },
+            { id: 'designer' as const, label: 'Form Mimarı', icon: Columns, count: designedFieldCount },
+            { id: 'preview' as const, label: 'Canlı Önizleme', icon: Eye, count: designedSectionCount },
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'group inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-extrabold transition-all',
+                  isSelected
+                    ? 'bg-brand-dark text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)]'
+                    : 'bg-transparent text-brand-gray hover:bg-surface-hover hover:text-brand-dark'
+                )}
+              >
+                <span className={cn('grid h-7 w-7 place-items-center rounded-lg transition-colors', isSelected ? 'bg-white/15' : 'bg-surface-hover group-hover:bg-white')}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                {tab.label}
+                <span className={cn('rounded-full px-2 py-0.5 text-[11px]', isSelected ? 'bg-white/15 text-white' : 'bg-surface-hover text-brand-gray')}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="hidden rounded-xl bg-surface-hover px-4 py-2 xl:block">
+          <p className="text-xs font-black text-brand-dark">{activeTabLabel}</p>
+          <p className="text-[11px] font-medium text-brand-gray">{activeTabDescription}</p>
+        </div>
+      </div>
+
       {/* Main Content Area */}
       <GlassCard noPadding className="flex-1 min-h-0 flex flex-col overflow-hidden">
         
         {activeTab === 'list' && (
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-surface-base scrollbar-thin">
-            <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 scrollbar-thin md:p-6">
+            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                <div>
                   <h3 className="text-lg font-bold text-brand-dark">Sistemdeki Tasarlanmış Formlar</h3>
                   <p className="text-sm text-brand-gray">Sistemde varolan şablonları buradan yönetebilir, durdurup başlatabilirsiniz.</p>
                </div>
-               <div className="flex items-center gap-3">
+               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                  <div className="relative">
                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                      <Search className="h-4 w-4 text-brand-gray" />
@@ -532,7 +627,7 @@ export const FormDesigner: React.FC = () => {
                    <input
                      type="text"
                      placeholder="Form adı veya kod..."
-                     className="block w-64 pl-10 pr-3 py-2 border border-surface-muted rounded-lg bg-surface-base focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary sm:text-sm transition-colors"
+                     className="block w-full rounded-2xl border border-surface-muted bg-white py-3 pl-10 pr-4 text-sm font-semibold text-brand-dark shadow-sm transition-all placeholder:text-brand-gray/60 focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/10 sm:w-72"
                      value={searchTerm}
                      onChange={(e) => setSearchTerm(e.target.value)}
                    />
@@ -540,9 +635,27 @@ export const FormDesigner: React.FC = () => {
                  <FfButton variant="primary" leftIcon={<Plus className="h-4 w-4"/>} onClick={() => setActiveTab('designer')}>Yeni Tasarım</FfButton>
                </div>
             </div>
-            <div className="bg-surface-base rounded-xl border border-surface-muted overflow-hidden">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-surface-hover text-xs font-bold uppercase text-brand-gray border-b border-surface-muted">
+            <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-surface-muted bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wider text-brand-gray">Toplam Şablon</p>
+                <p className="mt-2 text-2xl font-black text-brand-dark">{totalTemplateCount}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wider text-emerald-700">Kullanımda</p>
+                <p className="mt-2 text-2xl font-black text-emerald-700">{activeTemplateCount}</p>
+              </div>
+              <div className="rounded-2xl border border-orange-100 bg-orange-50/70 p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wider text-brand-primary">Tanımlı Alan</p>
+                <p className="mt-2 text-2xl font-black text-brand-primary">{totalFieldCount}</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-600">Onay Adımı</p>
+                <p className="mt-2 text-2xl font-black text-slate-800">{totalWorkflowStepCount}</p>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+                <table className="w-full text-left text-sm">
+                    <thead className="border-b border-surface-muted bg-slate-50/90 text-xs font-black uppercase tracking-wider text-brand-gray">
                         <tr>
                             <th className="px-4 py-3">Form Adı</th>
                             <th className="px-4 py-3">Kod</th>
@@ -566,11 +679,30 @@ export const FormDesigner: React.FC = () => {
                             </tr>
                         )}
                         {filteredTemplates?.map((t: any) => (
-                            <tr key={t.formTypeId} className="hover:bg-brand-primary/5 transition-colors">
-                                <td className="px-4 py-3 font-medium text-brand-dark">{t.name}</td>
-                                <td className="px-4 py-3 font-mono text-xs">{t.code}</td>
-                                <td className="px-4 py-3 text-center font-bold text-brand-primary">{t.fieldCount}</td>
-                                <td className="px-4 py-3 text-center text-brand-gray">{t.workflowStepCount} Adım</td>
+                            <tr key={t.formTypeId} className="group transition-colors hover:bg-orange-50/45">
+                                <td className="px-4 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                                      <PenTool className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                      <p className="font-black text-brand-dark">{t.name}</p>
+                                      <p className="text-xs font-semibold text-brand-gray">{t.active ? 'Yayında ve kullanılabilir' : 'Pasif durumda'}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-4">
+                                  <span className="rounded-xl bg-slate-100 px-3 py-1.5 font-mono text-xs font-bold text-slate-700">{t.code}</span>
+                                </td>
+                                <td className="px-4 py-4 text-center">
+                                  <span className="inline-flex min-w-12 justify-center rounded-full bg-orange-50 px-3 py-1 text-sm font-black text-brand-primary">{t.fieldCount}</span>
+                                </td>
+                                <td className="px-4 py-4 text-center text-brand-gray">
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-surface-muted bg-white px-3 py-1 text-xs font-bold text-brand-dark">
+                                    <Workflow className="h-3.5 w-3.5 text-brand-gray" />
+                                    {t.workflowStepCount} Adım
+                                  </span>
+                                </td>
                                 <td className="px-4 py-3 text-center flex justify-center">
                                     <label className="relative inline-flex items-center cursor-pointer" title={t.active ? "Kapat" : "Aç"}>
                                         <input 
@@ -583,10 +715,10 @@ export const FormDesigner: React.FC = () => {
                                         <div className="w-9 h-5 bg-surface-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-base after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-status-success"></div>
                                     </label>
                                 </td>
-                                <td className="px-4 py-3 text-center">
+                                <td className="px-4 py-4 text-center">
                                     <button 
                                       onClick={() => handlePreviewTemplate(t)}
-                                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-colors"
+                                      className="inline-flex items-center gap-1 rounded-xl bg-brand-primary/10 px-3 py-2 text-xs font-black text-brand-primary transition-colors hover:bg-brand-primary hover:text-white"
                                       title="Formu Önizle ve İncele"
                                     >
                                       <Eye className="h-3.5 w-3.5" /> Önizle
@@ -601,11 +733,68 @@ export const FormDesigner: React.FC = () => {
         )}
 
         {activeTab === 'designer' && (
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-surface-base scrollbar-thin">
+          <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 scrollbar-thin md:p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-surface-muted bg-white px-4 py-2 shadow-sm">
+              <span className="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-brand-primary">Form Mimarı</span>
+              <span className="max-w-[360px] truncate text-sm font-black text-brand-dark">{name || 'Henüz isim verilmedi'}</span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-700">{code || 'FORM_KODU'}</span>
+              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-brand-gray">{designedSectionCount} bölüm</span>
+              <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-brand-primary">{designedFieldCount} alan</span>
+              <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-bold text-status-danger">{requiredFieldCount} zorunlu</span>
+              <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-bold', isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-brand-gray')}>
+                {isActive ? 'Kullanımda' : 'Pasif'}
+              </span>
+            </div>
+            <div className="hidden">
+              <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-primary/10 text-brand-primary">
+                    <PenTool className="h-5 w-5" />
+                  </div>
+                  <span className="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-brand-primary">Kimlik</span>
+                </div>
+                <p className="text-xs font-black uppercase tracking-wider text-brand-gray">Aktif Şablon</p>
+                <p className="mt-1 truncate text-lg font-black text-brand-dark">{name || 'Henüz isim verilmedi'}</p>
+                <p className="mt-1 truncate font-mono text-xs font-bold text-brand-gray">{code || 'FORM_KODU_BEKLENIYOR'}</p>
+              </div>
+              <div className="rounded-3xl border border-surface-muted bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-700">
+                    <Layers3 className="h-5 w-5" />
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-slate-600">Mimari</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-2xl font-black text-brand-dark">{designedSectionCount}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">Bölüm</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-brand-primary">{designedFieldCount}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">Alan</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-status-danger">{requiredFieldCount}</p>
+                    <p className="text-[11px] font-bold text-brand-gray">Zorunlu</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-emerald-700 shadow-sm">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-700">Erişim</span>
+                </div>
+                <p className="text-xs font-black uppercase tracking-wider text-emerald-800/70">Form Durumu</p>
+                <p className="mt-1 text-lg font-black text-emerald-800">{isActive ? 'Kullanıma açık' : 'Pasif taslak'}</p>
+                <p className="mt-1 text-xs font-semibold text-emerald-800/70">{allowedCreateRoleCodes.length || 'Tüm'} rol doldurabilir, {allowedReportRoleCodes.length || 'tüm'} rol raporlayabilir.</p>
+              </div>
+            </div>
             
             {/* Form Meta */}
-            <div className="bg-surface-hover/50 p-4 md:p-5 rounded-xl border border-surface-muted mb-8 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+            <div className="mb-3 rounded-2xl border border-surface-muted bg-white p-3 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-4">
                         <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Form Kodu (Unique)</label>
                         <input type="text" value={code} onChange={e => setCode(e.target.value.toUpperCase().replace(/\s/g, '_'))} className="w-full px-4 py-2.5 bg-surface-base border border-surface-muted rounded-lg text-brand-dark font-mono font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm" placeholder="Örn: LEAVE_REQ" />
@@ -623,7 +812,7 @@ export const FormDesigner: React.FC = () => {
                     </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end mt-3">
                     <div className="md:col-span-12">
                         <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-2">Sistem Otomasyonu (Arka Plan Görevi) Tetiklemesi</label>
                         <select 
@@ -641,11 +830,11 @@ export const FormDesigner: React.FC = () => {
             </div>
 
             {/* Authorization Settings */}
-            <div className="bg-surface-hover/50 p-4 md:p-5 rounded-xl border border-surface-muted mb-8 shadow-sm">
-                <h4 className="text-sm font-bold text-brand-dark mb-4 flex items-center gap-2">
+            <div className="mb-3 max-h-36 overflow-y-auto rounded-2xl border border-surface-muted bg-white p-3 shadow-sm scrollbar-thin">
+                <h4 className="text-sm font-bold text-brand-dark mb-2 flex items-center gap-2">
                    <Settings className="h-4 w-4 text-brand-gray" /> Form Yetki & Erişim Ayarları
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs font-bold text-brand-gray uppercase tracking-wider mb-3">Formu Kimler Doldurabilir? <span className="text-brand-gray/60 normal-case font-normal">(Boşsa Herkes)</span></label>
                         {rolesLoading ? (
@@ -709,8 +898,8 @@ export const FormDesigner: React.FC = () => {
             </div>
 
             {/* Sections Header */}
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-brand-primary flex items-center gap-2">
+            <div className="mb-4 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 text-lg font-black text-brand-dark">
                     <Columns className="h-5 w-5 text-brand-accent" /> Dinamik Bölümler
                 </h3>
                 <FfButton variant="outline" size="sm" onClick={addSection} leftIcon={<Plus className="h-4 w-4" />}>Bölüm Ekle</FfButton>
@@ -732,11 +921,11 @@ export const FormDesigner: React.FC = () => {
                            onDragOver={handleSectionDragOver}
                            onDrop={(e) => handleSectionDrop(e, sIdx)}
                            onDragEnd={() => setDraggableSectionId(null)}
-                           className={`bg-surface-base rounded-xl border border-surface-muted shadow-sm overflow-hidden flex flex-col transition-all hover:border-brand-primary/40 group ${draggedSectionIndex === sIdx ? 'opacity-50 border-brand-primary border-dashed border-2' : ''}`}
+                           className={`group flex flex-col overflow-hidden rounded-3xl border border-surface-muted bg-white shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:border-brand-primary/40 ${draggedSectionIndex === sIdx ? 'opacity-50 border-brand-primary border-dashed border-2' : ''}`}
                         >
                             
                             {/* Section Header */}
-                            <div className="bg-surface-hover px-4 py-3 border-b border-surface-muted flex items-center justify-between gap-4">
+                            <div className="flex items-center justify-between gap-4 border-b border-surface-muted bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_48%,#f8fafc_100%)] px-4 py-3">
                                 <div className="flex items-center gap-3 flex-1">
                                     <div 
                                       onMouseDown={() => setDraggableSectionId(section.id)}
@@ -751,7 +940,7 @@ export const FormDesigner: React.FC = () => {
                                           type="text" 
                                           value={section.title} 
                                           onChange={e => updateSectionTitle(section.id, e.target.value)}
-                                          className="w-full bg-surface-base px-3 py-1.5 border border-surface-muted rounded text-brand-dark font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                                          className="w-full rounded-xl border border-surface-muted bg-white px-3 py-2 font-black text-brand-dark shadow-sm focus:outline-none focus:ring-4 focus:ring-brand-primary/10"
                                           placeholder="Bölüm Başlığı"
                                         />
                                     </div>
@@ -773,9 +962,9 @@ export const FormDesigner: React.FC = () => {
                                         Bu bölüme henüz alan eklenmedi.
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto w-full">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-surface-base text-xs font-bold uppercase text-brand-gray border-b border-surface-muted">
+                                    <div className="w-full overflow-x-auto">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="border-b border-surface-muted bg-slate-50/80 text-xs font-black uppercase tracking-wider text-brand-gray">
                                                 <tr>
                                                     <th className="px-4 py-3 w-12 text-center">#</th>
                                                     <th className="px-4 py-3 min-w-[140px]">Değişken Key</th>
@@ -795,7 +984,7 @@ export const FormDesigner: React.FC = () => {
                                                         onDragOver={handleFieldDragOver}
                                                         onDrop={(e) => handleFieldDrop(e, section.id, fIdx)}
                                                         onDragEnd={() => setDraggableFieldId(null)}
-                                                        className={`hover:bg-brand-primary/5 transition-colors group/row ${draggableFieldId === f.id ? 'cursor-move' : ''} ${draggedField?.secId === section.id && draggedField?.index === fIdx ? 'opacity-50 bg-brand-primary/10' : ''}`}
+                                                        className={`group/row transition-colors hover:bg-orange-50/45 ${draggableFieldId === f.id ? 'cursor-move' : ''} ${draggedField?.secId === section.id && draggedField?.index === fIdx ? 'opacity-50 bg-brand-primary/10' : ''}`}
                                                     >
                                                         <td className="px-4 py-2 text-center font-bold text-brand-gray/50 w-16">
                                                             <div 
@@ -882,14 +1071,18 @@ export const FormDesigner: React.FC = () => {
 
         {/* Canlı Önizleme Alanı */}
         {activeTab === 'preview' && (
-          <div className="flex-1 overflow-y-auto bg-surface-muted p-4 md:p-8 scrollbar-thin">
-            <div className="w-full max-w-3xl mx-auto bg-surface-base rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 mb-10 h-max">
-                <div className="bg-brand-primary/5 border-b border-brand-primary/10 px-6 py-4">
-                    <h2 className="text-xl font-bold text-brand-dark">{name || 'İsimsiz Form'}</h2>
-                    <p className="text-sm font-medium text-brand-gray mt-1">Bu alan form doldurucunun göreceği görsel karşılıktır.</p>
+          <div className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,rgba(255,122,61,0.12),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] p-4 scrollbar-thin md:p-8">
+            <div className="mx-auto mb-10 h-max w-full max-w-4xl overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.14)] animate-in zoom-in-95 duration-200">
+                <div className="border-b border-orange-100 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_55%,#f8fafc_100%)] px-6 py-5">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wider text-brand-primary shadow-sm">
+                      <Eye className="h-3.5 w-3.5" />
+                      Kullanıcı Görünümü
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight text-brand-dark">{name || 'İsimsiz Form'}</h2>
+                    <p className="mt-1 text-sm font-medium text-brand-gray">Bu alan form doldurucunun göreceği görsel karşılıktır.</p>
                 </div>
                 
-                <div className="p-6 md:p-8 space-y-8">
+                <div className="space-y-8 p-6 md:p-8">
                     {sections.length === 0 || sections.every(s => s.fields.length === 0) ? (
                         <div className="text-center py-10 text-brand-gray flex flex-col items-center">
                             <Eye className="h-12 w-12 opacity-20 mb-4" />

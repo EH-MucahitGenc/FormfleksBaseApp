@@ -2,14 +2,14 @@ import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
-import { Send, ArrowLeft, Save, Trash2, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Send, ArrowLeft, Save, Trash2, Loader2, Check, FileText } from 'lucide-react';
 
 import { notify } from '@/lib/notifications';
 import { formService } from '@/services/form.service';
 import { adminService } from '@/services/admin.service';
 import { useDeleteDraft } from '@/features/forms/hooks/useForms';
 
-import { PageHeader, FfButton } from '@/components/ui/index';
+import { PageHeader, FfButton, cn } from '@/components/ui/index';
 import { FfConfirmDialog } from '@/components/ui/FfConfirmDialog';
 import { FfModal } from '@/components/ui/FfModal';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
@@ -56,17 +56,44 @@ const evaluateFormula = (formula: string, context: Record<string, any>) => {
   }
 };
 
+const isFillableField = (field: DynamicFieldSchema) =>
+  field.editorType !== 'statichtml' && field.editorType !== 'calculation' && !!field.dataField;
+
+const hasMeaningfulValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim();
+    if (!normalizedValue) return false;
+    if (normalizedValue === '[]' || normalizedValue === '{}') return false;
+    return true;
+  }
+  if (value instanceof Date) return !Number.isNaN(value.getTime());
+  if (typeof File !== 'undefined' && value instanceof File) return value.size > 0;
+  if (Array.isArray(value)) return value.some(hasMeaningfulValue);
+  if (typeof value === 'object') return Object.values(value).some(hasMeaningfulValue);
+  return false;
+};
+
+const hasFilledFieldValue = (field: DynamicFieldSchema, value: unknown) => {
+  if (field.editorType === 'boolean') return value === true;
+  return hasMeaningfulValue(value);
+};
+
+const getSectionDomId = (sectionId: string | number | undefined, index: number) => `dynamic-form-section-${sectionId || index}`;
+
 const CalculationField = ({ field, control }: { field: DynamicFieldSchema, control: any }) => {
   const formValues = useWatch({ control });
   const val = evaluateFormula(field.calculationRuleJson || '', formValues);
 
   return (
-    <div className={`flex flex-col gap-1.5`}>
-      <label className="text-sm font-semibold text-brand-dark flex items-center justify-between">
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center justify-between text-sm font-bold text-brand-dark">
         <span>{field.label} {field.isRequired && <span className="text-status-danger">*</span>}</span>
-        <span className="text-xs bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full">Hesaplama</span>
+        <span className="rounded-full border border-orange-100 bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-brand-primary">Hesaplama</span>
       </label>
-      <div className="w-full bg-surface-muted border border-surface-muted rounded px-3 py-2 text-brand-dark font-medium cursor-not-allowed">
+      <div className="w-full cursor-not-allowed rounded-2xl border border-surface-muted bg-surface-ground/60 px-4 py-3 font-bold text-brand-dark shadow-soft">
         {val !== null ? val.toLocaleString('tr-TR', { maximumFractionDigits: 2 }) : '-'}
       </div>
     </div>
@@ -113,6 +140,7 @@ export const DynamicFormViewer: React.FC = () => {
     defaultValues: {} // Populated via useEffect
   });
   const { getValues, trigger, control } = methods;
+  const watchedValues = useWatch({ control });
 
   React.useEffect(() => {
     if (draftData && draftData.values) {
@@ -576,87 +604,191 @@ export const DynamicFormViewer: React.FC = () => {
     return <FfEmptyState title="Form Bulunamadı" description="Bu form silinmiş veya erişim yetkiniz bulunmuyor olabilir. URL'yi kontrol ediniz." />;
   }
 
+  const sectionMetrics = template.sections.map((section, index) => {
+    const fields = (section.fields || []).filter(isFillableField);
+    const requiredFields = fields.filter(field => field.isRequired);
+    const completedFields = fields.filter(field => hasFilledFieldValue(field, watchedValues?.[field.dataField]));
+    const completedRequiredFields = requiredFields.filter(field => hasFilledFieldValue(field, watchedValues?.[field.dataField]));
+    return {
+      id: getSectionDomId(section.id, index),
+      title: section.title || `Bölüm ${index + 1}`,
+      total: fields.length,
+      completed: completedFields.length,
+      required: requiredFields.length,
+      requiredCompleted: completedRequiredFields.length,
+      missingRequired: Math.max(requiredFields.length - completedRequiredFields.length, 0)
+    };
+  });
+  const allFields = template.sections.flatMap(section => section.fields || []).filter(isFillableField);
+  const requiredFieldCount = allFields.filter(field => field.isRequired).length;
+  const totalFieldCount = allFields.length;
+  const completedFieldCount = allFields.filter(field => hasFilledFieldValue(field, watchedValues?.[field.dataField])).length;
+  const completedRequiredCount = allFields.filter(field => field.isRequired && hasFilledFieldValue(field, watchedValues?.[field.dataField])).length;
+  const missingRequiredCount = Math.max(requiredFieldCount - completedRequiredCount, 0);
+  const completionPercent = totalFieldCount > 0 ? Math.round((completedFieldCount / totalFieldCount) * 100) : 0;
+  const autoSaveLabel = autoSaveStatus === 'saving'
+    ? 'Otomatik kaydediliyor'
+    : autoSaveStatus === 'saved'
+      ? `Taslak kaydedildi${lastSavedTime ? ` • ${lastSavedTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : ''}`
+      : autoSaveStatus === 'error'
+        ? 'Otomatik kayıt başarısız'
+        : activeDraftId
+          ? 'Taslak modu aktif'
+          : 'Yeni form';
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] w-full">
-      <div className="w-full mb-4">
-        <FfButton variant="ghost" className="mb-2 -ml-3" leftIcon={<ArrowLeft className="h-4 w-4"/>} onClick={() => navigate(-1)}>
-          Geri
-        </FfButton>
-        <PageHeader 
-          title={template.name} 
-          description={template.description || "Lütfen kurallara uygun olarak formu doldurunuz."} 
-        />
-      </div>
+    <div className="min-h-[calc(100vh-8rem)] w-full pb-8">
+      <section className="relative overflow-hidden rounded-2xl border border-orange-100/80 bg-[radial-gradient(circle_at_top_right,rgba(255,122,61,0.14),transparent_32%),linear-gradient(135deg,#ffffff_0%,#fffaf6_48%,#f7f8fa_100%)] p-5 shadow-[0_22px_70px_rgba(24,24,27,0.08)] md:p-6">
+        <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-orange-100/70 blur-3xl" />
+        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 gap-4">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-surface-muted bg-white/78 text-brand-gray shadow-soft transition-colors hover:border-brand-primary/30 hover:text-brand-primary"
+              aria-label="Geri"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-100 bg-white/78 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-primary shadow-soft">
+                <FileText className="h-3.5 w-3.5" />
+                Form çalışma alanı
+              </div>
+              <h1 className="mt-4 text-2xl font-extrabold leading-tight text-brand-dark md:text-3xl">{template.name}</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-brand-gray">
+                {template.description || "Lütfen kurallara uygun olarak formu doldurunuz."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="w-full flex-1 min-h-0 bg-surface-base rounded-xl shadow-soft border border-surface-muted p-6 md:p-8 overflow-y-auto mb-6 scrollbar-thin">
-        <FormProvider {...methods}>
-          <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
-            
-            {template.sections.map(section => {
-               console.log(`Rendering Section: ${section.title}`, section.fields);
-               return (
-                 <FormSection key={section.id} title={section.title}>
-                   {section.fields?.map(field => renderField(field))}
-                 </FormSection>
-               );
-            })}
+      <FormProvider {...methods}>
+        <form className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]" onSubmit={(e) => e.preventDefault()}>
+          <div className="ff-dynamic-form-canvas min-w-0 rounded-2xl border border-surface-muted/80 bg-white/72 p-3 shadow-[0_18px_55px_rgba(24,24,27,0.06)] md:p-4">
+            <div className="space-y-5">
+              {template.sections.map((section, index) => (
+                <FormSection key={section.id} id={getSectionDomId(section.id, index)} title={section.title} variant="premium" index={index}>
+                  {section.fields?.map(field => renderField(field))}
+                </FormSection>
+              ))}
+            </div>
+          </div>
 
-             <div className="pt-6 border-t border-surface-muted mt-4 flex items-center justify-between gap-3">
-               
-               {/* Left Side: Auto-Save Status & Delete Button */}
-               <div className="flex items-center gap-4">
-                 {activeDraftId && (
-                   <FfButton 
-                     variant="danger" 
-                     leftIcon={<Trash2 className="h-4 w-4" />}
-                     onClick={() => setIsDeleteDialogOpen(true)}
-                     isLoading={deleteDraftMutation.isPending}
-                     disabled={submitMutation.isPending || draftMutation.isPending || autoSaveMutation.isPending}
-                   >
-                     Taslağı Sil
-                   </FfButton>
-                 )}
-                 
-                 <div className="text-sm font-medium">
-                   {autoSaveStatus === 'saving' && (
-                     <span className="flex items-center gap-2 text-brand-gray"><Loader2 className="h-4 w-4 animate-spin"/> Otomatik kaydediliyor...</span>
-                   )}
-                   {autoSaveStatus === 'saved' && (
-                     <span className="flex items-center gap-2 text-status-success"><Check className="h-4 w-4"/> Taslak kaydedildi ({lastSavedTime?.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })})</span>
-                   )}
-                   {autoSaveStatus === 'error' && (
-                     <span className="flex items-center gap-2 text-status-danger"><AlertCircle className="h-4 w-4"/> Kaydedilemedi</span>
-                   )}
-                 </div>
-               </div>
+          <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start">
+            <div className="rounded-2xl border border-surface-muted/80 bg-white p-5 shadow-[0_18px_55px_rgba(24,24,27,0.06)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-primary">Form kontrolü</div>
+                  <div className="mt-1 text-sm font-extrabold text-brand-dark">{completionPercent}% tamamlandı</div>
+                </div>
+                <span className={cn(
+                  'rounded-full border px-2.5 py-1 text-[11px] font-bold',
+                  missingRequiredCount === 0 ? 'border-emerald-100 bg-emerald-50 text-status-success' : 'border-orange-100 bg-orange-50 text-brand-primary'
+                )}>
+                  {missingRequiredCount === 0 ? 'Gönderime hazır' : `${missingRequiredCount} zorunlu eksik`}
+                </span>
+              </div>
+              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-ground">
+                <div className="h-full rounded-full bg-gradient-to-r from-brand-primary via-amber-300 to-emerald-400 transition-all duration-500" style={{ width: `${completionPercent}%` }} />
+              </div>
+              <div className="mt-4 rounded-xl border border-surface-muted bg-surface-ground/35 p-3">
+                <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gray">Kayıt durumu</div>
+                <div className="mt-1 text-xs font-bold text-brand-dark">{autoSaveLabel}</div>
+              </div>
+              <div className="mt-5 space-y-2">
+                {sectionMetrics.map((section) => {
+                  const isComplete = section.total > 0 && section.completed === section.total;
+                  const sectionStatus = section.total === 0
+                    ? { label: 'bilgi', tone: 'bg-surface-ground text-brand-gray' }
+                    : isComplete
+                      ? { label: 'tamam', tone: 'bg-emerald-50 text-status-success' }
+                      : section.missingRequired > 0
+                        ? { label: `${section.missingRequired} zorunlu`, tone: 'bg-orange-50 text-brand-primary' }
+                        : { label: `${section.total - section.completed} boş`, tone: 'bg-surface-ground text-brand-gray' };
+                  return (
+                    <button
+                      type="button"
+                      key={section.id}
+                      onClick={() => scrollToSection(section.id)}
+                      className="group w-full rounded-xl border border-surface-muted bg-surface-ground/35 p-3 text-left transition-all hover:border-orange-100 hover:bg-orange-50/35"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={cn('h-2 w-2 rounded-full', isComplete ? 'bg-status-success' : 'bg-brand-primary')} />
+                            <span className="truncate text-sm font-bold text-brand-dark">{section.title}</span>
+                          </div>
+                          <div className="mt-1 text-xs font-medium text-brand-gray">
+                            {section.completed}/{section.total} alan dolu
+                          </div>
+                        </div>
+                        <span className={cn(
+                          'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                          sectionStatus.tone
+                        )}>
+                          {sectionStatus.label}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white">
+                        <div className="h-full rounded-full bg-brand-primary transition-all duration-500" style={{ width: `${section.total > 0 ? Math.round((section.completed / section.total) * 100) : 0}%` }} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4 rounded-xl border border-surface-muted bg-white p-3 text-xs leading-5 text-brand-gray">
+                Bölüm kartlarına tıklayarak ilgili alana hızlıca geçebilirsin. Gönderimden önce zorunlu eksikler otomatik kontrol edilir.
+              </div>
+            </div>
 
-               {/* Right Side: Actions */}
-               <div className="flex items-center gap-3">
-                 <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
-                 <FfButton 
-                   variant="secondary" 
-                   leftIcon={<Save className="h-4 w-4" />}
-                   onClick={onSaveDraft}
-                   isLoading={draftMutation.isPending}
-                   disabled={submitMutation.isPending || autoSaveMutation.isPending}
-                 >
-                   Taslak Kaydet
-                 </FfButton>
-                 <FfButton 
-                   variant="primary" 
-                   leftIcon={<Send className="h-4 w-4" />}
-                   onClick={methods.handleSubmit(onSubmit)}
-                   isLoading={submitMutation.isPending}
-                   disabled={draftMutation.isPending || autoSaveMutation.isPending}
-                 >
-                   Talebi Gönder
-                 </FfButton>
-               </div>
-             </div>
-            
-          </form>
-        </FormProvider>
-      </div>
+          </aside>
+
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-surface-muted/80 bg-white/92 p-3 shadow-[0_18px_55px_rgba(24,24,27,0.12)] backdrop-blur xl:col-span-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                {activeDraftId && (
+                  <FfButton
+                    type="button"
+                    variant="outline"
+                    leftIcon={deleteDraftMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    disabled={submitMutation.isPending || draftMutation.isPending || autoSaveMutation.isPending || deleteDraftMutation.isPending}
+                    className="w-full border-red-100 bg-red-50 text-status-danger hover:border-red-200 hover:bg-red-100 sm:w-auto"
+                  >
+                    Taslağı Sil
+                  </FfButton>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <FfButton variant="ghost" onClick={() => navigate(-1)}>İptal Et</FfButton>
+                <FfButton
+                  variant="secondary"
+                  leftIcon={<Save className="h-4 w-4" />}
+                  onClick={onSaveDraft}
+                  isLoading={draftMutation.isPending}
+                  disabled={submitMutation.isPending || autoSaveMutation.isPending}
+                >
+                  Taslak Kaydet
+                </FfButton>
+                <FfButton
+                  variant="primary"
+                  leftIcon={<Send className="h-4 w-4" />}
+                  onClick={methods.handleSubmit(onSubmit)}
+                  isLoading={submitMutation.isPending}
+                  disabled={draftMutation.isPending || autoSaveMutation.isPending}
+                >
+                  Talebi Gönder
+                </FfButton>
+              </div>
+            </div>
+          </div>
+        </form>
+      </FormProvider>
 
       <FfConfirmDialog
         isOpen={isDeleteDialogOpen}

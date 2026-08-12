@@ -1,55 +1,95 @@
 import React from 'react';
-import { FfCard } from '@/components/ui/index';
-import { cn } from '@/components/ui/index';
+import { FfCard, cn } from '@/components/ui/index';
 
 export interface KpiCardProps {
   title: string;
-  value: string | number;
+  value: number;
   icon: React.ElementType;
-  trend?: {
-    value: number; // e.g. 12 (means +12%) or -5 (means -5%)
-    label?: string; // e.g. "geçen aya göre"
-  };
-  colorConfig?: 'primary' | 'success' | 'warning' | 'info';
+  caption?: string;
+  unitLabel?: string;
+  tone?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger';
+  urgent?: boolean;
+  onClick?: () => void;
   className?: string;
 }
 
-export const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon: Icon, trend, colorConfig = 'primary', className }) => {
-  
-  const colors = {
-    primary: { bg: 'bg-brand-primary/10', text: 'text-brand-primary' },
-    success: { bg: 'bg-status-success/10', text: 'text-status-success' },
-    warning: { bg: 'bg-status-warning/10', text: 'text-status-warning' },
-    info: { bg: 'bg-status-info/10', text: 'text-status-info' }
+export const KpiCard: React.FC<KpiCardProps> = ({
+  title,
+  value,
+  icon: Icon,
+  caption,
+  unitLabel = 'adet',
+  tone = 'neutral',
+  urgent = false,
+  onClick,
+  className,
+}) => {
+  const tones = {
+    neutral: {
+      icon: 'bg-zinc-100 text-zinc-700',
+      accent: 'bg-zinc-700',
+      footer: 'text-zinc-500',
+    },
+    primary: {
+      icon: 'bg-orange-50 text-brand-primary',
+      accent: 'bg-brand-primary',
+      footer: 'text-brand-gray',
+    },
+    success: {
+      icon: 'bg-emerald-50 text-status-success',
+      accent: 'bg-status-success',
+      footer: 'text-brand-gray',
+    },
+    warning: {
+      icon: 'bg-amber-50 text-status-warning',
+      accent: 'bg-status-warning',
+      footer: 'text-brand-gray',
+    },
+    danger: {
+      icon: 'bg-red-50 text-status-danger',
+      accent: 'bg-status-danger',
+      footer: 'text-brand-gray',
+    },
   };
 
-  const theme = colors[colorConfig];
+  const theme = tones[tone];
 
   return (
-    <FfCard className={cn("relative overflow-hidden group", className)} noPadding>
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center mb-2", theme.bg, theme.text)}>
-            <Icon className="h-6 w-6" />
-          </div>
-          {trend && (
-            <div className={cn("flex items-center text-xs font-semibold px-2 py-1 rounded-full", trend.value >= 0 ? "bg-status-success/10 text-status-success" : "bg-status-danger/10 text-status-danger")}>
-               {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%
+    <FfCard
+      className={cn(
+        'group h-full border border-surface-muted/80 bg-surface-base transition-all duration-200 hover:border-zinc-300/80 hover:shadow-premium',
+        onClick && 'cursor-pointer',
+        className
+      )}
+      noPadding
+      onClick={onClick}
+    >
+      <div className="flex h-full flex-col p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
+              {title}
+            </p>
+            <div className="flex items-end gap-2">
+              <span className="text-[30px] font-semibold leading-none tracking-[-0.04em] text-brand-dark">
+                {value}
+              </span>
+              <span className="pb-1 text-xs text-zinc-400">{unitLabel}</span>
             </div>
-          )}
-        </div>
-        
-        <div>
-          <h3 className="text-sm font-medium text-brand-gray mb-1">{title}</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-brand-dark">{value}</span>
           </div>
-          {trend?.label && <p className="text-xs text-brand-gray mt-2">{trend.label}</p>}
+          <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', theme.icon)}>
+            <Icon className="h-5 w-5" />
+          </div>
         </div>
+
+        <div className="mt-5 border-t border-surface-muted/70 pt-3">
+          <p className={cn('text-xs', theme.footer)}>
+            {caption || 'Güncel iş hacmi özeti'}
+          </p>
+        </div>
+
+        {urgent && <div className={cn('mt-4 h-1 rounded-full', theme.accent)} />}
       </div>
-      
-      {/* Decorative background flare */}
-      <div className={cn("absolute -right-8 -bottom-8 h-32 w-32 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity pointer-events-none", theme.bg)} />
     </FfCard>
   );
 };

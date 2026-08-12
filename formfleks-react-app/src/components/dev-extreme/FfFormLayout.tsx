@@ -9,15 +9,46 @@ import { cn } from '../ui';
 // ----------------------------------------------------------------------
 
 export interface FormSectionProps {
+  id?: string;
   title?: string;
   description?: string;
   children: React.ReactNode;
   className?: string;
+  variant?: 'default' | 'premium';
+  index?: number;
 }
 
-export const FormSection: React.FC<FormSectionProps> = ({ title, description, children, className }) => {
+export const FormSection: React.FC<FormSectionProps> = ({ id, title, description, children, className, variant = 'default', index }) => {
+  if (variant === 'premium') {
+    return (
+      <section id={id} className={cn("scroll-mt-6 overflow-hidden rounded-2xl border border-surface-muted/80 bg-white shadow-[0_14px_40px_rgba(24,24,27,0.055)]", className)}>
+        {(title || description) && (
+          <div className="flex flex-col gap-3 border-b border-surface-muted bg-[linear-gradient(135deg,#ffffff_0%,#fffaf6_100%)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              {title && (
+                <h3 className="flex items-center gap-2 text-base font-extrabold text-brand-dark">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-primary" />
+                  {title}
+                </h3>
+              )}
+              {description && <p className="mt-1 text-sm text-brand-gray">{description}</p>}
+            </div>
+            {typeof index === 'number' && (
+              <span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-primary">
+                Bölüm {String(index + 1).padStart(2, '0')}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 p-5 md:grid-cols-12">
+          {children}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <div className={cn("flex flex-col gap-6 py-6 border-b border-surface-muted last:border-0", className)}>
+    <div id={id} className={cn("flex flex-col gap-6 py-6 border-b border-surface-muted last:border-0", className)}>
       {(title || description) && (
         <div className="flex flex-col gap-1">
           {title && <h3 className="text-lg font-semibold text-brand-dark">{title}</h3>}

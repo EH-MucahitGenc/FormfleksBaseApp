@@ -25,6 +25,140 @@
   --app-mesh-end: #fffdf9;
 }
 
+/* Command Center surface overrides */
+:root {
+  --app-brand-primary: #ff7a3d;
+  --app-brand-accent: #c65d2d;
+  --app-surface-base: #ffffff;
+  --app-surface-ground: #f7f8fa;
+  --app-surface-muted: #e7e7ea;
+  --app-surface-hover: #f2f3f5;
+}
+
+.bg-premium-mesh {
+  background:
+    radial-gradient(circle at top left, rgba(255, 122, 61, 0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.05), transparent 24%),
+    linear-gradient(180deg, #ffffff, #f7f8fa 58%, #eef1f5);
+}
+
+@keyframes ffFlowBar {
+  0% { transform: translateX(-14px); filter: saturate(0.7); }
+  50% { filter: saturate(1.35); }
+  100% { transform: translateX(0); filter: saturate(1); }
+}
+
+.ff-flow-bar {
+  animation: ffFlowBar 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ffStatusSegment {
+  0% { opacity: 0.35; transform: scaleX(0.82); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+.ff-status-segment {
+  transform-origin: left center;
+  animation: ffStatusSegment 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ffEventEnter {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.ff-event-card {
+  animation: ffEventEnter 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ffLiveDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+.ff-live-dot {
+  animation: ffLiveDot 1.35s ease-in-out infinite;
+}
+
+@keyframes ffScanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.ff-scanline::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 122, 61, 0.05), transparent);
+  animation: ffScanline 4.8s ease-in-out infinite;
+}
+
+@keyframes ffOrbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.ff-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+}
+
+.ff-orbit::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #ff7a3d;
+  box-shadow: 0 0 18px rgba(255, 122, 61, 0.85);
+}
+
+.ff-orbit-lg {
+  width: 300px;
+  height: 300px;
+  animation: ffOrbit 18s linear infinite;
+}
+
+.ff-orbit-md {
+  width: 214px;
+  height: 214px;
+  animation: ffOrbit 12s linear infinite reverse;
+}
+
+@keyframes ffSpinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ff-spin-slow {
+  animation: ffSpinSlow 5s linear infinite;
+}
+
+@keyframes ffStageRise {
+  0% { opacity: 0; transform: translateY(14px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ff-stage-card {
+  animation: ffStageRise 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ffLifecycleFill {
+  0% { transform: scaleY(0); opacity: 0.55; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+.ff-lifecycle-fill {
+  transform-origin: bottom center;
+  animation: ffLifecycleFill 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .dark {
   /* Sıcak Antrasit Koyu Tema — Katmanlar Arası Güçlü Kontrast */
   --app-brand-dark: #ede8e1;
@@ -40,12 +174,12 @@
   --app-mesh-mid: #1a1510;
   --app-mesh-end: #211c18;
 
-  /* Koyu temada güçlü gölgeler */
-  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-  --shadow-premium: 0 8px 30px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 25px -5px rgba(246, 137, 76, 0.35);
-  --shadow-card-hover: 0 12px 40px -10px rgba(0, 0, 0, 0.6);
-  --shadow-card-lift: 0 20px 60px -15px rgba(0, 0, 0, 0.65);
+  /* Koyu temada gölgeler (daha sade) */
+  --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-premium: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-glow: none;
+  --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  --shadow-card-lift: none;
 }
 
 @theme {
@@ -68,11 +202,11 @@
   
   --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   
-  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  --shadow-premium: 0 8px 30px rgba(0,0,0,0.04);
-  --shadow-glow: 0 0 20px -5px rgba(246, 137, 76, 0.2);
-  --shadow-card-hover: 0 12px 40px -10px rgba(0, 0, 0, 0.08);
-  --shadow-card-lift: 0 20px 60px -15px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-glow: none;
+  --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  --shadow-card-lift: none;
   
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -88,17 +222,9 @@
    Premium V4 Animation & Utility System
    ═══════════════════════════════════════════════════════ */
 
-/* --- Dynamic Mesh Background --- */
-@keyframes premiumMesh {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
+/* --- Mesh Background Removed for Corporate Look --- */
 .bg-premium-mesh {
-  background: linear-gradient(-45deg, var(--app-mesh-start), var(--app-mesh-mid), var(--app-mesh-end), var(--app-mesh-start));
-  background-size: 400% 400%;
-  animation: premiumMesh 20s ease infinite;
+  background-color: var(--app-surface-ground);
 }
 
 /* --- Fade In Up Entrance --- */
@@ -116,13 +242,13 @@
 .animate-delay-300 { animation-delay: 300ms; }
 .animate-delay-500 { animation-delay: 500ms; }
 
-/* --- Glass Glow (Topbar, premium surfaces) --- */
+/* --- Glass Glow Removed --- */
 .glass-glow {
-  box-shadow: 0 0 40px -10px rgba(246, 137, 76, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+  /* Removed to keep the UI clean and flat */
 }
 
 .dark .glass-glow {
-  box-shadow: 0 0 40px -10px rgba(246, 137, 76, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  /* Removed */
 }
 
 /* --- Shimmer Skeleton Loading --- */
@@ -143,14 +269,12 @@
   border-radius: 8px;
 }
 
-/* --- Hover Lift (Cards, interactive surfaces) --- */
+/* --- Hover Lift (Subdued for corporate look) --- */
 .hover-lift {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -230,6 +354,439 @@
   text-align: center !important;
   font-size: 1.125rem !important;
   font-weight: 500 !important;
+}
+
+@keyframes ff-workflow-scan {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  18%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(260%);
+    opacity: 0;
+  }
+}
+
+.ff-workflow-scan {
+  animation: ff-workflow-scan 1.9s ease-in-out infinite;
+}
+
+/* Login workspace scene */
+.ff-auth-grid {
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to right, black, rgba(0, 0, 0, 0.45) 70%, transparent 92%);
+}
+
+@keyframes ffAuthFormEnter {
+  from { opacity: 0; transform: translate3d(-24px, 24px, 0) rotate(-2deg); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(-2deg); }
+}
+
+@keyframes ffAuthWorkflowEnter {
+  from { opacity: 0; transform: translate3d(28px, 30px, 0) rotate(2deg); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) rotate(2deg); }
+}
+
+@keyframes ffAuthPublishFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes ffAuthFieldEnter {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes ffAuthFlow {
+  from { left: 0; }
+  to { left: calc(100% - 10px); }
+}
+
+@keyframes ffAuthPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+@keyframes ffAuthActiveStep {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 122, 61, 0.25); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 122, 61, 0); }
+}
+
+@keyframes ffAuthOrbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.ff-auth-form-card {
+  transform: rotate(-2deg);
+  animation: ffAuthFormEnter 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ff-auth-workflow-card {
+  transform: rotate(2deg);
+  animation: ffAuthWorkflowEnter 780ms 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ff-auth-publish-card { animation: ffAuthPublishFloat 4.2s ease-in-out infinite; }
+.ff-auth-field { opacity: 0; animation: ffAuthFieldEnter 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.ff-auth-flow-dot { animation: ffAuthFlow 2.2s ease-in-out infinite; }
+.ff-auth-live-dot { animation: ffAuthPulse 1.8s ease-in-out infinite; }
+.ff-auth-active-step { animation: ffAuthActiveStep 1.9s ease-in-out infinite; }
+.ff-auth-orbit { animation: ffAuthOrbit 38s linear infinite; }
+
+@media (max-width: 1279px) {
+  .ff-auth-form-card { left: 2%; width: 390px; }
+  .ff-auth-workflow-card { right: 0; width: 300px; }
+  .ff-auth-connector { left: 48%; width: 70px; }
+}
+
+@media (min-width: 1024px) and (max-height: 800px) {
+  .ff-auth-brand-row { margin-bottom: 14px; }
+  .ff-auth-login-card { padding: 22px 26px; }
+  .ff-login-heading { margin-bottom: 17px; }
+  .ff-login-heading > div:first-child { margin-bottom: 12px; }
+  .ff-login-heading h1 { font-size: 27px; }
+  .ff-login-heading > p:last-child { margin-top: 6px; line-height: 1.45; }
+  .ff-login-panel form { gap: 14px; }
+  .ff-login-security { margin-top: 14px; padding-block: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-auth-form-card,
+  .ff-auth-workflow-card,
+  .ff-auth-publish-card,
+  .ff-auth-field,
+  .ff-auth-flow-dot,
+  .ff-auth-live-dot,
+  .ff-auth-active-step,
+  .ff-auth-orbit {
+    animation: none !important;
+  }
+
+  .ff-auth-field { opacity: 1; }
+}
+
+/* System settings workspace */
+.ff-settings-card {
+  border-color: #e9e3df !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 22px 58px -46px rgba(33, 26, 23, 0.5) !important;
+}
+
+.ff-settings-card:hover {
+  border-color: #e2dad5 !important;
+  box-shadow: 0 24px 64px -48px rgba(33, 26, 23, 0.52) !important;
+}
+
+.ff-settings-card > div:first-child {
+  padding: 24px 26px;
+}
+
+.ff-settings-card > div:first-child > h3,
+.ff-settings-card > div:first-child > div:first-child h3 {
+  margin-bottom: 22px;
+  border-bottom-color: #eee9e5;
+  padding-bottom: 15px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #332a26;
+}
+
+.ff-settings-card form input:not([type="checkbox"]),
+.ff-settings-card form textarea {
+  min-height: 44px;
+  border-color: #e5dfdb;
+  border-radius: 13px;
+  background: #fbfaf9;
+  padding-inline: 14px;
+}
+
+.ff-settings-card form input:not([type="checkbox"]):focus,
+.ff-settings-card form textarea:focus {
+  border-color: #ff8b57;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 122, 61, 0.1);
+}
+
+.ff-settings-card form label {
+  color: #493e38;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ff-settings-card form input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff7138;
+}
+
+.ff-settings-card > div:last-child {
+  min-height: 70px;
+  border-top-color: #eee9e5;
+  background: linear-gradient(90deg, #faf9f8, #fffaf7);
+  padding: 14px 26px;
+}
+
+.ff-settings-card > div:last-child button[type="submit"] {
+  min-height: 42px;
+  border-radius: 13px;
+  padding-inline: 20px;
+  box-shadow: 0 12px 24px rgba(255, 113, 56, 0.2);
+}
+
+@media (max-width: 639px) {
+  .ff-settings-card > div:first-child { padding: 20px 17px; }
+  .ff-settings-card > div:last-child { padding: 12px 17px; }
+  .ff-settings-card > div:last-child button[type="submit"] { width: 100%; }
+}
+
+/* Maintenance operation scene */
+.ff-maintenance-grid {
+  background-image:
+    linear-gradient(rgba(71, 85, 105, 0.052) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.052) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.5) 78%, transparent);
+}
+
+@keyframes ffMaintenanceConsoleEnter {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes ffMaintenanceStepEnter {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes ffMaintenanceGear {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ffMaintenancePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 113, 56, 0.24); }
+  50% { box-shadow: 0 0 0 9px rgba(255, 113, 56, 0); }
+}
+
+@keyframes ffMaintenanceProgress {
+  0% { transform: translateX(-110%); }
+  45%, 100% { transform: translateX(145%); }
+}
+
+@keyframes ffMaintenanceFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes ffMaintenanceOrbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes ffMaintenanceGlow {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.ff-maintenance-console {
+  animation: ffMaintenanceConsoleEnter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ff-maintenance-step {
+  opacity: 0;
+  animation: ffMaintenanceStepEnter 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ff-maintenance-gear { animation: ffMaintenanceGear 8s linear infinite; }
+.ff-maintenance-gear-pulse,
+.ff-maintenance-active { animation: ffMaintenancePulse 1.9s ease-in-out infinite; }
+.ff-maintenance-float { animation: ffMaintenanceFloat 4s ease-in-out infinite; }
+.ff-maintenance-orbit { animation: ffMaintenanceOrbit 42s linear infinite; }
+.ff-maintenance-glow { animation: ffMaintenanceGlow 7s ease-in-out infinite; }
+
+.ff-maintenance-progress {
+  position: relative;
+  overflow: hidden;
+}
+
+.ff-maintenance-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.78), transparent);
+  animation: ffMaintenanceProgress 2.8s ease-in-out infinite;
+}
+
+.ff-maintenance-live { animation: ffMaintenancePulse 1.8s ease-in-out infinite; }
+
+.ff-maintenance-message {
+  animation: ffEventEnter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (max-width: 1023px) {
+  .ff-maintenance-shell { overflow-y: auto; }
+}
+
+@media (max-width: 639px) {
+  .ff-maintenance-console { border-radius: 24px; }
+  .ff-maintenance-orbit { width: 410px; height: 410px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-maintenance-console,
+  .ff-maintenance-step,
+  .ff-maintenance-gear,
+  .ff-maintenance-gear-pulse,
+  .ff-maintenance-active,
+  .ff-maintenance-float,
+  .ff-maintenance-orbit,
+  .ff-maintenance-glow,
+  .ff-maintenance-progress::after,
+  .ff-maintenance-live,
+  .ff-maintenance-message {
+    animation: none !important;
+  }
+
+  .ff-maintenance-step { opacity: 1; }
+}
+
+/* Maintenance developer team illustration */
+@keyframes ffDevSceneEnter {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes ffDevRing {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes ffCodeFloat {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes ffCodeFloatAlt {
+  0%, 100% { transform: translateY(0) rotate(2deg); }
+  50% { transform: translateY(9px) rotate(-2deg); }
+}
+
+@keyframes ffDevPerson {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes ffTypingArm {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(3deg); }
+}
+
+@keyframes ffTypingDot {
+  0%, 60%, 100% { opacity: 0.28; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@keyframes ffScreenCode {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 1; }
+}
+
+@keyframes ffFlowPath {
+  0%, 100% { stroke-dashoffset: 54; }
+  50% { stroke-dashoffset: 0; }
+}
+
+@keyframes ffSceneSpark {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes ffLaptopLine {
+  0%, 100% { transform: scaleX(0.42); }
+  50% { transform: scaleX(1); }
+}
+
+.ff-dev-scene {
+  transform-origin: center;
+  animation: ffDevSceneEnter 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ff-dev-scene-ring {
+  animation: ffDevRing 46s linear infinite;
+}
+
+.ff-code-float-one { animation: ffCodeFloat 4.2s ease-in-out infinite; }
+.ff-code-float-two { animation: ffCodeFloatAlt 4.8s ease-in-out infinite; }
+
+.ff-dev-person {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: ffDevPerson 3.8s ease-in-out infinite;
+}
+
+.ff-dev-person-right { animation-delay: -1.2s; }
+.ff-dev-person-center { animation-delay: -2.1s; }
+
+.ff-dev-arm-left,
+.ff-dev-arm-right,
+.ff-dev-center-arm {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: ffTypingArm 0.7s ease-in-out infinite;
+}
+
+.ff-dev-arm-right { animation-delay: -0.24s; }
+.ff-dev-center-arm { animation-delay: -0.42s; }
+.ff-screen-code { animation: ffScreenCode 2.2s ease-in-out infinite; }
+.ff-flow-path { stroke-dasharray: 54; animation: ffFlowPath 2.3s ease-in-out infinite; }
+.ff-scene-spark { transform-box: fill-box; transform-origin: center; animation: ffSceneSpark 2.1s ease-in-out infinite; }
+.ff-laptop-line { transform-box: fill-box; transform-origin: left center; animation: ffLaptopLine 1.5s ease-in-out infinite; }
+
+.ff-typing-dots circle { animation: ffTypingDot 1.25s ease-in-out infinite; }
+.ff-typing-dots circle:nth-child(2) { animation-delay: 150ms; }
+.ff-typing-dots circle:nth-child(3) { animation-delay: 300ms; }
+
+.ff-maintenance-team-label {
+  box-shadow: 0 16px 36px rgba(33, 26, 23, 0.12);
+  transition: box-shadow 300ms ease;
+}
+
+@media (max-width: 1023px) {
+  .ff-maintenance-v2 { overflow-y: auto; }
+}
+
+@media (max-width: 639px) {
+  .ff-dev-scene { transform: scale(1.04); }
+  .ff-maintenance-team-label { bottom: -3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-dev-scene,
+  .ff-dev-scene-ring,
+  .ff-code-float-one,
+  .ff-code-float-two,
+  .ff-dev-person,
+  .ff-dev-arm-left,
+  .ff-dev-arm-right,
+  .ff-dev-center-arm,
+  .ff-screen-code,
+  .ff-flow-path,
+  .ff-scene-spark,
+  .ff-laptop-line,
+  .ff-typing-dots circle {
+    animation: none !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════

@@ -65,9 +65,9 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-brand-dark flex items-center gap-1">
+        <label className="flex items-center gap-1 text-sm font-bold text-brand-dark">
           {label}
           {required && <span className="text-status-danger">*</span>}
         </label>
@@ -76,7 +76,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
           <button
             type="button"
             onClick={() => setIsExcelModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-bold text-brand-primary bg-brand-primary/10 hover:bg-brand-primary/20 px-3 py-1.5 rounded-full transition-colors"
+            className="flex items-center gap-1.5 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-bold text-brand-primary transition-colors hover:bg-orange-100"
           >
             <DownloadCloud className="h-3.5 w-3.5" />
             Excel'den Aktar
@@ -108,7 +108,7 @@ export const FfDynamicGridField: React.FC<FfDynamicGridFieldProps> = ({
           }
 
           return (
-            <div className={cn("border rounded-xl overflow-hidden", error ? "border-status-danger" : "border-surface-muted")}>
+            <div className={cn("overflow-hidden rounded-2xl border bg-white shadow-soft", error ? "border-status-danger" : "border-surface-muted")}>
               <DataGrid
                 dataSource={gridData}
                 showBorders={true}

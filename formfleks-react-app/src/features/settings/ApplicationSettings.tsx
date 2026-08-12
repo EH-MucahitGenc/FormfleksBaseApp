@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
-import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
+import { FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { PremiumInput, PremiumCheckbox } from '@/components/forms';
 import toast from 'react-hot-toast';
 import { settingsService, type AppSettingsDto, type EmailSettingsDto, type JwtSettingsDto, type WorkflowSettingsDto, type LdapSettingsDto } from '@/services/settings.service';
 import { apiClient } from '@/lib/axios';
-import { Save, Server, Mail, ShieldAlert, CheckCircle, RefreshCcw, Key, GitMerge } from 'lucide-react';
+import { Save, Mail, ShieldAlert, CheckCircle, RefreshCcw, GitMerge, Settings2, SlidersHorizontal, ChevronRight, Activity, Cable, LockKeyhole } from 'lucide-react';
+
+type SettingsTab = 'app' | 'email' | 'jwt' | 'workflow' | 'integration';
+
+const settingsTabs: Array<{
+  id: SettingsTab;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: 'app', label: 'Genel Ayarlar', description: 'Kimlik, adres ve dosya politikaları', icon: SlidersHorizontal },
+  { id: 'email', label: 'E-Posta (SMTP)', description: 'Gönderim kanalı ve bağlantı testi', icon: Mail },
+  { id: 'jwt', label: 'Güvenlik & Oturum', description: 'JWT ve Active Directory erişimi', icon: LockKeyhole },
+  { id: 'workflow', label: 'İş Akışı Kuralları', description: 'Hatırlatıcı ve taslak yönetimi', icon: GitMerge },
+  { id: 'integration', label: 'Entegrasyonlar', description: 'IFS zamanlama ve tetikleyiciler', icon: Cable },
+];
 
 export const ApplicationSettings: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'app' | 'email' | 'jwt' | 'workflow' | 'integration'>('app');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('app');
   const [testEmailStatus, setTestEmailStatus] = useState<{ loading: boolean; success?: boolean; error?: string }>({ loading: false });
 
   // -- QUERIES --
@@ -65,78 +80,94 @@ export const ApplicationSettings: React.FC = () => {
 
   if (appLoading || emailLoading || jwtLoading || workflowLoading || ldapLoading || integrationLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+      <div className="flex min-h-[420px] items-center justify-center">
+        <div className="flex flex-col items-center rounded-[24px] border border-[#eee7e2] bg-white px-10 py-8 shadow-[0_24px_60px_-42px_rgba(33,26,23,0.5)]">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff0e8] text-[#f36c2f]">
+            <RefreshCcw className="h-5 w-5 animate-spin" />
+          </div>
+          <p className="mt-4 text-sm font-black text-[#352c28]">Ayarlar hazırlanıyor</p>
+          <p className="mt-1 text-[11px] font-semibold text-[#92857e]">Yapılandırma güvenli biçimde yükleniyor.</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Sistem Ayarları"
-        description="Uygulama genel davranışlarını, güvenlik, e-posta ve iş akışı kurallarını yapılandırın."
-        breadcrumbs={[
-          { label: 'Anasayfa', href: '/' },
-          { label: 'Ayarlar', href: '#' },
-          { label: 'Sistem' }
-        ]}
-      />
+  const activeSetting = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0];
+  const ActiveSettingIcon = activeSetting.icon;
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar Nav */}
-        <div className="lg:col-span-1">
-          <div className="bg-surface-base rounded-xl shadow-sm border border-surface-muted overflow-hidden flex flex-col">
-            <button
-              onClick={() => setActiveTab('app')}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
-                activeTab === 'app' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
-              }`}
-            >
-              <Server className={`h-5 w-5 ${activeTab === 'app' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
-              Genel Ayarlar
-            </button>
-            <button
-              onClick={() => setActiveTab('email')}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
-                activeTab === 'email' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
-              }`}
-            >
-              <Mail className={`h-5 w-5 ${activeTab === 'email' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
-              E-Posta (SMTP)
-            </button>
-            <button
-              onClick={() => setActiveTab('jwt')}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
-                activeTab === 'jwt' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
-              }`}
-            >
-              <Key className={`h-5 w-5 ${activeTab === 'jwt' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
-              Güvenlik & Oturum
-            </button>
-            <button
-              onClick={() => setActiveTab('workflow')}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
-                activeTab === 'workflow' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
-              }`}
-            >
-              <GitMerge className={`h-5 w-5 ${activeTab === 'workflow' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
-              İş Akışı Kuralları
-            </button>
-            <button
-              onClick={() => setActiveTab('integration')}
-              className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors text-left border-l-4 ${
-                activeTab === 'integration' ? 'bg-brand-primary/5 text-brand-primary border-brand-primary' : 'bg-transparent text-brand-gray border-transparent hover:bg-surface-muted/50 hover:text-brand-dark'
-              }`}
-            >
-              <Server className={`h-5 w-5 ${activeTab === 'integration' ? 'text-brand-primary' : 'text-brand-gray/70'}`} />
-              Entegrasyonlar
-            </button>
+  return (
+    <PageContainer className="ff-settings-page" maxWidth="full">
+      <section className="relative overflow-hidden rounded-[28px] border border-[#f0dfd4] bg-[linear-gradient(118deg,#fff7f1_0%,#ffffff_58%,#eef9f6_100%)] px-5 py-5 shadow-[0_24px_65px_-44px_rgba(33,26,23,0.46)] sm:px-7 sm:py-6">
+        <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full border border-emerald-100/60" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ffd9c7] bg-white/80 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-[#e76228] shadow-sm">
+              <Settings2 className="h-3.5 w-3.5" />
+              Sistem kontrol merkezi
+            </div>
+            <h1 className="text-[30px] font-black leading-tight tracking-[-0.045em] text-[#211a17] sm:text-[36px]">Sistem Ayarları</h1>
+            <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#756963]">
+              Uygulama davranışlarını, güvenlik katmanlarını ve operasyon kurallarını tek bir kontrollü alanda yönetin.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <div className="rounded-2xl border border-white bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#998c84]">Yapılandırma</p>
+              <p className="mt-1 text-sm font-black text-[#332a26]">5 yönetim alanı</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 shadow-sm backdrop-blur-xl">
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700/70">Sistem durumu</p>
+              <p className="mt-1 flex items-center gap-2 text-sm font-black text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" />Yapılandırılabilir</p>
+            </div>
           </div>
         </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+        {/* Sidebar Nav */}
+        <aside className="lg:sticky lg:top-5 lg:self-start">
+          <div className="overflow-x-auto rounded-[22px] border border-[#e9e3df] bg-white p-2 shadow-[0_18px_50px_-40px_rgba(33,26,23,0.44)] lg:overflow-visible">
+            <div className="flex min-w-max gap-2 lg:min-w-0 lg:flex-col">
+              {settingsTabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`group flex w-[230px] items-center gap-3 rounded-[17px] px-3 py-3 text-left transition-all lg:w-full ${isActive ? 'bg-[#211a17] text-white shadow-[0_14px_28px_rgba(33,26,23,0.18)]' : 'text-[#695d57] hover:bg-[#faf7f4] hover:text-[#2f2723]'}`}
+                  >
+                    <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${isActive ? 'bg-[#ff7138] text-white' : 'bg-[#f5f2f0] text-[#8a7d76] group-hover:bg-[#fff0e8] group-hover:text-[#f36c2f]'}`}>
+                      <Icon className="h-4.5 w-4.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-black">{tab.label}</span>
+                      <span className={`mt-1 block truncate text-[9px] font-semibold ${isActive ? 'text-white/55' : 'text-[#9b8e87]'}`}>{tab.description}</span>
+                    </span>
+                    <ChevronRight className={`h-4 w-4 shrink-0 transition-transform ${isActive ? 'text-[#ff9b70]' : 'text-[#c4bab4] group-hover:translate-x-0.5'}`} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 hidden rounded-[20px] border border-[#e9e3df] bg-[#faf9f8] p-4 lg:block">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#8d8079]"><Activity className="h-3.5 w-3.5 text-[#f36c2f]" />Değişiklik politikası</div>
+            <p className="mt-2 text-[10px] font-semibold leading-4 text-[#8a7d76]">Her modül ayrı kaydedilir. Değişiklikler yalnızca ilgili ayar grubunu etkiler.</p>
+          </div>
+        </aside>
 
         {/* Content Pane */}
-        <div className="lg:col-span-3">
+        <div className="ff-settings-content min-w-0">
+          <div className="mb-3 flex items-center gap-3 rounded-[20px] border border-[#e9e3df] bg-white px-4 py-3 shadow-[0_14px_40px_-38px_rgba(33,26,23,0.46)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#fff0e8] text-[#f36c2f]"><ActiveSettingIcon className="h-4.5 w-4.5" /></span>
+            <div className="min-w-0">
+              <p className="text-sm font-black text-[#332a26]">{activeSetting.label}</p>
+              <p className="mt-0.5 truncate text-[10px] font-semibold text-[#90837c]">{activeSetting.description}</p>
+            </div>
+          </div>
           {activeTab === 'app' && appData && <AppForm data={appData} mutation={appMutation} />}
           {activeTab === 'email' && emailData && <EmailForm data={emailData} mutation={emailMutation} onTest={handleTestEmail} testStatus={testEmailStatus} />}
           {activeTab === 'jwt' && (
@@ -174,7 +205,7 @@ const IntegrationForm = ({ data, mutation }: { data: any, mutation: any }) => {
   };
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Dış Sistem Entegrasyonları</h3>
         {mutation.isSuccess && <div className="p-3 bg-status-success/10 text-status-success border border-status-success/20 rounded-lg flex items-center gap-2 text-sm font-medium"><CheckCircle className="h-4 w-4" /> Ayarlar başarıyla kaydedildi.</div>}
@@ -234,7 +265,7 @@ const AppForm = ({ data, mutation }: { data: AppSettingsDto, mutation: any }) =>
   const { control, handleSubmit } = useForm<AppSettingsDto>({ defaultValues: data });
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Genel Ayarlar</h3>
         {mutation.isSuccess && <div className="p-3 bg-status-success/10 text-status-success border border-status-success/20 rounded-lg flex items-center gap-2 text-sm font-medium"><CheckCircle className="h-4 w-4" /> Ayarlar başarıyla kaydedildi.</div>}
@@ -268,7 +299,7 @@ const EmailForm = ({ data, mutation, onTest, testStatus }: { data: EmailSettings
   const [testEmail, setTestEmail] = useState(data.smtp.defaultFrom);
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <div className="flex items-center justify-between border-b pb-2 mb-4">
           <h3 className="text-lg font-bold text-brand-dark">SMTP Konfigürasyonu</h3>
@@ -318,7 +349,7 @@ const JwtForm = ({ data, mutation }: { data: JwtSettingsDto, mutation: any }) =>
   const { control, handleSubmit } = useForm<JwtSettingsDto>({ defaultValues: data });
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">Güvenlik & Oturum (JWT)</h3>
         {mutation.isSuccess && <div className="p-3 bg-status-success/10 text-status-success border border-status-success/20 rounded-lg flex items-center gap-2 text-sm font-medium"><CheckCircle className="h-4 w-4" /> Ayarlar başarıyla kaydedildi.</div>}
@@ -342,7 +373,7 @@ const LdapForm = ({ data, mutation }: { data: LdapSettingsDto, mutation: any }) 
   const isActive = watch('isActive');
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <div className="flex items-center justify-between border-b pb-2 mb-4">
           <h3 className="text-lg font-bold text-brand-dark">Active Directory (LDAP)</h3>
@@ -390,7 +421,7 @@ const WorkflowForm = ({ data, mutation }: { data: WorkflowSettingsDto, mutation:
   const { control, handleSubmit } = useForm<WorkflowSettingsDto>({ defaultValues: data });
 
   return (
-    <GlassCard noPadding className="overflow-hidden">
+    <GlassCard noPadding className="ff-settings-card overflow-hidden">
       <div className="p-6 md:p-8 space-y-6">
         <h3 className="text-lg font-bold text-brand-dark mb-4 border-b pb-2">İş Akışı & Hatırlatıcı Kuralları</h3>
         {mutation.isSuccess && <div className="p-3 bg-status-success/10 text-status-success border border-status-success/20 rounded-lg flex items-center gap-2 text-sm font-medium"><CheckCircle className="h-4 w-4" /> Ayarlar başarıyla kaydedildi.</div>}

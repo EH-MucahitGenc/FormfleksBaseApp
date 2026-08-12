@@ -85,9 +85,9 @@ export const FfDynamicFileField = ({
   };
 
   return (
-    <div className="w-full flex flex-col gap-1.5 mb-5">
+    <div className="mb-5 flex w-full flex-col gap-2">
       {label && (
-        <label className="text-sm font-semibold text-brand-dark flex items-center justify-between">
+        <label className="flex items-center justify-between text-sm font-bold text-brand-dark">
           <span>
             {label}
             {isRequired && <span className="text-status-danger ml-1">*</span>}
@@ -100,8 +100,8 @@ export const FfDynamicFileField = ({
 
       {value ? (
         // Dosya yüklendiyse gösterilecek alan
-        <div className="relative flex items-center gap-4 p-4 border border-surface-muted bg-surface-base rounded-xl shadow-sm group transition-all hover:border-brand-primary/30">
-          <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-brand-primary/10 text-brand-primary">
+        <div className="group relative flex items-center gap-4 rounded-2xl border border-surface-muted bg-white p-4 shadow-soft transition-all hover:border-brand-primary/30">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-brand-primary">
             <File className="h-6 w-6" />
           </div>
           <div className="flex flex-col flex-1 min-w-0">
@@ -122,7 +122,7 @@ export const FfDynamicFileField = ({
             <button 
               type="button"
               onClick={clearFile}
-              className="h-8 w-8 flex items-center justify-center rounded-full bg-surface-hover text-brand-gray hover:bg-status-danger/10 hover:text-status-danger transition-colors shrink-0"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-hover text-brand-gray transition-colors hover:bg-status-danger/10 hover:text-status-danger"
               title="Dosyayı Sil"
             >
               <X className="h-4 w-4" />
@@ -134,9 +134,9 @@ export const FfDynamicFileField = ({
         <div 
           className={`
             relative w-full p-8 flex flex-col items-center justify-center text-center 
-            border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer
+            border border-dashed rounded-2xl transition-all duration-200 cursor-pointer shadow-soft
             ${readonly ? 'opacity-60 cursor-not-allowed bg-surface-muted border-surface-muted' : ''}
-            ${isDragging ? 'border-brand-primary bg-brand-primary/5 scale-[1.02]' : 'border-surface-muted bg-surface-hover/50 hover:bg-surface-hover'}
+            ${isDragging ? 'border-brand-primary bg-brand-primary/5 scale-[1.01]' : 'border-surface-muted bg-white hover:bg-orange-50/30'}
             ${error ? 'border-status-danger/50 bg-status-danger/5' : ''}
           `}
           onDragOver={(e) => { e.preventDefault(); !readonly && setIsDragging(true); }}
@@ -160,7 +160,7 @@ export const FfDynamicFileField = ({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2">
-              <div className={`p-3 rounded-full mb-2 ${error ? 'bg-status-danger/10 text-status-danger' : 'bg-surface-base text-brand-gray shadow-sm'}`}>
+              <div className={`mb-2 rounded-2xl p-3 ${error ? 'bg-status-danger/10 text-status-danger' : 'bg-orange-50 text-brand-primary shadow-soft'}`}>
                 {error ? <AlertCircle className="h-6 w-6" /> : <UploadCloud className="h-6 w-6" />}
               </div>
               <p className="text-sm font-bold text-brand-dark">
