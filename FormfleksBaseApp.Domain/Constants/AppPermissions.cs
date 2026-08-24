@@ -13,6 +13,14 @@ public static class AppPermissions
     public const string SystemSettings = "System.Settings";
     public const string SystemAuditLogs = "System.AuditLogs";
     public const string PersonnelSync = "Personnel.Sync";
+    
+    // Survey Permissions
+    public const string SurveysDesign = "Surveys.Design";
+    public const string SurveysPublish = "Surveys.Publish";
+    public const string SurveysManage = "Surveys.Manage";
+    public const string SurveysResultsView = "Surveys.Results.View";
+    public const string SurveysResultsExport = "Surveys.Results.Export";
+    public const string SurveysSettings = "Surveys.Settings";
 
     // Policy Names for Authorize Attributes
     public const string PolicyFormsDesign = "Permission:" + FormsDesign;
@@ -24,6 +32,14 @@ public static class AppPermissions
     public const string PolicySystemAuditLogs = "Permission:" + SystemAuditLogs;
     public const string PolicyPersonnelSync = "Permission:" + PersonnelSync;
 
+    // Survey Policy Names
+    public const string PolicySurveysDesign = "Permission:" + SurveysDesign;
+    public const string PolicySurveysPublish = "Permission:" + SurveysPublish;
+    public const string PolicySurveysManage = "Permission:" + SurveysManage;
+    public const string PolicySurveysResultsView = "Permission:" + SurveysResultsView;
+    public const string PolicySurveysResultsExport = "Permission:" + SurveysResultsExport;
+    public const string PolicySurveysSettings = "Permission:" + SurveysSettings;
+
     public static readonly IReadOnlyList<(string Name, string Description)> All = new List<(string, string)>
     {
         (FormsDesign, "Form Tasarımcısına erişim sağlar."),
@@ -33,6 +49,12 @@ public static class AppPermissions
         (RolesManage, "Rolleri ve Yetkileri yönetme izni."),
         (SystemSettings, "Sistem ayarlarını değiştirme izni."),
         (SystemAuditLogs, "Sistem loglarını görüntüleme izni."),
-        (PersonnelSync, "IK Personel senkronizasyonunu başlatma izni.")
+        (PersonnelSync, "IK Personel senkronizasyonunu başlatma izni."),
+        (SurveysDesign, "Anket şablonu oluşturma ve düzenleme izni."),
+        (SurveysPublish, "Anket kampanyası hazırlama ve yayınlama izni."),
+        (SurveysManage, "Katılımcı, mail ve kampanya süreçlerini yönetme izni."),
+        (SurveysResultsView, "Yetkili olduğu anket sonuçlarını görüntüleme izni."),
+        (SurveysResultsExport, "Anket sonuçlarını Excel/PDF dışa aktarma izni."),
+        (SurveysSettings, "Anket modülü ayarlarını yönetme izni.")
     };
 }

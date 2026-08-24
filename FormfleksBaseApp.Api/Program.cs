@@ -147,8 +147,14 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 builder.Services.AddDbContext<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
     
+builder.Services.AddDbContext<FormfleksBaseApp.Infrastructure.Surveys.DataAccess.SurveyDbContext>(opt =>
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext>(sp =>
     sp.GetRequiredService<FormfleksBaseApp.DynamicForms.DataAccess.DynamicFormsDbContext>());
+
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.ISurveyDbContext>(sp =>
+    sp.GetRequiredService<FormfleksBaseApp.Infrastructure.Surveys.DataAccess.SurveyDbContext>());
 
 // Repositories / Services
 builder.Services.AddScoped<IAuthTokenIssuer, AuthTokenIssuer>();
@@ -247,6 +253,8 @@ builder.Services.AddHealthChecks()
 // Background Jobs (Cron)
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.PersonnelSyncBackgroundJob>();
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.ProbationTrackingCronJob>();
+builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.SurveyFileCleanupBackgroundJob>();
+builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.SurveyEmailBackgroundJob>();
 
 var app = builder.Build();
 

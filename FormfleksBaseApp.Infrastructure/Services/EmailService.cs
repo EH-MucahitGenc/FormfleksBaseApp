@@ -962,6 +962,117 @@ public class EmailService : IEmailService
         }, cancellationToken);
     }
 
+    public async Task SendSurveyAssignmentEmailAsync(string toEmail, string campaignName, string token, CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/surveys/fill/{token}";
+        var formTypeName = "Anket ve Değerlendirme";
+
+        var bodyHtml = $"""
+            <p>
+              Sistem tarafından size yeni bir anket tanımlanmıştır: <strong style="color:#0ea5e9;">{campaignName}</strong>.
+            </p>
+            <p style="margin-top:16px;">
+              Görüşleriniz kurumumuz için son derece değerlidir. Lütfen aşağıdaki butona tıklayarak anketi doldurunuz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#0ea5e9", // Formfleks brand primary blue
+            accentDark: "#0284c7",
+            accentTextColor: "#ffffff",
+            accentLabel: "YENİ ANKET",
+            statusIcon: "📝",
+            recipientName: "Değerli Çalışanımız",
+            subject: $"Yeni Anket Katılım Daveti: {campaignName}",
+            bodyHtml: bodyHtml,
+            formRequestNo: "-", // Not applicable
+            formTypeName: formTypeName,
+            requesterName: "İnsan Kaynakları",
+            actionUrl: actionUrl,
+            actionLabel: "Anketi Doldur",
+            actionBgColor: "#0ea5e9",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: "Formfleks");
+
+        await QueueEmailAsync(new EmailMessage
+        {
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"Yeni Anket Katılım Daveti: {campaignName}",
+            HtmlBody = html
+        }, cancellationToken);
+    }
+
+    public async Task<bool> SendSurveyAssignmentEmailDirectAsync(string toEmail, string campaignName, string token, CancellationToken cancellationToken = default)
+    {
+        var actionUrl = $"{GetBaseUrl()}/surveys/fill/{token}";
+        var formTypeName = "Anket ve Değerlendirme";
+
+        var bodyHtml = $"""
+            <p>
+              Sistem tarafından size yeni bir anket tanımlanmıştır: <strong style="color:#0ea5e9;">{campaignName}</strong>.
+            </p>
+            <p style="margin-top:16px;">
+              Görüşleriniz kurumumuz için son derece değerlidir. Lütfen aşağıdaki butona tıklayarak anketi doldurunuz.
+            </p>
+            """;
+
+        var html = BuildEmail(
+            accentColor: "#0ea5e9", // Formfleks brand primary blue
+            accentDark: "#0284c7",
+            accentTextColor: "#ffffff",
+            accentLabel: "YENİ ANKET",
+            statusIcon: "📝",
+            recipientName: "Değerli Çalışanımız",
+            subject: $"Yeni Anket Katılım Daveti: {campaignName}",
+            bodyHtml: bodyHtml,
+            formRequestNo: "-", // Not applicable
+            formTypeName: formTypeName,
+            requesterName: "İnsan Kaynakları",
+            actionUrl: actionUrl,
+            actionLabel: "Anketi Doldur",
+            actionBgColor: "#0ea5e9",
+            baseUrl: GetBaseUrl(),
+            requesterCompany: "Formfleks");
+
+        var settings = await _systemSettingsService.GetSettingAsync<EmailSettings>("EmailSettings", new EmailSettings(), cancellationToken);
+        var smtpSettings = settings?.Smtp;
+
+        if (smtpSettings == null || string.IsNullOrWhiteSpace(smtpSettings.Host))
+        {
+            return false;
+        }
+
+        using var client = new System.Net.Mail.SmtpClient(smtpSettings.Host, smtpSettings.Port);
+        client.Timeout = smtpSettings.TimeoutSeconds * 1000;
+        client.EnableSsl = smtpSettings.EnableSsl;
+        if (!string.IsNullOrWhiteSpace(smtpSettings.Username) && !string.IsNullOrWhiteSpace(smtpSettings.Password))
+        {
+            client.UseDefaultCredentials = false;
+            client.Credentials = new System.Net.NetworkCredential(smtpSettings.Username, smtpSettings.Password);
+        }
+
+        using var mailMessage = new System.Net.Mail.MailMessage
+        {
+            From = new System.Net.Mail.MailAddress(string.IsNullOrWhiteSpace(smtpSettings.DefaultFrom) ? smtpSettings.Username : smtpSettings.DefaultFrom, "Erkurt Holding-Formfleks Kurumsal Form ve Onay Platformu"),
+            Subject = $"Yeni Anket Katılım Daveti: {campaignName}",
+            Body = html,
+            IsBodyHtml = true
+        };
+
+        mailMessage.To.Add(toEmail);
+
+        try
+        {
+            await client.SendMailAsync(mailMessage, cancellationToken);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Throw so ProcessSurveyCampaignsCommand can log the error and mark as Failed/Retry
+            throw new InvalidOperationException($"SMTP GÃ¶nderim HatasÄ±: {ex.Message}", ex);
+        }
+    }
+
     public async Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         await _emailQueue.QueueEmailAsync(message, cancellationToken);

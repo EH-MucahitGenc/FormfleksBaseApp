@@ -30,6 +30,15 @@ const ApplicationSettings = lazy(() => import('@/features/settings/ApplicationSe
 const Delegations = lazy(() => import('@/features/profile/Delegations').then(m => ({ default: m.Delegations })));
 const PersonnelSync = lazy(() => import('@/features/admin/personnel-sync/PersonnelSyncDashboard'));
 const IntegrationQueries = lazy(() => import('@/features/admin/IntegrationQueries').then(m => ({ default: m.IntegrationQueries })));
+const SurveyCenterPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCenterPage').then(m => ({ default: m.SurveyCenterPage })));
+const SurveyTemplateLibraryPage = lazy(() => import('@/features/admin/surveys/pages/SurveyTemplateLibraryPage').then(m => ({ default: m.SurveyTemplateLibraryPage })));
+const SurveyStudioPage = lazy(() => import('@/features/admin/surveys/pages/SurveyStudioPage').then(m => ({ default: m.SurveyStudioPage })));
+const SurveyCampaignWizardPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCampaignWizardPage').then(m => ({ default: m.SurveyCampaignWizardPage })));
+const SurveyCampaignOverviewPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCampaignOverviewPage').then(m => ({ default: m.SurveyCampaignOverviewPage })));
+const SurveyCampaignParticipantsPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCampaignParticipantsPage').then(m => ({ default: m.SurveyCampaignParticipantsPage })));
+const SurveyCampaignResultsPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCampaignResultsPage').then(m => ({ default: m.SurveyCampaignResultsPage })));
+const SurveyViewableResultsPage = lazy(() => import('@/features/admin/surveys/pages/SurveyViewableResultsPage').then(m => ({ default: m.SurveyViewableResultsPage })));
+const SurveyFillPage = lazy(() => import('@/features/admin/surveys/pages/SurveyFillPage').then(m => ({ default: m.SurveyFillPage })));
 const Maintenance = lazy(() => import('@/app/Maintenance'));
 
 // ─── Suspense Fallback ───────────────────────────────────────────────
@@ -142,6 +151,22 @@ export const router = createBrowserRouter([
               { 
                 path: 'integration-queries', 
                 element: <ProtectedRoute requiredPermission="System.Settings"><Suspense fallback={<PageFallback />}><IntegrationQueries /></Suspense></ProtectedRoute> 
+              },
+              {
+                path: 'surveys',
+                children: [
+                  { path: '', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyCenterPage /></Suspense></ProtectedRoute> },
+                  { path: 'templates', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyTemplateLibraryPage /></Suspense></ProtectedRoute> },
+                  { path: 'templates/new', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyTemplateLibraryPage /></Suspense></ProtectedRoute> },
+                  { path: 'templates/:id/edit', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyStudioPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignOverviewPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/new', element: <ProtectedRoute requiredPermission="Surveys.Publish"><Suspense fallback={<PageFallback />}><SurveyCampaignWizardPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignOverviewPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id/participants', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id/delivery', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id/results', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyCampaignResultsPage /></Suspense></ProtectedRoute> },
+                  { path: 'viewable-results', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyViewableResultsPage /></Suspense></ProtectedRoute> }
+                ]
               }
             ]
           },
@@ -164,5 +189,15 @@ export const router = createBrowserRouter([
         ]
       }
     ]
+  },
+  {
+    path: '/surveys/fill/:token',
+    element: (
+      <ErrorBoundary>
+        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div></div>}>
+          <SurveyFillPage />
+        </Suspense>
+      </ErrorBoundary>
+    )
   }
 ]);

@@ -37,7 +37,7 @@ type NavItemProps = NavItemDefinition & {
   isCollapsed: boolean;
 };
 
-type SidebarSectionKey = 'main' | 'forms' | 'reports' | 'design' | 'admin' | 'account';
+type SidebarSectionKey = 'main' | 'forms' | 'surveys' | 'reports' | 'design' | 'admin' | 'account';
 
 const getInitials = (firstName?: string, lastName?: string) =>
   `${firstName?.charAt(0) || 'M'}${lastName?.charAt(0) || 'G'}`.toLocaleUpperCase('tr-TR');
@@ -192,7 +192,9 @@ export const DynamicSidebar = ({
   const canSeeHrReports = hasPermission('Reports.View');
   const canSeeFormDesigner = hasPermission('Forms.Design');
   const canSeeWorkflowDesigner = hasPermission('Workflows.Manage');
-  const canSeeDesignersSection = canSeeHrReports || canSeeFormDesigner || canSeeWorkflowDesigner;
+  const canSeeSurveys = hasPermission('Surveys.Design') || hasPermission('Surveys.Manage') || hasPermission('Surveys.Publish') || isAdminRole;
+  const canSeeSurveyResults = true; // Any user can be a viewer
+  const canSeeDesignersSection = canSeeHrReports || canSeeFormDesigner || canSeeWorkflowDesigner || canSeeSurveys || canSeeSurveyResults;
 
   const canSeeUsers = hasPermission('Users.Manage');
   const canSeeRoles = hasPermission('Roles.Manage');
@@ -203,9 +205,10 @@ export const DynamicSidebar = ({
 
   const [isFormsExpanded, setIsFormsExpanded] = useState(() => location.pathname.includes('/forms/d/'));
   const [formSearch, setFormSearch] = useState('');
-  const [expandedSections, setExpandedSections] = useState<Record<SidebarSectionKey, boolean>>({
+  const [expandedSections, setExpandedSections] = useState<Record<SidebarSectionKey | 'surveys', boolean>>({
     main: true,
     forms: true,
+    surveys: true,
     reports: true,
     design: true,
     admin: true,
@@ -238,6 +241,11 @@ export const DynamicSidebar = ({
   const coreItems: NavItemDefinition[] = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
     { to: '/approvals', icon: CheckSquare, label: 'Onaylarım' },
+  ];
+
+  const surveyItems: NavItemDefinition[] = [
+    ...(canSeeSurveys ? [{ to: '/admin/surveys', icon: FileText, label: 'Anket Merkezi' }] : []),
+    { to: '/admin/surveys/viewable-results', icon: FileText, label: 'İzlenebilir Sonuçlarım' }
   ];
 
   const reportItems: NavItemDefinition[] = canSeeHrReports ? [{ to: '/hr/reports', icon: BarChart2, label: 'Form Analizleri' }] : [];
@@ -390,6 +398,17 @@ export const DynamicSidebar = ({
 
         {canSeeDesignersSection && (
           <>
+            {surveyItems.length > 0 && (
+              <SidebarSection
+                label="Anket Modülü"
+                isCollapsed={!isSidebarOpen}
+                isOpen={expandedSections.surveys}
+                onToggle={() => toggleSection('surveys')}
+              >
+                <nav className="flex flex-col gap-1">{renderItems(surveyItems)}</nav>
+              </SidebarSection>
+            )}
+
             {reportItems.length > 0 && (
               <SidebarSection
                 label="Raporlama"

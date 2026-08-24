@@ -23,5 +23,10 @@ public interface IEmailService
     Task SendProbationDraftEmailAsync(List<string> toEmails, string managerName, string personelName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany, CancellationToken cancellationToken = default);
     Task SendProbationManagerMissingEmailAsync(List<string> toEmails, string personelName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany, CancellationToken cancellationToken = default);
     Task SendProbationManagerEmailMissingEmailAsync(List<string> toEmails, string personelName, string managerName, int monthType, Guid formRequestId, string formRequestNo, string requesterCompany, CancellationToken cancellationToken = default);
+    
+    // Survey Emails
+    Task SendSurveyAssignmentEmailAsync(string toEmail, string campaignName, string token, CancellationToken cancellationToken = default);
+    Task<bool> SendSurveyAssignmentEmailDirectAsync(string toEmail, string campaignName, string token, CancellationToken cancellationToken = default);
+    
     Task QueueEmailAsync(EmailMessage message, CancellationToken cancellationToken = default);
 }
