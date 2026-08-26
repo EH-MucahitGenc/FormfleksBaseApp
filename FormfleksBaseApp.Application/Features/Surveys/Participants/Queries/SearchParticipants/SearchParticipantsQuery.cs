@@ -1,50 +1,29 @@
-using FormfleksBaseApp.Application.Common.Interfaces;
+using FormfleksBaseApp.Application.Features.Surveys.Common;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Participants.Queries.SearchParticipants;
 
-public record ParticipantDto(Guid? UserId, string Name, string Email, string Department, string Title);
+public record PaginatedList<T>(List<T> Items, int TotalCount, int Page, int PageSize);
 
-public record SearchParticipantsQuery(string SearchTerm, int MaxResults = 50) : IRequest<List<ParticipantDto>>;
+public record SearchParticipantsQuery(AudienceFilter Filter, int Page = 1, int PageSize = 10) : IRequest<PaginatedList<SurveyAudienceUser>>;
 
-public class SearchParticipantsQueryHandler : IRequestHandler<SearchParticipantsQuery, List<ParticipantDto>>
+public class SearchParticipantsQueryHandler : IRequestHandler<SearchParticipantsQuery, PaginatedList<SurveyAudienceUser>>
 {
-    private readonly IDynamicFormsDbContext _context;
+    private readonly ISurveyAudienceDirectory _directory;
 
-    public SearchParticipantsQueryHandler(IDynamicFormsDbContext context)
+    public SearchParticipantsQueryHandler(ISurveyAudienceDirectory directory)
     {
-        _context = context;
+        _directory = directory;
     }
 
-    public async Task<List<ParticipantDto>> Handle(SearchParticipantsQuery request, CancellationToken cancellationToken)
+    public async Task<PaginatedList<SurveyAudienceUser>> Handle(SearchParticipantsQuery request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.SearchTerm) || request.SearchTerm.Length < 2)
-            return new List<ParticipantDto>();
+        var totalCount = await _directory.GetTotalUsersCountAsync(request.Filter, cancellationToken);
+        var users = await _directory.GetUsersAsync(request.Filter, request.Page, request.PageSize, cancellationToken);
 
-        var search = request.SearchTerm.ToLower();
-
-        var qdmsResults = await _context.QdmsPersoneller
-            .AsNoTracking()
-            .Where(p => p.IsActive && p.LinkedUserId != null && (
-                (p.Adi + " " + p.Soyadi).ToLower().Contains(search) || 
-                (p.Email != null && p.Email.ToLower().Contains(search)) ||
-                (p.Departman_Adi != null && p.Departman_Adi.ToLower().Contains(search)) ||
-                (p.Pozisyon_Aciklamasi != null && p.Pozisyon_Aciklamasi.ToLower().Contains(search))))
-            .Take(request.MaxResults)
-            .ToListAsync(cancellationToken);
-
-        return qdmsResults.Select(p => new ParticipantDto(
-            p.LinkedUserId,
-            (p.Adi + " " + p.Soyadi).Trim(),
-            p.Email ?? "",
-            p.Departman_Adi ?? "",
-            p.Pozisyon_Aciklamasi ?? ""
-        )).ToList();
+        return new PaginatedList<SurveyAudienceUser>(users, totalCount, request.Page, request.PageSize);
     }
 }

@@ -23,6 +23,7 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
     public DbSet<SurveyResultViewer> SurveyResultViewers => Set<SurveyResultViewer>();
     public DbSet<SurveyAnswerFile> SurveyAnswerFiles => Set<SurveyAnswerFile>();
     public DbSet<SurveyParticipationGuard> SurveyParticipationGuards => Set<SurveyParticipationGuard>();
+    public DbSet<SavedAudience> SavedAudiences => Set<SavedAudience>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -41,7 +42,7 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.ToTable("survey_templates");
             e.HasKey(x => x.Id);
             ConfigureBaseEntity(e);
-            
+
             e.Property(x => x.Title).HasColumnName("title").IsRequired().HasMaxLength(200);
             e.Property(x => x.Description).HasColumnName("description");
             e.Property(x => x.DefaultIsAnonymous).HasColumnName("default_is_anonymous");
@@ -139,6 +140,7 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.EndDate).HasColumnName("end_date");
             e.Property(x => x.EmailSubject).HasColumnName("email_subject").HasMaxLength(250);
             e.Property(x => x.EmailBodyTemplate).HasColumnName("email_body_template");
+            e.Property(x => x.TargetAudienceJson).HasColumnName("target_audience_json").HasColumnType("jsonb");
 
             e.HasOne(x => x.SurveyTemplateVersion)
              .WithMany(x => x.Campaigns)
@@ -156,8 +158,18 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.UserId).HasColumnName("user_id");
             e.Property(x => x.Token).HasColumnName("token");
             e.Property(x => x.Status).HasColumnName("status").HasColumnType("smallint");
+            e.Property(x => x.StartedAt).HasColumnName("started_at");
             e.Property(x => x.EmailSentAt).HasColumnName("email_sent_at");
             e.Property(x => x.CompletedAt).HasColumnName("completed_at");
+            e.Property(x => x.ParticipantDisplayName).HasColumnName("participant_display_name").HasMaxLength(200);
+            e.Property(x => x.ParticipantEmail).HasColumnName("participant_email").HasMaxLength(320);
+            e.Property(x => x.CompanySnapshot).HasColumnName("company_snapshot").HasMaxLength(250);
+            e.Property(x => x.LocationSnapshot).HasColumnName("location_snapshot").HasMaxLength(250);
+            e.Property(x => x.DepartmentSnapshot).HasColumnName("department_snapshot").HasMaxLength(250);
+            e.Property(x => x.JobTitleSnapshot).HasColumnName("job_title_snapshot").HasMaxLength(250);
+            e.Property(x => x.PersonnelGroupSnapshot).HasColumnName("personnel_group_snapshot").HasMaxLength(250);
+            e.Property(x => x.SnapshotAt).HasColumnName("snapshot_at");
+            e.Property(x => x.SnapshotSource).HasColumnName("snapshot_source").HasMaxLength(50);
 
             e.HasOne(x => x.SurveyCampaign)
              .WithMany(x => x.Assignments)
@@ -166,6 +178,9 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
              
             e.HasIndex(x => x.Token).IsUnique();
             e.HasIndex(x => new { x.SurveyCampaignId, x.UserId }).IsUnique();
+            e.HasIndex(x => new { x.SurveyCampaignId, x.Status });
+            e.HasIndex(x => new { x.SurveyCampaignId, x.DepartmentSnapshot });
+            e.HasIndex(x => new { x.SurveyCampaignId, x.LocationSnapshot });
         });
 
         modelBuilder.Entity<SurveyResponse>(e =>
@@ -179,6 +194,11 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.UserId).HasColumnName("user_id");
             e.Property(x => x.StartedAt).HasColumnName("started_at");
             e.Property(x => x.SubmittedAt).HasColumnName("submitted_at");
+            e.Property(x => x.CompanySnapshot).HasColumnName("company_snapshot").HasMaxLength(250);
+            e.Property(x => x.LocationSnapshot).HasColumnName("location_snapshot").HasMaxLength(250);
+            e.Property(x => x.DepartmentSnapshot).HasColumnName("department_snapshot").HasMaxLength(250);
+            e.Property(x => x.JobTitleSnapshot).HasColumnName("job_title_snapshot").HasMaxLength(250);
+            e.Property(x => x.PersonnelGroupSnapshot).HasColumnName("personnel_group_snapshot").HasMaxLength(250);
 
             e.HasOne(x => x.SurveyCampaign)
              .WithMany(x => x.Responses)
@@ -189,6 +209,11 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
              .WithMany()
              .HasForeignKey(x => x.SurveyAssignmentId)
              .OnDelete(DeleteBehavior.SetNull); // Keeping response if assignment is deleted? Better SetNull
+
+            e.HasIndex(x => new { x.SurveyCampaignId, x.SubmittedAt });
+            e.HasIndex(x => new { x.SurveyCampaignId, x.UserId });
+            e.HasIndex(x => new { x.SurveyCampaignId, x.DepartmentSnapshot });
+            e.HasIndex(x => new { x.SurveyCampaignId, x.LocationSnapshot });
         });
 
         modelBuilder.Entity<SurveyAnswer>(e =>
@@ -213,6 +238,8 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
              .WithMany()
              .HasForeignKey(x => x.SurveyVersionQuestionId)
              .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(x => new { x.SurveyVersionQuestionId, x.SurveyResponseId });
         });
 
         modelBuilder.Entity<SurveyResultViewer>(e =>
@@ -256,6 +283,18 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.HasKey(x => x.Token);
             e.Property(x => x.Token).HasColumnName("token");
             e.Property(x => x.CompletedAt).HasColumnName("completed_at").HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<SavedAudience>(e =>
+        {
+            e.ToTable("saved_audiences");
+            e.HasKey(x => x.Id);
+            ConfigureBaseEntity(e);
+            
+            e.Property(x => x.Name).HasColumnName("name").IsRequired().HasMaxLength(200);
+            e.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
+            e.Property(x => x.AudienceDefinitionJson).HasColumnName("audience_definition_json").HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.OwnerUserId).HasColumnName("owner_user_id");
         });
     }
 

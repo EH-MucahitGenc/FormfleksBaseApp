@@ -31,6 +31,8 @@ public class GetMyViewableCampaignsQueryHandler : IRequestHandler<GetMyViewableC
             .Select(c => new CampaignListDto(
                 c.Id,
                 c.Title,
+                c.Description,
+                c.IsAnonymous,
                 c.Status.ToString(),
                 (int)c.Status,
                 c.StartDate,

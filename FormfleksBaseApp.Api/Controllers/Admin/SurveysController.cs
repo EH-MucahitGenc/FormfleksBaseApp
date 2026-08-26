@@ -1,4 +1,6 @@
 using FormfleksBaseApp.Application.Features.Surveys.Templates.Commands.CreateTemplate;
+using FormfleksBaseApp.Application.Features.Surveys.Templates.Commands.DeleteTemplate;
+using FormfleksBaseApp.Application.Features.Surveys.Templates.Commands.DuplicateTemplate;
 using FormfleksBaseApp.Application.Features.Surveys.Templates.Commands.UpdateTemplate;
 using FormfleksBaseApp.Application.Features.Surveys.Templates.Queries.GetTemplateById;
 using FormfleksBaseApp.Application.Features.Surveys.Templates.Queries.GetTemplates;
@@ -62,5 +64,19 @@ public class SurveysController : ControllerBase
         if (result == null) return NotFound();
         
         return Ok(result);
+    }
+
+    [HttpPost("templates/{id:guid}/duplicate")]
+    public async Task<IActionResult> DuplicateTemplate(Guid id)
+    {
+        var newId = await _mediator.Send(new DuplicateTemplateCommand(id));
+        return CreatedAtAction(nameof(GetTemplateById), new { id = newId }, new { id = newId });
+    }
+
+    [HttpDelete("templates/{id:guid}")]
+    public async Task<IActionResult> DeleteTemplate(Guid id)
+    {
+        var deleted = await _mediator.Send(new DeleteTemplateCommand(id));
+        return deleted ? NoContent() : NotFound();
     }
 }

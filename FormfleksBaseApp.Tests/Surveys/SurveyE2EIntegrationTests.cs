@@ -135,7 +135,16 @@ namespace FormfleksBaseApp.Tests.Surveys
             await _context.SaveChangesAsync();
 
             // 2. Create Campaign (Immediate Publish)
-            var createCmd = new CreateCampaignCommand(templateId, "Campaign", "Desc", DateTime.UtcNow, DateTime.UtcNow.AddDays(1), false, new List<Guid> { userId }, new List<Guid>(), false);
+            var createCmd = new CreateCampaignCommand(
+                templateId,
+                "Campaign",
+                "Desc",
+                DateTime.UtcNow,
+                DateTime.UtcNow.AddDays(1),
+                false,
+                new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter { IncludedUserIds = new List<Guid> { userId } },
+                new List<Guid>(),
+                false);
             
             var mockServiceProvider = new Moq.Mock<IServiceProvider>();
             var createHandler = new CreateCampaignCommandHandler(_context, mockServiceProvider.Object);
@@ -146,13 +155,22 @@ namespace FormfleksBaseApp.Tests.Surveys
             Assert.NotNull(campaign);
             Assert.Equal(SurveyCampaignStatus.Published, campaign.Status);
 
-            var assignment = await _context.SurveyAssignments.FirstOrDefaultAsync(a => a.SurveyCampaignId == campaign.Id);
-            Assert.NotNull(assignment);
-            Assert.Equal(SurveyAssignmentStatus.Pending, assignment.Status);
-            Assert.Equal(SurveyEmailDeliveryStatus.Queued, assignment.EmailDeliveryStatus);
+            // Assignment is NOT generated yet!
 
             // 3. Process Campaigns (Outbox & Retry)
             var emailServiceMock = new Mock<IEmailService>();
+            var audienceDirectoryMock = new Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory>();
+
+            // Mock audience to return the user
+            audienceDirectoryMock.Setup(x => x.GetUsersAsync(It.IsAny<FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAudienceUser> {
+                    new FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAudienceUser { UserId = userId, Email = "test@test.com", DisplayName = "Test User" }
+                });
+
+            audienceDirectoryMock.Setup(x => x.GetUsersByIdsAsync(It.IsAny<List<Guid>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAudienceUser> {
+                    new FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAudienceUser { UserId = userId, Email = "test@test.com", DisplayName = "Test User" }
+                });
             
             var mockQdmsUsers = new List<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> 
             {
@@ -162,12 +180,20 @@ namespace FormfleksBaseApp.Tests.Surveys
             var dynamicFormsContextMock = new Mock<IDynamicFormsDbContext>();
             dynamicFormsContextMock.Setup(d => d.QdmsPersoneller).Returns(mockQdmsUsers.Object);
 
-            var processHandler = new ProcessSurveyCampaignsCommandHandler(_context, dynamicFormsContextMock.Object, emailServiceMock.Object, new NullLogger<ProcessSurveyCampaignsCommandHandler>());
+            var processHandler = new ProcessSurveyCampaignsCommandHandler(_context, dynamicFormsContextMock.Object, emailServiceMock.Object, audienceDirectoryMock.Object, new NullLogger<ProcessSurveyCampaignsCommandHandler>());
             
+            // Run process handler to GENERATE assignments first
+            await processHandler.Handle(new ProcessSurveyCampaignsCommand(), CancellationToken.None);
+
+            var assignment = await _context.SurveyAssignments.FirstOrDefaultAsync(a => a.SurveyCampaignId == campaign.Id);
+            Assert.NotNull(assignment);
+            Assert.Equal(SurveyAssignmentStatus.Pending, assignment.Status);
+
             // Mock email to fail first
             emailServiceMock.Setup(e => e.SendSurveyAssignmentEmailDirectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(new Exception("SMTP Error"));
 
+            // Run process handler to SEND emails (fails)
             await processHandler.Handle(new ProcessSurveyCampaignsCommand(), CancellationToken.None);
             
             await _context.Entry(assignment).ReloadAsync();
@@ -203,7 +229,7 @@ namespace FormfleksBaseApp.Tests.Surveys
             Assert.Contains("doldurdunuz", doubleSubmitResult.Message);
 
             // 5. Get Results
-            var getResultsHandler = new GetCampaignResultsQueryHandler(_context, dynamicFormsContextMock.Object);
+            var getResultsHandler = new GetCampaignResultsQueryHandler(_context, audienceDirectoryMock.Object);
             var results = await getResultsHandler.Handle(new GetCampaignResultsQuery(campaign.Id, userId, true), CancellationToken.None);
             
             Assert.Equal(1, results.TotalParticipants);
@@ -215,11 +241,11 @@ namespace FormfleksBaseApp.Tests.Surveys
             Assert.Contains(qStats.OptionStats, o => o.Label.StartsWith("5") && o.Count == 1);
 
             // 6. Export Results
-            var exportHandler = new ExportCampaignResultsCsvQueryHandler(_context, dynamicFormsContextMock.Object);
-            var csvBytes = await exportHandler.Handle(new ExportCampaignResultsCsvQuery(campaign.Id, userId, true), CancellationToken.None);
+            var exportHandler = new ExportCampaignResultsCsvQueryHandler(_context, audienceDirectoryMock.Object);
+            var csvBytes = await exportHandler.Handle(new ExportCampaignResultsCsvQuery(campaign.Id, userId, true, true), CancellationToken.None);
             var csvString = System.Text.Encoding.UTF8.GetString(csvBytes);
             
-            Assert.Contains("Makbuz Kodu", csvString);
+            Assert.Contains("Katılımcı", csvString);
             Assert.Contains("5", csvString);
 
             // 7. Get Templates

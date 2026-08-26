@@ -21,8 +21,8 @@ public class CreateCampaignCommandValidator : AbstractValidator<CreateCampaignCo
         RuleFor(x => x.TemplateId)
             .NotEmpty().WithMessage("Şablon seçilmelidir.");
 
-        RuleFor(x => x.ParticipantUserIds)
-            .NotEmpty().WithMessage("En az bir katılımcı seçilmelidir.");
+        RuleFor(x => x.AudienceDefinition)
+            .NotNull().WithMessage("Hedef kitle tanımı (AudienceDefinition) boş olamaz.");
 
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("Açıklama en fazla 500 karakter olabilir.");

@@ -1,521 +1,129 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Users, FileText, CheckCircle2, Download, BarChart3, MessageSquare, Hash, Calendar, Star, ThumbsUp, Grid3X3, Paperclip, Info, User, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import {
+    AlertTriangle, BarChart3, ChevronLeft, ChevronRight, Clock3, Download, EyeOff,
+    FileText, Filter, Info, LockKeyhole, MessageSquareText, ShieldCheck, TrendingUp, Users
+} from 'lucide-react';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import toast from 'react-hot-toast';
 import { apiClient } from '@/lib/axios';
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuthStore } from '@/store/useAuthStore';
+import { campaignService, type CampaignSegments, type PagedTextAnswers } from '../services/campaign.service';
 
-interface OptionStat {
-    optionId: string;
-    label: string;
-    count: number;
-    percentage: number;
-}
-
-interface QuestionStats {
-    questionId: string;
-    title: string;
-    type: number;
-    totalAnswers: number;
-    optionStats: OptionStat[];
-    textAnswers: string[];
-}
-
+interface OptionStat { optionId: string; label: string; count: number; percentage: number; selectionPercentage?: number; }
+interface NumericSummary { count: number; average?: number; median?: number; mode?: number; standardDeviation?: number; minimum?: number; maximum?: number; lowerQuartile?: number; upperQuartile?: number; topBoxPercentage?: number; bottomBoxPercentage?: number; }
+interface QuestionStats { questionId: string; title: string; type: number; isRequired: boolean; eligibleResponses: number; totalAnswers: number; missingAnswers: number; answerRate: number; percentageDenominator: string; totalSelections: number; averageSelectionsPerRespondent?: number; optionStats: OptionStat[]; numericSummary?: NumericSummary; npsSummary?: { promoters: number; passives: number; detractors: number; score: number }; textAnswerCount: number; }
 interface CampaignResults {
-    campaignId: string;
-    title: string;
-    totalParticipants: number;
-    totalResponses: number;
-    responseRate: number;
+    campaignId: string; title: string; description?: string; isAnonymous: boolean; status: string; startDate?: string; endDate?: string;
+    totalParticipants: number; totalResponses: number; responseRate: number;
+    funnel: { targeted: number; assigned: number; emailQueued: number; emailDelivered: number; emailFailed: number; started: number; completed: number; abandoned: number; expired: number; startToCompletionRate: number };
+    timing: { firstResponseAt?: string; lastResponseAt?: string; averageCompletionSeconds?: number; medianCompletionSeconds?: number };
+    dataQuality: { responsesEvaluated: number; speedingResponses: number; highMissingResponses: number; flaggedResponses: number; speedingThresholdSeconds: number };
+    responseTrend: Array<{ date: string; count: number; cumulativeCount: number }>;
     questions: QuestionStats[];
+    methodology: { responseRateFormula: string; questionRateFormula: string; multipleChoiceNote: string; representationNote: string; anonymousMinimumGroupSize: number };
 }
 
-const CHART_COLORS = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899',
-    '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6', '#e11d48'
-];
+type Tab = 'overview' | 'questions' | 'segments' | 'methodology';
 
-const QUESTION_TYPE_MAP: Record<number, { label: string; icon: React.ReactNode; color: string }> = {
-    1: { label: 'Kısa Metin', icon: <MessageSquare className="h-3.5 w-3.5" />, color: 'bg-blue-100 text-blue-700' },
-    2: { label: 'Uzun Metin', icon: <MessageSquare className="h-3.5 w-3.5" />, color: 'bg-blue-100 text-blue-700' },
-    3: { label: 'Tek Seçim', icon: <CheckCircle2 className="h-3.5 w-3.5" />, color: 'bg-emerald-100 text-emerald-700' },
-    4: { label: 'Çoklu Seçim', icon: <CheckCircle2 className="h-3.5 w-3.5" />, color: 'bg-teal-100 text-teal-700' },
-    5: { label: 'Evet / Hayır', icon: <ThumbsUp className="h-3.5 w-3.5" />, color: 'bg-amber-100 text-amber-700' },
-    6: { label: 'Derecelendirme', icon: <Star className="h-3.5 w-3.5" />, color: 'bg-yellow-100 text-yellow-700' },
-    7: { label: 'NPS', icon: <TrendingUp className="h-3.5 w-3.5" />, color: 'bg-purple-100 text-purple-700' },
-    8: { label: 'Sayı', icon: <Hash className="h-3.5 w-3.5" />, color: 'bg-indigo-100 text-indigo-700' },
-    9: { label: 'Tarih', icon: <Calendar className="h-3.5 w-3.5" />, color: 'bg-pink-100 text-pink-700' },
-    10: { label: 'Matris', icon: <Grid3X3 className="h-3.5 w-3.5" />, color: 'bg-orange-100 text-orange-700' },
-    11: { label: 'Dosya', icon: <Paperclip className="h-3.5 w-3.5" />, color: 'bg-slate-100 text-slate-700' },
-    12: { label: 'Bilgi', icon: <Info className="h-3.5 w-3.5" />, color: 'bg-gray-100 text-gray-600' },
+const formatDuration = (seconds?: number) => {
+    if (seconds == null) return '-';
+    if (seconds < 60) return `${Math.round(seconds)} saniye`;
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes} dk ${Math.round(seconds % 60)} sn`;
 };
 
-/* ───── Circular Progress Ring ───── */
-const ProgressRing = ({ value, size = 56, strokeWidth = 5, color = '#3b82f6' }: { value: number; size?: number; strokeWidth?: number; color?: string }) => {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (Math.min(value, 100) / 100) * circumference;
-    return (
-        <svg width={size} height={size} className="transform -rotate-90">
-            <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
-            <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
-                strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-                className="transition-all duration-700 ease-out" />
-        </svg>
-    );
+const TextAnswersPanel = ({ campaignId, question, isAnonymous }: { campaignId: string; question: QuestionStats; isAnonymous: boolean }) => {
+    const [data, setData] = useState<PagedTextAnswers | null>(null);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+
+    const load = async (targetPage: number) => {
+        setLoading(true);
+        try {
+            setData(await campaignService.getQuestionTextAnswers(campaignId, question.questionId, targetPage, 10));
+            setPage(targetPage);
+        } catch (error) {
+            console.error(error);
+            toast.error('Metin yanıtları yüklenemedi.');
+        } finally { setLoading(false); }
+    };
+
+    if (!data) return <button onClick={() => load(1)} disabled={loading || question.textAnswerCount === 0} className="inline-flex items-center gap-2 rounded-xl bg-brand-dark px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"><MessageSquareText className="h-4 w-4" />{loading ? 'Yükleniyor...' : `${question.textAnswerCount} metin yanıtını incele`}</button>;
+    if (data.isSuppressed) return <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><EyeOff className="mt-0.5 h-4 w-4 flex-none" /><div><strong>Yanıtlar gizlendi</strong><p className="mt-1">{data.suppressionReason}</p></div></div>;
+
+    return <div className="space-y-3">{isAnonymous && <p className="flex items-center gap-2 text-xs text-brand-gray"><ShieldCheck className="h-3.5 w-3.5" />Kişisel veri örüntüleri maskelenir ve kesin saat bilgisi gösterilmez.</p>}{data.items.map(item => <article key={item.answerId} className="rounded-xl border border-surface-muted bg-surface-ground/40 p-4"><div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-brand-gray">{item.participantName && <strong className="text-brand-dark">{item.participantName}</strong>}{item.department && <span>{item.department}</span>}<span>{new Date(item.submittedAt).toLocaleDateString('tr-TR')}</span></div><p className="whitespace-pre-wrap text-sm leading-6 text-brand-dark">{item.text}</p></article>)}<div className="flex items-center justify-between"><span className="text-xs text-brand-gray">{data.totalCount} yanıt · Sayfa {page}</span><div className="flex gap-2"><button onClick={() => load(page - 1)} disabled={loading || page <= 1} className="grid h-8 w-8 place-items-center rounded-lg border border-surface-muted disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button><button onClick={() => load(page + 1)} disabled={loading || page * data.pageSize >= data.totalCount} className="grid h-8 w-8 place-items-center rounded-lg border border-surface-muted disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button></div></div></div>;
 };
 
-/* ───── Horizontal Bar for option stats ───── */
-const HorizontalBar = ({ label, count, percentage, color, maxPercentage }: { label: string; count: number; percentage: number; color: string; maxPercentage: number }) => {
-    const barWidth = maxPercentage > 0 ? (percentage / maxPercentage) * 100 : 0;
-    return (
-        <div className="group">
-            <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-medium text-brand-dark truncate">{label}</span>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                    <span className="text-xs font-semibold text-brand-gray tabular-nums">{count} yanıt</span>
-                    <span className="text-sm font-bold text-brand-dark tabular-nums w-14 text-right">%{percentage % 1 === 0 ? percentage.toFixed(0) : percentage.toFixed(1)}</span>
-                </div>
-            </div>
-            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700 ease-out"
-                    style={{ width: `${barWidth}%`, backgroundColor: color }} />
-            </div>
-        </div>
-    );
-};
-
-/* ───── Text Answer Card ───── */
-const TextAnswerCard = ({ answer, index, questionType }: { answer: string; index: number; questionType: number }) => {
-    const colonIdx = answer.indexOf(': ');
-    const hasUser = colonIdx > 0 && colonIdx < 50;
-    const userName = hasUser ? answer.substring(0, colonIdx) : null;
-    const answerText = hasUser ? answer.substring(colonIdx + 2) : answer;
-
-    if (questionType === 11 && answerText.startsWith('http')) {
-        return (
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-lg border border-surface-muted hover:border-brand-primary/30 transition-colors">
-                {userName && (
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <div className="w-7 h-7 rounded-full bg-brand-primary/10 flex items-center justify-center">
-                            <User className="h-3.5 w-3.5 text-brand-primary" />
-                        </div>
-                        <span className="text-xs font-semibold text-brand-dark">{userName}</span>
-                        <span className="text-gray-300 mx-1">|</span>
-                    </div>
-                )}
-                <Paperclip className="h-4 w-4 text-brand-gray flex-shrink-0" />
-                <a href={answerText} target="_blank" rel="noreferrer" className="text-sm text-brand-primary hover:underline truncate">{answerText}</a>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex items-start gap-3 px-4 py-3 bg-white rounded-lg border border-surface-muted hover:border-brand-primary/30 transition-colors">
-            {userName ? (
-                <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
-                    <div className="w-7 h-7 rounded-full bg-brand-primary/10 flex items-center justify-center">
-                        <User className="h-3.5 w-3.5 text-brand-primary" />
-                    </div>
-                </div>
-            ) : (
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-brand-gray mt-0.5">{index + 1}</span>
-            )}
-            <div className="min-w-0 flex-1">
-                {userName && <p className="text-xs font-semibold text-brand-dark mb-0.5">{userName}</p>}
-                <p className="text-sm text-brand-dark/80 leading-relaxed break-words">{answerText}</p>
-            </div>
-        </div>
-    );
-};
-
-/* ───── Custom Donut Chart Label ───── */
-const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, percent }: any) => {
-    if (percent < 0.05) return null;
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 24;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    return (
-        <text x={x} y={y} fill="#374151" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight={600}>
-            {`${(percent * 100).toFixed(0)}%`}
-        </text>
-    );
-};
-
-/* ───── Rating / NPS special summary ───── */
-const RatingNpsSummary = ({ optionStats, type }: { optionStats: OptionStat[]; type: number }) => {
-    const totalVotes = optionStats.reduce((s, o) => s + o.count, 0);
-    if (totalVotes === 0) return null;
-    const weightedSum = optionStats.reduce((s, o) => s + (parseFloat(o.label) || 0) * o.count, 0);
-    const average = weightedSum / totalVotes;
-
-    if (type === 7) {
-        const promoters = optionStats.filter(o => parseFloat(o.label) >= 9).reduce((s, o) => s + o.count, 0);
-        const detractors = optionStats.filter(o => parseFloat(o.label) <= 6).reduce((s, o) => s + o.count, 0);
-        const npsScore = Math.round(((promoters - detractors) / totalVotes) * 100);
-        const npsColor = npsScore >= 50 ? '#10b981' : npsScore >= 0 ? '#f59e0b' : '#ef4444';
-
-        return (
-            <div className="flex items-center gap-6 mb-6 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-surface-muted">
-                <div className="text-center">
-                    <p className="text-xs font-medium text-brand-gray uppercase tracking-wide mb-1">NPS Skoru</p>
-                    <p className="text-3xl font-bold" style={{ color: npsColor }}>{npsScore > 0 ? '+' : ''}{npsScore}</p>
-                </div>
-                <div className="h-12 w-px bg-surface-muted" />
-                <div className="flex gap-4 text-xs">
-                    <div className="text-center">
-                        <div className="w-3 h-3 rounded-full bg-emerald-500 mx-auto mb-1" />
-                        <p className="font-semibold text-brand-dark">{promoters}</p>
-                        <p className="text-brand-gray">Destekçi</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="w-3 h-3 rounded-full bg-amber-400 mx-auto mb-1" />
-                        <p className="font-semibold text-brand-dark">{totalVotes - promoters - detractors}</p>
-                        <p className="text-brand-gray">Pasif</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="w-3 h-3 rounded-full bg-red-500 mx-auto mb-1" />
-                        <p className="font-semibold text-brand-dark">{detractors}</p>
-                        <p className="text-brand-gray">Eleştiren</p>
-                    </div>
-                </div>
-                <div className="h-12 w-px bg-surface-muted" />
-                <div className="text-center">
-                    <p className="text-xs font-medium text-brand-gray uppercase tracking-wide mb-1">Ortalama</p>
-                    <p className="text-xl font-bold text-brand-dark">{average.toFixed(1)}</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Rating
-    return (
-        <div className="flex items-center gap-6 mb-6 p-4 bg-gradient-to-r from-yellow-50/50 to-white rounded-xl border border-surface-muted">
-            <div className="text-center">
-                <p className="text-xs font-medium text-brand-gray uppercase tracking-wide mb-1">Ortalama Puan</p>
-                <div className="flex items-center gap-1">
-                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                    <p className="text-3xl font-bold text-brand-dark">{average.toFixed(1)}</p>
-                </div>
-            </div>
-            <div className="h-12 w-px bg-surface-muted" />
-            <div className="text-center">
-                <p className="text-xs font-medium text-brand-gray uppercase tracking-wide mb-1">Toplam Oy</p>
-                <p className="text-xl font-bold text-brand-dark">{totalVotes}</p>
-            </div>
-        </div>
-    );
-};
-
-/* ═════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ═════════════════════════════════════════════════════ */
 export const SurveyCampaignResultsPage = () => {
     const { id } = useParams<{ id: string }>();
+    const { user } = useAuthStore();
     const [results, setResults] = useState<CampaignResults | null>(null);
+    const [segments, setSegments] = useState<CampaignSegments | null>(null);
+    const [dimension, setDimension] = useState('department');
+    const [tab, setTab] = useState<Tab>('overview');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
-    const { user } = useAuthStore();
-
-    const hasPermission = (perm: string) => user?.permissions?.includes(perm);
-    const isAdminRole = user?.roles?.includes('Global Admin');
-    const canExport = hasPermission('Surveys.Manage') || hasPermission('Surveys.Results.Export') || isAdminRole;
+    const canExport = user?.permissions?.some(permission => ['Surveys.Manage', 'Surveys.Results.Export'].includes(permission)) || user?.roles?.includes('Global Admin');
 
     useEffect(() => {
         if (!id) return;
-        apiClient.get<CampaignResults>(`/admin/surveys/campaigns/${id}/results`)
-            .then(res => {
-                setResults(res.data);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error(err);
-                const msg = err?.response?.data?.message || err?.response?.data || 'Sonuçlar yüklenirken bir hata oluştu.';
-                setError(typeof msg === 'string' ? msg : 'Sonuçlar yüklenirken bir hata oluştu.');
-                setLoading(false);
-            });
+        apiClient.get<CampaignResults>(`/admin/surveys/campaigns/${id}/analytics/overview`).then(response => setResults(response.data)).catch(requestError => {
+            console.error(requestError); setError('Rapor yüklenemedi veya bu kampanyaya erişim yetkiniz bulunmuyor.');
+        }).finally(() => setLoading(false));
     }, [id]);
 
-    const handleExport = async () => {
+    useEffect(() => {
+        if (!id || tab !== 'segments') return;
+        campaignService.getCampaignSegments(id, dimension).then(setSegments).catch(error => {
+            console.error(error); toast.error('Segment analizi yüklenemedi.');
+        });
+    }, [id, tab, dimension]);
+
+    const exportCsv = async () => {
+        if (!id) return;
         try {
             const response = await apiClient.get(`/admin/surveys/campaigns/${id}/export`, { responseType: 'blob' });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Anket_Sonuclari_${results?.title || 'export'}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (err) {
-            console.error("Export failed", err);
-        }
+            const url = URL.createObjectURL(response.data); const anchor = document.createElement('a');
+            anchor.href = url; anchor.download = `anket-sonuclari-${id}.csv`; anchor.click(); URL.revokeObjectURL(url);
+        } catch (exportError) { console.error(exportError); toast.error('Rapor dışa aktarılamadı.'); }
     };
 
-    const toggleExpand = (qId: string) => {
-        setExpandedQuestions(prev => {
-            const next = new Set(prev);
-            if (next.has(qId)) next.delete(qId);
-            else next.add(qId);
-            return next;
-        });
-    };
+    if (loading) return <div className="grid min-h-[70vh] place-items-center bg-surface-ground"><div className="text-center"><div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-brand-primary/20 border-t-brand-primary" /><p className="mt-4 text-sm font-medium text-brand-gray">Analiz çalışma alanı hazırlanıyor...</p></div></div>;
+    if (error || !results) return <div className="grid min-h-[70vh] place-items-center bg-surface-ground"><div className="max-w-md text-center"><AlertTriangle className="mx-auto h-10 w-10 text-red-500" /><h2 className="mt-3 text-xl font-bold">Rapor açılamadı</h2><p className="mt-2 text-sm text-brand-gray">{error}</p></div></div>;
 
-    /* ── Loading State ── */
-    if (loading) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-surface-ground">
-                <div className="text-center">
-                    <div className="w-12 h-12 rounded-full border-4 border-brand-primary/20 border-t-brand-primary animate-spin mx-auto mb-4" />
-                    <p className="text-brand-gray font-medium">Analiz verileri yükleniyor...</p>
-                </div>
-            </div>
-        );
-    }
+    const funnel = [
+        ['Atandı', results.funnel.assigned], ['Teslim edildi', results.funnel.emailDelivered],
+        ['Başladı', results.funnel.started], ['Tamamladı', results.funnel.completed]
+    ] as const;
+    const maxSegmentRate = Math.max(1, ...(segments?.items.map(item => item.responseRate ?? 0) ?? []));
 
-    /* ── Error State ── */
-    if (error || !results) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-surface-ground">
-                <div className="text-center max-w-md mx-auto p-8">
-                    <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-                        <BarChart3 className="h-8 w-8 text-red-400" />
-                    </div>
-                    <h2 className="text-lg font-semibold text-brand-dark mb-2">Sonuçlar Yüklenemedi</h2>
-                    <p className="text-sm text-brand-gray mb-6">{error || 'Sonuçlar bulunamadı.'}</p>
-                    <Link to="/admin/surveys/campaigns"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors">
-                        <ChevronLeft className="h-4 w-4" /> Kampanyalara Dön
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    return <div className="min-h-full bg-surface-ground">
+        <header className="sticky top-0 z-20 border-b border-surface-muted bg-white/95 backdrop-blur">
+            <div className="mx-auto flex max-w-[1500px] items-center gap-4 px-5 py-4 lg:px-8"><Link to="/admin/surveys/campaigns" className="grid h-10 w-10 place-items-center rounded-xl bg-surface-ground text-brand-gray hover:text-brand-dark"><ChevronLeft className="h-5 w-5" /></Link><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-xl font-bold text-brand-dark">{results.title}</h1><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${results.isAnonymous ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>{results.isAnonymous ? <ShieldCheck className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}{results.isAnonymous ? 'Anonim rapor' : 'Kimlikli rapor'}</span></div><p className="mt-1 text-xs text-brand-gray">{results.status} · {results.totalResponses.toLocaleString('tr-TR')} tamamlanmış yanıt</p></div><div className="ml-auto flex gap-2">{!results.isAnonymous && <Link to={`/admin/surveys/campaigns/${id}/participants`} className="hidden items-center gap-2 rounded-xl border border-surface-muted px-4 py-2.5 text-sm font-semibold text-brand-dark sm:inline-flex"><Users className="h-4 w-4" />Yanıt gezgini</Link>}{canExport && <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl bg-brand-dark px-4 py-2.5 text-sm font-semibold text-white"><Download className="h-4 w-4" /><span className="hidden sm:inline">Dışa aktar</span></button>}</div></div>
+            <nav className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-5 lg:px-8">{([['overview', 'Genel bakış'], ['questions', 'Soru analizleri'], ['segments', 'Segmentler'], ['methodology', 'Metodoloji']] as Array<[Tab, string]>).map(([value, label]) => <button key={value} onClick={() => setTab(value)} className={`border-b-2 px-4 py-3 text-sm font-semibold whitespace-nowrap ${tab === value ? 'border-brand-primary text-brand-primary' : 'border-transparent text-brand-gray'}`}>{label}</button>)}</nav>
+        </header>
 
-    const isChoiceType = (type: number) => [3, 4, 5, 6, 7].includes(type);
-    const isTextType = (type: number) => [1, 2, 8, 9, 10, 11].includes(type);
+        <main className="mx-auto max-w-[1500px] space-y-6 px-5 py-7 lg:px-8">
+            {results.isAnonymous && <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><LockKeyhole className="mt-0.5 h-5 w-5 flex-none" /><div><strong>Anonimlik koruması etkin</strong><p className="mt-1">Tekil katılımcılar gösterilmez; 10 yanıtın altındaki segmentler ve metin grupları backend tarafından gizlenir.</p></div></div>}
 
-    return (
-        <div className="flex-1 bg-surface-ground overflow-y-auto">
-            {/* ── Sticky Header ── */}
-            <div className="bg-white border-b border-surface-muted sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link to="/admin/surveys/campaigns"
-                            className="w-9 h-9 rounded-lg bg-surface-ground flex items-center justify-center text-brand-gray hover:text-brand-dark hover:bg-surface-muted transition-all">
-                            <ChevronLeft className="h-5 w-5" />
-                        </Link>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-lg font-bold text-brand-dark">{results.title}</h1>
-                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md">Analiz Raporu</span>
-                            </div>
-                            <p className="text-xs text-brand-gray mt-0.5">Gerçek zamanlı anket sonuçları ve istatistikler</p>
-                        </div>
-                    </div>
-                    {canExport && (
-                        <button onClick={handleExport}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-dark text-white rounded-lg text-sm font-medium hover:bg-brand-dark/90 transition-colors shadow-sm">
-                            <Download className="h-4 w-4" />
-                            <span className="hidden sm:inline">Raporu İndir</span>
-                        </button>
-                    )}
-                </div>
-            </div>
+            {tab === 'overview' && <>
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
+                    ['Hedef kitle', results.totalParticipants, 'atanan aktif kullanıcı', <Users className="h-5 w-5" />],
+                    ['Tamamlanan', results.totalResponses, 'geçerli yanıt', <FileText className="h-5 w-5" />],
+                    ['Katılım oranı', `%${results.responseRate}`, `${results.totalResponses} / ${results.totalParticipants}`, <TrendingUp className="h-5 w-5" />],
+                    ['Medyan süre', formatDuration(results.timing.medianCompletionSeconds), `Ortalama ${formatDuration(results.timing.averageCompletionSeconds)}`, <Clock3 className="h-5 w-5" />]
+                ].map(([label, value, note, icon]) => <article key={String(label)} className="rounded-2xl border border-surface-muted bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-gray">{label}</p><span className="grid h-9 w-9 place-items-center rounded-xl bg-orange-50 text-brand-primary">{icon}</span></div><p className="mt-3 text-3xl font-bold text-brand-dark">{value}</p><p className="mt-1 text-xs text-brand-gray">{note}</p></article>)}</section>
+                <section className="grid gap-5 xl:grid-cols-[1.1fr_1.9fr]"><article className="rounded-2xl border border-surface-muted bg-white p-5 shadow-sm"><h2 className="font-bold text-brand-dark">Katılım hunisi</h2><p className="mt-1 text-xs text-brand-gray">Davetin yanıta dönüşümünü aşama aşama gösterir.</p><div className="mt-5 space-y-4">{funnel.map(([label, value], index) => <div key={label}><div className="mb-1.5 flex justify-between text-sm"><span className="font-medium text-brand-dark">{label}</span><strong>{value.toLocaleString('tr-TR')}</strong></div><div className="h-3 overflow-hidden rounded-full bg-surface-ground"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${results.funnel.assigned ? Math.max(3, value / results.funnel.assigned * 100) : 0}%`, opacity: 1 - index * .12 }} /></div></div>)}</div><div className="mt-5 grid grid-cols-3 gap-2 border-t border-surface-muted pt-4 text-center"><div><strong className="block text-lg text-red-600">{results.funnel.emailFailed}</strong><span className="text-xs text-brand-gray">Teslim hatası</span></div><div><strong className="block text-lg text-amber-600">{results.funnel.abandoned}</strong><span className="text-xs text-brand-gray">Yarım bırakan</span></div><div><strong className="block text-lg text-brand-dark">%{results.funnel.startToCompletionRate}</strong><span className="text-xs text-brand-gray">Başla-tamamla</span></div></div></article>
+                    <article className="rounded-2xl border border-surface-muted bg-white p-5 shadow-sm"><h2 className="font-bold text-brand-dark">Yanıt hareketi</h2><p className="mt-1 text-xs text-brand-gray">Günlük tamamlanan yanıt ve kümülatif büyüme.</p><div className="mt-5 h-72">{results.responseTrend.length ? <ResponsiveContainer width="100%" height="100%"><LineChart data={results.responseTrend}><CartesianGrid strokeDasharray="3 3" stroke="#ece8e4" /><XAxis dataKey="date" tickFormatter={value => new Date(value).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })} fontSize={11} /><YAxis allowDecimals={false} fontSize={11} /><Tooltip labelFormatter={value => new Date(value).toLocaleDateString('tr-TR')} /><Line type="monotone" dataKey="count" name="Günlük" stroke="#ff6b35" strokeWidth={3} dot={{ r: 3 }} /><Line type="monotone" dataKey="cumulativeCount" name="Kümülatif" stroke="#24303f" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-sm text-brand-gray">Henüz zaman serisi oluşturacak yanıt yok.</div>}</div></article></section>
+                <section className="grid gap-5 lg:grid-cols-2"><article className="rounded-2xl border border-surface-muted bg-white p-5"><h2 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-5 w-5 text-emerald-600" />Veri kalitesi</h2><div className="mt-4 grid grid-cols-3 gap-3 text-center"><div className="rounded-xl bg-surface-ground p-3"><strong className="text-xl">{results.dataQuality.responsesEvaluated}</strong><span className="block text-xs text-brand-gray">İncelenen</span></div><div className="rounded-xl bg-amber-50 p-3"><strong className="text-xl text-amber-700">{results.dataQuality.speedingResponses}</strong><span className="block text-xs text-brand-gray">Hızlı yanıt</span></div><div className="rounded-xl bg-red-50 p-3"><strong className="text-xl text-red-700">{results.dataQuality.flaggedResponses}</strong><span className="block text-xs text-brand-gray">İşaretli</span></div></div><p className="mt-3 text-xs text-brand-gray">Kalite işaretleri yanıtları silmez; analiz için inceleme sinyali üretir. Hız eşiği: {results.dataQuality.speedingThresholdSeconds} saniye.</p></article><article className="rounded-2xl border border-surface-muted bg-brand-dark p-5 text-white"><h2 className="font-bold">Temsil uyarısı</h2><p className="mt-3 text-sm leading-6 text-white/75">{results.methodology.representationNote}</p><button onClick={() => setTab('segments')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-dark"><Filter className="h-4 w-4" />Segmentleri kontrol et</button></article></section>
+            </>}
 
-            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-8">
-                {/* ── Summary Cards ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <div className="bg-white rounded-xl border border-surface-muted p-5 flex items-center gap-4 shadow-sm">
-                        <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                            <Users className="h-7 w-7 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-medium text-brand-gray uppercase tracking-wide">Hedef Kitle</p>
-                            <p className="text-3xl font-bold text-brand-dark leading-tight">{results.totalParticipants}</p>
-                            <p className="text-xs text-brand-gray">davet edilen kişi</p>
-                        </div>
-                    </div>
+            {tab === 'questions' && <section className="space-y-5">{results.questions.map((question, index) => <article key={question.questionId} className="overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-sm"><header className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-muted bg-gradient-to-r from-orange-50/70 to-white px-5 py-4"><div className="flex gap-3"><span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-brand-primary text-sm font-bold text-white">{index + 1}</span><div><h2 className="font-bold text-brand-dark">{question.title}</h2><p className="mt-1 text-xs text-brand-gray">{question.isRequired ? 'Zorunlu' : 'Opsiyonel'} · Payda: {question.percentageDenominator}</p></div></div><div className="flex gap-5 text-right"><div><span className="block text-xs text-brand-gray">Geçerli</span><strong>{question.totalAnswers}</strong></div><div><span className="block text-xs text-brand-gray">Eksik</span><strong className={question.missingAnswers ? 'text-amber-600' : ''}>{question.missingAnswers}</strong></div><div><span className="block text-xs text-brand-gray">Yanıtlama</span><strong>%{question.answerRate}</strong></div></div></header><div className="p-5">{question.numericSummary && question.numericSummary.count > 0 && <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">{[['Ortalama', question.numericSummary.average], ['Medyan', question.numericSummary.median], ['Std. sapma', question.numericSummary.standardDeviation], ['Minimum', question.numericSummary.minimum], ['Maksimum', question.numericSummary.maximum], ['N', question.numericSummary.count]].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-surface-ground p-3"><span className="block text-xs text-brand-gray">{label}</span><strong className="mt-1 block text-lg text-brand-dark">{value ?? '-'}</strong></div>)}</div>}{question.npsSummary && <div className="mb-5 flex flex-wrap gap-3 rounded-xl border border-surface-muted p-4"><div className="mr-4"><span className="block text-xs text-brand-gray">NPS</span><strong className="text-3xl text-brand-primary">{question.npsSummary.score > 0 ? '+' : ''}{question.npsSummary.score}</strong></div><div><span className="block text-xs text-brand-gray">Destekçi</span><strong>{question.npsSummary.promoters}</strong></div><div><span className="block text-xs text-brand-gray">Pasif</span><strong>{question.npsSummary.passives}</strong></div><div><span className="block text-xs text-brand-gray">Eleştiren</span><strong>{question.npsSummary.detractors}</strong></div></div>}{question.optionStats.length > 0 && <div className="space-y-4">{question.optionStats.map(option => <div key={`${question.questionId}-${option.optionId}-${option.label}`}><div className="mb-1.5 flex justify-between gap-3 text-sm"><span className="font-medium text-brand-dark">{option.label}</span><span className="text-brand-gray"><strong className="text-brand-dark">{option.count}</strong> · %{option.percentage}{question.type === 4 && option.selectionPercentage != null ? ` · seçimlerin %${option.selectionPercentage}` : ''}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-surface-ground"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${option.percentage}%` }} /></div></div>)}{question.type === 4 && <p className="text-xs text-brand-gray">Toplam {question.totalSelections} seçim · kişi başına ortalama {question.averageSelectionsPerRespondent ?? 0} seçim</p>}</div>}{[1, 2].includes(question.type) && <TextAnswersPanel campaignId={results.campaignId} question={question} isAnonymous={results.isAnonymous} />}{question.totalAnswers === 0 && question.type !== 12 && <p className="text-sm text-brand-gray">Bu soru için henüz geçerli yanıt yok.</p>}{question.type === 12 && <p className="flex items-center gap-2 text-sm text-brand-gray"><Info className="h-4 w-4" />Bilgilendirme alanı, yanıt beklenmez.</p>}</div></article>)}</section>}
 
-                    <div className="bg-white rounded-xl border border-surface-muted p-5 flex items-center gap-4 shadow-sm">
-                        <div className="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                            <FileText className="h-7 w-7 text-emerald-600" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-medium text-brand-gray uppercase tracking-wide">Tamamlayan</p>
-                            <p className="text-3xl font-bold text-brand-dark leading-tight">{results.totalResponses}</p>
-                            <p className="text-xs text-brand-gray">yanıt alındı</p>
-                        </div>
-                    </div>
+            {tab === 'segments' && <section className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-brand-dark">Organizasyon segmentleri</h2><p className="mt-1 text-sm text-brand-gray">Katılım kapsamını kampanya anındaki snapshot boyutlarıyla karşılaştırın.</p></div><div className="flex flex-wrap gap-2">{[['company', 'Şirket'], ['location', 'Lokasyon'], ['department', 'Departman'], ['title', 'Unvan'], ['personnelgroup', 'Personel grubu']].map(([value, label]) => <button key={value} onClick={() => setDimension(value)} className={`rounded-xl px-3 py-2 text-xs font-semibold ${dimension === value ? 'bg-brand-dark text-white' : 'border border-surface-muted bg-white text-brand-gray'}`}>{label}</button>)}</div></div><article className="rounded-2xl border border-surface-muted bg-white p-5 shadow-sm">{!segments ? <p className="py-12 text-center text-sm text-brand-gray">Segmentler yükleniyor...</p> : <div className="space-y-4">{segments.items.map(item => <div key={item.label} className="grid items-center gap-3 md:grid-cols-[minmax(160px,1fr)_3fr_120px]"><div><p className="truncate text-sm font-semibold text-brand-dark" title={item.label}>{item.label}</p>{item.isSuppressed && <p className="text-xs text-amber-700">Yetersiz örneklem</p>}</div>{item.isSuppressed ? <div className="h-10 rounded-xl bg-[repeating-linear-gradient(135deg,#f6f2ee,#f6f2ee_8px,#ebe5df_8px,#ebe5df_16px)]" /> : <div className="h-3 overflow-hidden rounded-full bg-surface-ground"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${(item.responseRate ?? 0) / maxSegmentRate * 100}%` }} /></div>}<div className="text-right">{item.isSuppressed ? <EyeOff className="ml-auto h-4 w-4 text-brand-gray" /> : <><strong className="text-lg text-brand-dark">%{item.responseRate}</strong><span className="block text-xs text-brand-gray">{item.responses}/{item.participants} yanıt</span></>}</div></div>)}</div>}</article>{segments?.isAnonymous && <p className="flex items-center gap-2 text-xs text-brand-gray"><ShieldCheck className="h-4 w-4" />{segments.minimumGroupSize} yanıtın altındaki segment hücreleri API seviyesinde gizlenir.</p>}</section>}
 
-                    <div className="bg-white rounded-xl border border-surface-muted p-5 flex items-center gap-4 shadow-sm">
-                        <div className="relative flex-shrink-0">
-                            <ProgressRing value={results.responseRate} size={56} strokeWidth={5}
-                                color={results.responseRate >= 70 ? '#10b981' : results.responseRate >= 40 ? '#f59e0b' : '#ef4444'} />
-                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-brand-dark">
-                                %{results.responseRate % 1 === 0 ? results.responseRate.toFixed(0) : results.responseRate.toFixed(1)}
-                            </span>
-                        </div>
-                        <div>
-                            <p className="text-xs font-medium text-brand-gray uppercase tracking-wide">Katılım Oranı</p>
-                            <p className="text-xl font-bold text-brand-dark leading-tight">
-                                {results.responseRate >= 70 ? 'Yüksek' : results.responseRate >= 40 ? 'Orta' : 'Düşük'}
-                            </p>
-                            <p className="text-xs text-brand-gray">{results.totalResponses} / {results.totalParticipants} kişi</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Question Cards ── */}
-                <div className="space-y-6">
-                    {results.questions.map((q, idx) => {
-                        const qType = QUESTION_TYPE_MAP[q.type] || { label: 'Diğer', icon: <MessageSquare className="h-3.5 w-3.5" />, color: 'bg-gray-100 text-gray-600' };
-                        const maxPct = q.optionStats.length > 0 ? Math.max(...q.optionStats.map(o => o.percentage)) : 0;
-                        const isExpanded = expandedQuestions.has(q.questionId);
-                        const TEXT_PREVIEW_LIMIT = 5;
-                        const hasMoreText = q.textAnswers && q.textAnswers.length > TEXT_PREVIEW_LIMIT;
-                        const visibleAnswers = isExpanded ? q.textAnswers : (q.textAnswers?.slice(0, TEXT_PREVIEW_LIMIT) || []);
-
-                        return (
-                            <div key={q.questionId} className="bg-white rounded-xl border border-surface-muted overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                {/* Question Header */}
-                                <div className="px-6 py-4 border-b border-surface-muted bg-gradient-to-r from-surface-base to-white">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-start gap-3 min-w-0">
-                                            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-sm font-bold text-brand-primary mt-0.5">
-                                                {idx + 1}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <h3 className="text-base font-semibold text-brand-dark leading-snug">{q.title}</h3>
-                                                <div className="flex items-center gap-2 mt-1.5">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${qType.color}`}>
-                                                        {qType.icon}
-                                                        {qType.label}
-                                                    </span>
-                                                    <span className="text-xs text-brand-gray">
-                                                        {q.totalAnswers} yanıt
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {q.totalAnswers > 0 && results.totalResponses > 0 && (
-                                            <div className="flex-shrink-0 text-right">
-                                                <p className="text-xs text-brand-gray">Yanıtlama</p>
-                                                <p className="text-sm font-bold text-brand-dark">
-                                                    %{Math.round((q.totalAnswers / results.totalResponses) * 100)}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Question Body */}
-                                <div className="p-6">
-                                    {q.totalAnswers === 0 ? (
-                                        <div className="flex items-center justify-center py-8">
-                                            <div className="text-center">
-                                                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-2">
-                                                    <BarChart3 className="h-5 w-5 text-gray-300" />
-                                                </div>
-                                                <p className="text-sm text-brand-gray">Henüz yanıt verilmemiş</p>
-                                            </div>
-                                        </div>
-                                    ) : isChoiceType(q.type) && q.optionStats.length > 0 ? (
-                                        <>
-                                            {(q.type === 6 || q.type === 7) && (
-                                                <RatingNpsSummary optionStats={q.optionStats} type={q.type} />
-                                            )}
-
-                                            <div className="flex flex-col lg:flex-row gap-8">
-                                                {/* Donut Chart */}
-                                                <div className="w-full lg:w-2/5 flex items-center justify-center">
-                                                    <div className="w-[280px] h-[280px]">
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <PieChart>
-                                                                <Pie data={q.optionStats.filter(o => o.count > 0)}
-                                                                    dataKey="count" nameKey="label"
-                                                                    cx="50%" cy="50%" innerRadius={65} outerRadius={100}
-                                                                    paddingAngle={q.optionStats.filter(o => o.count > 0).length > 1 ? 3 : 0}
-                                                                    label={renderCustomLabel}
-                                                                    labelLine={false}
-                                                                    strokeWidth={0}>
-                                                                    {q.optionStats.filter(o => o.count > 0).map((_, index) => (
-                                                                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                                                                    ))}
-                                                                </Pie>
-                                                                <Tooltip content={({ active, payload }) => {
-                                                                    if (!active || !payload?.[0]) return null;
-                                                                    const d = payload[0].payload;
-                                                                    return (
-                                                                        <div className="bg-white px-3 py-2 rounded-lg shadow-lg border border-surface-muted text-xs">
-                                                                            <p className="font-semibold text-brand-dark">{d.label}</p>
-                                                                            <p className="text-brand-gray">{d.count} kişi · %{d.percentage % 1 === 0 ? d.percentage.toFixed(0) : d.percentage.toFixed(1)}</p>
-                                                                        </div>
-                                                                    );
-                                                                }} />
-                                                            </PieChart>
-                                                        </ResponsiveContainer>
-                                                    </div>
-                                                </div>
-
-                                                {/* Horizontal Bars */}
-                                                <div className="w-full lg:w-3/5 space-y-4">
-                                                    {q.optionStats.map((opt, i) => (
-                                                        <HorizontalBar key={opt.optionId} label={opt.label} count={opt.count}
-                                                            percentage={opt.percentage} color={CHART_COLORS[i % CHART_COLORS.length]}
-                                                            maxPercentage={maxPct} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : isTextType(q.type) ? (
-                                        <div className="space-y-2.5">
-                                            {visibleAnswers.length > 0 ? (
-                                                <>
-                                                    {visibleAnswers.map((ans, i) => (
-                                                        <TextAnswerCard key={i} answer={ans} index={i} questionType={q.type} />
-                                                    ))}
-                                                    {hasMoreText && (
-                                                        <button onClick={() => toggleExpand(q.questionId)}
-                                                            className="w-full py-2.5 text-sm font-medium text-brand-primary hover:text-brand-primary/80 bg-brand-primary/5 hover:bg-brand-primary/10 rounded-lg transition-colors">
-                                                            {isExpanded
-                                                                ? 'Daralt'
-                                                                : `Tüm yanıtları göster (${q.textAnswers.length})`
-                                                            }
-                                                        </button>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <div className="flex items-center justify-center py-8">
-                                                    <p className="text-sm text-brand-gray italic">Henüz metin yanıtı yok.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : q.type === 12 ? (
-                                        <div className="flex items-center gap-2 text-sm text-brand-gray py-4">
-                                            <Info className="h-4 w-4" />
-                                            <span>Bu bir bilgilendirme sorusudur, yanıt beklenmez.</span>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-brand-gray italic py-4">Bu soru tipi için analiz henüz desteklenmiyor.</p>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* ── Footer ── */}
-                <div className="text-center py-4">
-                    <p className="text-xs text-brand-gray">
-                        Toplam {results.questions.length} soru · {results.totalResponses} yanıt analiz edildi
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
+            {tab === 'methodology' && <section className="grid gap-5 lg:grid-cols-2"><article className="rounded-2xl border border-surface-muted bg-white p-6"><BarChart3 className="h-7 w-7 text-brand-primary" /><h2 className="mt-4 text-lg font-bold">Metrik sözlüğü</h2><dl className="mt-5 space-y-4 text-sm"><div><dt className="font-semibold">Katılım oranı</dt><dd className="mt-1 text-brand-gray">{results.methodology.responseRateFormula}</dd></div><div><dt className="font-semibold">Soru yanıtlama oranı</dt><dd className="mt-1 text-brand-gray">{results.methodology.questionRateFormula}</dd></div><div><dt className="font-semibold">Çoklu seçim</dt><dd className="mt-1 text-brand-gray">{results.methodology.multipleChoiceNote}</dd></div></dl></article><article className="rounded-2xl border border-surface-muted bg-white p-6"><ShieldCheck className="h-7 w-7 text-emerald-600" /><h2 className="mt-4 text-lg font-bold">Gizlilik ve yorumlama</h2><p className="mt-4 text-sm leading-6 text-brand-gray">{results.methodology.representationNote}</p><p className="mt-4 rounded-xl bg-surface-ground p-4 text-sm text-brand-dark">Anonim minimum görünür grup: <strong>{results.methodology.anonymousMinimumGroupSize} yanıt</strong>. Bu eşik segmentlerde ve açık metin listelerinde backend tarafından uygulanır.</p></article></section>}
+        </main>
+    </div>;
 };

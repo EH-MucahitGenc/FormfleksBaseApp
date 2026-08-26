@@ -40,7 +40,7 @@ namespace FormfleksBaseApp.Tests.Surveys
                 DateTime.UtcNow.AddDays(1),
                 DateTime.UtcNow.AddDays(10),
                 false,
-                new List<Guid> { Guid.NewGuid() },
+                new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter { IncludedUserIds = new List<Guid> { Guid.NewGuid() } },
                 null,
                 false
             );

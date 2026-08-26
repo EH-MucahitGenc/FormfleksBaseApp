@@ -14,6 +14,7 @@ public class SurveyCampaign : BaseEntity
     public DateTime? EndDate { get; set; }
     public string? EmailSubject { get; set; }
     public string? EmailBodyTemplate { get; set; }
+    public string? TargetAudienceJson { get; set; } // Stores AudienceFilter serialized as JSON
 
     // Navigation properties
     public SurveyTemplateVersion SurveyTemplateVersion { get; set; } = null!;

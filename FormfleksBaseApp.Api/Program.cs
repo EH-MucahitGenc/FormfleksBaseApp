@@ -182,6 +182,7 @@ builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIfsIn
 builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.IIntegrationQueryService, FormfleksBaseApp.Infrastructure.Services.IntegrationQueryService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService, FormfleksBaseApp.Infrastructure.Services.SystemSettingsService>();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory, FormfleksBaseApp.Infrastructure.Services.SurveyAudienceDirectory>();
 
 // SignalR UserId Provider
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, FormfleksBaseApp.Api.Hubs.CustomUserIdProvider>();

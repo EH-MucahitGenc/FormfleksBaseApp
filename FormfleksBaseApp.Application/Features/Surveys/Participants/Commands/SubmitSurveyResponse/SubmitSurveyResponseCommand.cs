@@ -71,9 +71,14 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
                 CompletedAt = DateTime.UtcNow
             });
             
+            // UpdatedAt records the first start transition for legacy assignments.
+            assignment.StartedAt ??= assignment.Status == SurveyAssignmentStatus.Started
+                ? assignment.UpdatedAt ?? now
+                : now;
+
             // Update assignment status
             assignment.Status = SurveyAssignmentStatus.Completed;
-            assignment.CompletedAt = DateTime.UtcNow;
+            assignment.CompletedAt = now;
 
             string? receiptCode = null;
             if (assignment.SurveyCampaign.IsAnonymous)
@@ -87,9 +92,14 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
                 SurveyCampaignId = assignment.SurveyCampaignId,
                 SurveyAssignmentId = assignment.SurveyCampaign.IsAnonymous ? null : assignment.Id,
                 UserId = assignment.SurveyCampaign.IsAnonymous ? null : assignment.UserId,
-                StartedAt = DateTime.UtcNow,
-                SubmittedAt = DateTime.UtcNow,
-                ReceiptCode = receiptCode
+                StartedAt = assignment.StartedAt.Value,
+                SubmittedAt = now,
+                ReceiptCode = receiptCode,
+                CompanySnapshot = assignment.CompanySnapshot,
+                LocationSnapshot = assignment.LocationSnapshot,
+                DepartmentSnapshot = assignment.DepartmentSnapshot,
+                JobTitleSnapshot = assignment.JobTitleSnapshot,
+                PersonnelGroupSnapshot = assignment.PersonnelGroupSnapshot
             };
 
             // We need to evaluate visibility rules server-side

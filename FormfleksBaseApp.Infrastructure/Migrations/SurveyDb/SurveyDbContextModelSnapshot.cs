@@ -22,6 +22,53 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Surveys.SavedAudience", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("active");
+
+                    b.Property<string>("AudienceDefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("audience_definition_json");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("saved_audiences", (string)null);
+                });
+
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Surveys.SurveyAnswer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -72,7 +119,7 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
 
                     b.HasIndex("SurveyResponseId");
 
-                    b.HasIndex("SurveyVersionQuestionId");
+                    b.HasIndex("SurveyVersionQuestionId", "SurveyResponseId");
 
                     b.ToTable("survey_answers", (string)null);
                 });
@@ -144,6 +191,11 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasDefaultValue(true)
                         .HasColumnName("active");
 
+                    b.Property<string>("CompanySnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("company_snapshot");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
@@ -153,6 +205,11 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("DepartmentSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("department_snapshot");
 
                     b.Property<int>("EmailDeliveryStatus")
                         .HasColumnType("integer");
@@ -167,8 +224,49 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("email_sent_at");
 
+                    b.Property<string>("JobTitleSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("job_title_snapshot");
+
                     b.Property<DateTime?>("LastEmailAttemptAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LocationSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("location_snapshot");
+
+                    b.Property<string>("ParticipantDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("participant_display_name");
+
+                    b.Property<string>("ParticipantEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("participant_email");
+
+                    b.Property<string>("PersonnelGroupSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("personnel_group_snapshot");
+
+                    b.Property<DateTime>("SnapshotAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("snapshot_at");
+
+                    b.Property<string>("SnapshotSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("snapshot_source");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
 
                     b.Property<short>("Status")
                         .HasColumnType("smallint")
@@ -194,6 +292,12 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
 
                     b.HasIndex("Token")
                         .IsUnique();
+
+                    b.HasIndex("SurveyCampaignId", "DepartmentSnapshot");
+
+                    b.HasIndex("SurveyCampaignId", "LocationSnapshot");
+
+                    b.HasIndex("SurveyCampaignId", "Status");
 
                     b.HasIndex("SurveyCampaignId", "UserId")
                         .IsUnique();
@@ -251,6 +355,10 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                     b.Property<Guid>("SurveyTemplateVersionId")
                         .HasColumnType("uuid")
                         .HasColumnName("survey_template_version_id");
+
+                    b.Property<string>("TargetAudienceJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("target_audience_json");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -349,11 +457,36 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasDefaultValue(true)
                         .HasColumnName("active");
 
+                    b.Property<string>("CompanySnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("company_snapshot");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("DepartmentSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("department_snapshot");
+
+                    b.Property<string>("JobTitleSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("job_title_snapshot");
+
+                    b.Property<string>("LocationSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("location_snapshot");
+
+                    b.Property<string>("PersonnelGroupSnapshot")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("personnel_group_snapshot");
 
                     b.Property<string>("ReceiptCode")
                         .HasColumnType("text");
@@ -386,7 +519,13 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
 
                     b.HasIndex("SurveyAssignmentId");
 
-                    b.HasIndex("SurveyCampaignId");
+                    b.HasIndex("SurveyCampaignId", "DepartmentSnapshot");
+
+                    b.HasIndex("SurveyCampaignId", "LocationSnapshot");
+
+                    b.HasIndex("SurveyCampaignId", "SubmittedAt");
+
+                    b.HasIndex("SurveyCampaignId", "UserId");
 
                     b.ToTable("survey_responses", (string)null);
                 });

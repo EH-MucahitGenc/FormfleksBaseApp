@@ -2,7 +2,31 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { surveyFillService, type SurveyFillDto, type SurveyAnswerDto } from "../services/surveyFill.service";
 import toast from "react-hot-toast";
-import { CheckCircle2, Star, Loader2 } from "lucide-react";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    CheckCircle2,
+    Clock3,
+    Cloud,
+    FileCheck2,
+    Loader2,
+    LockKeyhole,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    UserRoundCheck,
+} from "lucide-react";
+import "./SurveyFillPage.css";
+
+const BrandLockup = () => (
+    <div className="flex items-center gap-3">
+        <img src="/erkurtlogo.svg" alt="Erkurt Holding" className="h-7 w-auto object-contain sm:h-8" />
+        <span className="h-6 w-px bg-stone-200" aria-hidden="true" />
+        <img src="/logo.svg" alt="Formfleks" className="h-7 w-auto object-contain sm:h-8" />
+    </div>
+);
 
 export const SurveyFillPage = () => {
     const { token } = useParams<{ token: string }>();
@@ -109,6 +133,27 @@ export const SurveyFillPage = () => {
         }
     };
 
+    const visibleSections = Array.isArray(parsedConfig)
+        ? parsedConfig
+            .map((section: any) => ({
+                ...section,
+                Questions: (section.Questions || []).filter(shouldRenderQuestion),
+            }))
+            .filter((section: any) => section.Questions.length > 0)
+        : [];
+
+    const safeRenderIndex = Math.min(currentSectionIndex, Math.max(visibleSections.length - 1, 0));
+    const currentSection = visibleSections[safeRenderIndex];
+    const isLastSection = safeRenderIndex >= visibleSections.length - 1;
+    const sectionProgress = visibleSections.length > 0
+        ? Math.round(((safeRenderIndex + 1) / visibleSections.length) * 100)
+        : 0;
+
+    const goToSection = (index: number) => {
+        setCurrentSectionIndex(Math.max(0, Math.min(index, visibleSections.length - 1)));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
     // Handle inputs
     const handleTextChange = (questionId: string, value: string) => {
@@ -190,7 +235,7 @@ export const SurveyFillPage = () => {
             }
             
             if (firstErrorSectionIndex !== -1) {
-                setCurrentSectionIndex(firstErrorSectionIndex);
+                goToSection(firstErrorSectionIndex);
                 setIsSubmitting(false);
                 return;
             }
@@ -219,55 +264,52 @@ export const SurveyFillPage = () => {
     };
 
     const renderErrorState = (errMsg: string) => {
-        let icon = <Loader2 className="w-12 h-12 text-brand-gray animate-spin mx-auto mb-4" />;
+        let icon = <AlertTriangle className="h-8 w-8" />;
         let title = "Bir Hata Oluştu";
-        let colorClass = "text-red-500";
-        let bgClass = "bg-red-50";
-        let borderClass = "border-red-100";
+        let iconClass = "bg-red-50 text-red-600 ring-red-100";
 
         if (errMsg.toLowerCase().includes("zaten doldurdunuz")) {
-            icon = <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />;
+            icon = <CheckCircle2 className="h-8 w-8" />;
             title = "Anket Tamamlanmış";
-            colorClass = "text-green-600";
-            bgClass = "bg-green-50";
-            borderClass = "border-green-100";
+            iconClass = "bg-emerald-50 text-emerald-600 ring-emerald-100";
         } else if (errMsg.toLowerCase().includes("süresi dolmuş") || errMsg.toLowerCase().includes("aktif değil") || errMsg.toLowerCase().includes("geçersiz") || errMsg.toLowerCase().includes("başlangıç tarihi")) {
-            // Using a simple clock/alert SVG since we might not have the exact lucide-react import ready for it
-            icon = (
-                <svg className="w-16 h-16 text-amber-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            );
+            icon = <Clock3 className="h-8 w-8" />;
             title = "Erişim Yok";
-            colorClass = "text-amber-600";
-            bgClass = "bg-amber-50";
-            borderClass = "border-amber-100";
-        } else {
-            icon = (
-                <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            );
+            iconClass = "bg-amber-50 text-amber-600 ring-amber-100";
         }
 
         return (
-            <div className="min-h-screen bg-surface-ground flex flex-col items-center justify-center p-6">
-                <div className={`max-w-md w-full p-8 text-center rounded-2xl shadow-xl border ${bgClass} ${borderClass}`}>
-                    {icon}
-                    <h2 className={`text-2xl font-bold mb-4 ${colorClass}`}>{title}</h2>
-                    <p className="text-brand-dark font-medium leading-relaxed">{errMsg}</p>
-                    <p className="text-brand-gray text-sm mt-6">
+            <div className="survey-fill-page flex min-h-screen flex-col items-center justify-center p-5">
+                <div className="survey-fill-panel w-full max-w-lg overflow-hidden rounded-[28px] border border-white/80 bg-white">
+                    <div className="border-b border-stone-100 px-7 py-5 sm:px-9">
+                        <BrandLockup />
+                    </div>
+                    <div className="px-7 py-10 text-center sm:px-10 sm:py-12">
+                        <div className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl ring-8 ${iconClass}`}>
+                            {icon}
+                        </div>
+                        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.22em] text-stone-400">Anket erişimi</p>
+                        <h2 className="mb-4 text-3xl font-semibold tracking-tight text-stone-900">{title}</h2>
+                        <p className="font-medium leading-relaxed text-stone-600">{errMsg}</p>
+                        <p className="mt-7 border-t border-stone-100 pt-6 text-sm leading-relaxed text-stone-500">
                         Bu sayfayı artık kapatabilirsiniz veya daha fazla bilgi için sistem yöneticinizle iletişime geçebilirsiniz.
-                    </p>
+                        </p>
+                    </div>
                 </div>
             </div>
         );
     };
 
     if (loading) return (
-        <div className="min-h-screen bg-surface-ground flex flex-col items-center justify-center p-6">
-            <Loader2 className="w-10 h-10 text-brand-primary animate-spin" />
-            <p className="mt-4 text-brand-gray font-medium">Anket yükleniyor, lütfen bekleyin...</p>
+        <div className="survey-fill-page flex min-h-screen flex-col items-center justify-center p-6">
+            <div className="survey-fill-panel flex w-full max-w-sm flex-col items-center rounded-[28px] border border-white/80 bg-white px-8 py-10 text-center">
+                <BrandLockup />
+                <div className="relative mt-9 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-brand-primary ring-8 ring-orange-50/60">
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                </div>
+                <h1 className="mt-7 text-xl font-semibold text-stone-900">Anket hazırlanıyor</h1>
+                <p className="mt-2 text-sm text-stone-500">Güvenli katılım bağlantınız kontrol ediliyor.</p>
+            </div>
         </div>
     );
 
@@ -276,100 +318,182 @@ export const SurveyFillPage = () => {
 
     if (isSuccess) {
         return (
-            <div className="min-h-screen bg-surface-ground py-20 px-4 flex items-center justify-center">
-                <div className="bg-white max-w-md w-full p-8 rounded-xl shadow-sm border border-surface-muted text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <div className={`survey-fill-page flex min-h-screen items-center justify-center p-5 ${survey.isAnonymous ? "" : "survey-fill-page--identified"}`}>
+                <div className="survey-fill-panel w-full max-w-xl overflow-hidden rounded-[30px] border border-white/80 bg-white text-center">
+                    <div className="border-b border-stone-100 px-7 py-5 sm:px-10">
+                        <BrandLockup />
                     </div>
-                    <h2 className="text-2xl font-bold text-brand-dark mb-3">Teşekkürler!</h2>
-                    <p className="text-brand-gray mb-8">Anket yanıtlarınız başarıyla kaydedilmiştir. Katılımınız için teşekkür ederiz.</p>
-                    
-                    {receiptCode && (
-                        <div className="bg-surface-ground p-4 rounded-lg mb-8 border border-surface-muted text-center">
-                            <p className="text-xs text-brand-gray uppercase font-semibold tracking-wider mb-2">Makbuz Kodunuz (Gizlilik Katılım Kanıtı)</p>
-                            <p className="text-xl font-mono font-bold text-brand-dark tracking-widest bg-white p-2 rounded border border-surface-muted inline-block">{receiptCode}</p>
-                            <p className="text-xs text-brand-gray mt-2">Bu kod tamamen size özeldir. Yöneticiler bu kod ile yanıtların size ait olduğunu bilemez, ancak siz katıldığınızı kanıtlayabilirsiniz.</p>
+                    <div className="px-7 py-10 sm:px-12 sm:py-12">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/60">
+                            <CheckCircle2 className="h-10 w-10" />
                         </div>
-                    )}
+                        <p className="mt-8 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">Yanıtlar kaydedildi</p>
+                        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">Katılımınız için teşekkürler</h2>
+                        <p className="mx-auto mt-4 max-w-md leading-relaxed text-stone-500">
+                            {survey.isAnonymous
+                                ? "Yanıtlarınız kimliğinizle ilişkilendirilmeden güvenle kaydedildi."
+                                : "Yanıtlarınız katılım kaydınızla birlikte güvenle kaydedildi."}
+                        </p>
 
-                    <button 
-                        onClick={() => navigate("/auth/login")}
-                        className="bg-brand-primary text-white font-medium px-6 py-2.5 rounded-md hover:bg-brand-primary/90 transition-colors w-full"
-                    >
-                        Sayfayı Kapat
-                    </button>
+                        {receiptCode && (
+                            <div className="mt-8 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5">
+                                <div className="flex items-center justify-center gap-2 text-emerald-800">
+                                    <FileCheck2 className="h-4 w-4" />
+                                    <p className="text-xs font-bold uppercase tracking-[0.16em]">Anonim katılım kanıtı</p>
+                                </div>
+                                <p className="mt-4 font-mono text-2xl font-bold tracking-[0.18em] text-stone-900">{receiptCode}</p>
+                                <p className="mt-3 text-xs leading-relaxed text-stone-500">Bu kod yanıt içeriğinizi veya kimliğinizi göstermez; yalnızca katılımınızı doğrulamanız için size özeldir.</p>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => navigate("/auth/login")}
+                            className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-stone-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-4 focus:ring-stone-200"
+                        >
+                            Sayfayı kapat
+                            <ArrowRight className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-surface-ground py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-surface-muted overflow-hidden">
-                {/* Header */}
-                <div className="bg-brand-primary p-8 text-white">
-                    <h1 className="text-2xl font-bold">{survey.campaignTitle}</h1>
-                    {survey.isAnonymous && (
-                        <p className="mt-4 text-sm font-medium bg-white/20 inline-block px-4 py-1.5 rounded-full backdrop-blur-sm">
-                            🔒 Bu anket tamamen anonimdir. Kimlik bilgileriniz kaydedilmez.
-                        </p>
-                    )}
-                </div>
+        <div className={`survey-fill-page min-h-screen ${survey.isAnonymous ? "" : "survey-fill-page--identified"}`}>
+            <div className="relative z-10 mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-9">
+                <header className="mb-5 flex items-center justify-between rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-xl sm:px-5">
+                    <BrandLockup />
+                    <div className="hidden items-center gap-2 text-xs font-semibold text-stone-500 sm:flex">
+                        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                        Güvenli anket deneyimi
+                    </div>
+                </header>
 
-                {/* Form Body */}
-                <div className="p-8 space-y-12">
-                    {(() => {
-                        const visibleSections = parsedConfig.map((section: any) => ({
-                            ...section,
-                            Questions: section.Questions.filter(shouldRenderQuestion)
-                        })).filter((s: any) => s.Questions.length > 0);
+                <div className="grid items-start gap-5 lg:grid-cols-[330px_minmax(0,1fr)] lg:gap-7">
+                    <aside className="space-y-4 lg:sticky lg:top-7">
+                        <div className="survey-fill-rail relative overflow-hidden rounded-[28px] bg-stone-950 px-6 py-7 text-white sm:px-7 sm:py-8">
+                            <div className="absolute -right-14 -top-16 h-40 w-40 rounded-full bg-brand-primary/30 blur-3xl" aria-hidden="true" />
+                            <div className="absolute -bottom-20 -left-12 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden="true" />
+                            <div className="relative">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-orange-200">
+                                    <Sparkles className="h-3.5 w-3.5" />
+                                    Formfleks Anket
+                                </span>
+                                <h1 className="mt-6 text-3xl font-semibold leading-[1.12] tracking-tight text-white">{survey.campaignTitle}</h1>
+                                <p className="mt-4 text-sm leading-relaxed text-stone-400">Görüşlerinizi paylaşın; her yanıt daha iyi bir çalışma deneyimine katkı sağlar.</p>
 
-                        if (visibleSections.length === 0) return <div className="text-center text-brand-gray">Gösterilecek soru bulunmuyor.</div>;
-
-                        const safeRenderIndex = Math.min(currentSectionIndex, visibleSections.length - 1);
-                        const section = visibleSections[safeRenderIndex];
-                        
-                        return (
-                        <div key={section.Id} className="space-y-6">
-                            {(section.Title || section.Description) && (
-                                <div className="border-b border-surface-muted pb-3 mb-6">
-                                    <h2 className="text-xl font-bold text-brand-dark">{section.Title}</h2>
-                                    {section.Description && <p className="text-sm text-brand-gray mt-2">{section.Description}</p>}
+                                <div className="mt-8 border-t border-white/10 pt-6">
+                                    <div className="flex items-end justify-between gap-3">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">İlerleme</p>
+                                            <p className="mt-1 text-sm font-semibold text-stone-200">Bölüm {safeRenderIndex + 1} / {visibleSections.length || 1}</p>
+                                        </div>
+                                        <span className="text-2xl font-semibold text-white">%{sectionProgress}</span>
+                                    </div>
+                                    <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-brand-primary to-orange-300 transition-all duration-500" style={{ width: `${sectionProgress}%` }} />
+                                    </div>
                                 </div>
-                            )}
+                            </div>
+                        </div>
 
-                            <div className="space-y-8">
-                                {section.Questions.map((q: any) => {
+                        <div className={`rounded-[24px] border p-5 ${survey.isAnonymous ? "border-emerald-200 bg-emerald-50/90" : "border-orange-200 bg-orange-50/90"}`}>
+                            <div className="flex items-start gap-3">
+                                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${survey.isAnonymous ? "bg-emerald-700 text-white" : "bg-brand-primary text-white"}`}>
+                                    {survey.isAnonymous ? <LockKeyhole className="h-5 w-5" /> : <UserRoundCheck className="h-5 w-5" />}
+                                </div>
+                                <div>
+                                    <p className={`text-[10px] font-bold uppercase tracking-[0.18em] ${survey.isAnonymous ? "text-emerald-700" : "text-orange-700"}`}>
+                                        {survey.isAnonymous ? "Anonim katılım" : "Kimlikli katılım"}
+                                    </p>
+                                    <h2 className="mt-1 text-base font-semibold text-stone-950">
+                                        {survey.isAnonymous ? "Kimliğiniz yanıtlarla eşleşmez" : "Yanıtlarınız davetinizle ilişkilidir"}
+                                    </h2>
+                                </div>
+                            </div>
+                            <p className="mt-4 text-sm leading-relaxed text-stone-600">
+                                {survey.isAnonymous
+                                    ? "Adınız ve e-posta adresiniz yanıt kaydına eklenmez; raporlarda yanıtlarınız kimliğinizle ilişkilendirilmez."
+                                    : "Bu anket anonim değildir. Yanıtlarınız size gönderilen katılım kaydıyla ilişkilendirilerek saklanır."}
+                            </p>
+                            <div className="mt-4 space-y-2 border-t border-black/5 pt-4 text-xs font-medium text-stone-600">
+                                {(survey.isAnonymous
+                                    ? ["Yanıtlar kimlikten ayrı tutulur", "Katılım sonunda özel kanıt kodu sunulur"]
+                                    : ["Katılım yalnızca size atanan davetle yapılır", "Göndermeden önce yanıtlarınızı kontrol edin"]
+                                ).map(item => (
+                                    <div key={item} className="flex items-center gap-2">
+                                        <Check className={`h-3.5 w-3.5 ${survey.isAnonymous ? "text-emerald-700" : "text-orange-700"}`} />
+                                        {item}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/75 p-4 text-stone-500 backdrop-blur">
+                            <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-brand-primary" />
+                            <p className="text-xs leading-relaxed"><span className="font-semibold text-stone-700">Otomatik taslak açık.</span> Yanıtlarınız gönderene kadar bu cihazda korunur.</p>
+                        </div>
+                    </aside>
+
+                    <main className="survey-fill-panel overflow-hidden rounded-[28px] border border-white/90 bg-white">
+                        <div className="border-b border-stone-100 px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-sm font-bold text-brand-primary">{String(safeRenderIndex + 1).padStart(2, "0")}</span>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-400">Anket bölümü</p>
+                                    <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-stone-950 sm:text-2xl">{currentSection?.Title || `Bölüm ${safeRenderIndex + 1}`}</h2>
+                                </div>
+                            </div>
+                            {currentSection?.Description && <p className="mt-4 max-w-2xl text-sm leading-relaxed text-stone-500">{currentSection.Description}</p>}
+                        </div>
+
+                        <div className="space-y-5 bg-stone-50/60 px-4 py-5 sm:px-7 sm:py-7 lg:px-8">
+                            {visibleSections.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-stone-200 bg-white p-10 text-center text-sm text-stone-500">Gösterilecek soru bulunmuyor.</div>
+                            ) : (
+                            <div key={currentSection.Id} className="space-y-5">
+                                {currentSection.Questions.map((q: any, questionIndex: number) => {
                                     let settings: any = {};
                                     try { if (q.SettingsJson) settings = JSON.parse(q.SettingsJson); } catch {}
 
                                     return (
-                                    <div key={q.Id} className={`bg-surface-base p-6 rounded-lg border border-surface-muted transition-colors hover:border-brand-primary/30 ${q.Type === 12 ? "bg-blue-50/50 border-blue-100" : ""}`}>
-                                        <div className="mb-4">
-                                            <h3 className={`text-base font-semibold ${q.Type === 12 ? "text-blue-900" : "text-brand-dark"}`}>
-                                                {q.Title} {q.IsRequired && q.Type !== 12 && <span className="text-red-500 ml-1">*</span>}
+                                    <section key={q.Id} className={`survey-question-card rounded-[22px] border p-5 transition duration-300 sm:p-6 ${q.Type === 12 ? "border-sky-100 bg-sky-50/70" : "border-stone-200/80 bg-white hover:border-orange-200 hover:shadow-[0_12px_30px_-24px_rgba(28,20,18,0.45)]"}`} style={{ animationDelay: `${Math.min(questionIndex * 70, 280)}ms` }}>
+                                        <div className="mb-5 flex items-start gap-3">
+                                            <span className={`mt-0.5 flex h-7 min-w-7 items-center justify-center rounded-lg px-1.5 text-[10px] font-bold ${q.Type === 12 ? "bg-sky-100 text-sky-700" : "bg-stone-100 text-stone-500"}`}>
+                                                {q.Type === 12 ? "i" : String(questionIndex + 1).padStart(2, "0")}
+                                            </span>
+                                            <div className="min-w-0 flex-1">
+                                            <h3 className={`text-[15px] font-semibold leading-relaxed sm:text-base ${q.Type === 12 ? "text-sky-950" : "text-stone-900"}`}>
+                                                {q.Title}
                                             </h3>
-                                            {q.Description && <p className={`text-sm mt-1 ${q.Type === 12 ? "text-blue-700" : "text-brand-gray"}`}>{q.Description}</p>}
+                                            {q.Description && <p className={`mt-1.5 text-sm leading-relaxed ${q.Type === 12 ? "text-sky-700" : "text-stone-500"}`}>{q.Description}</p>}
+                                            </div>
+                                            {q.IsRequired && q.Type !== 12 && (
+                                                <span className="mt-1 flex h-2 w-2 shrink-0 rounded-full bg-brand-primary sm:h-auto sm:w-auto sm:rounded-full sm:bg-orange-50 sm:px-2.5 sm:py-1 sm:text-[9px] sm:font-bold sm:uppercase sm:tracking-[0.12em] sm:text-orange-700" aria-label="Zorunlu alan">
+                                                    <span className="hidden sm:inline">Zorunlu</span>
+                                                </span>
+                                            )}
                                         </div>
 
                                         {q.Type === 1 ? (
                                             <input 
                                                 type="text" 
-                                                className="w-full border-surface-muted rounded-md shadow-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-sm p-3 border outline-none transition-all"
+                                                className="w-full rounded-xl border border-stone-200 bg-stone-50/70 px-4 py-3.5 text-sm text-stone-900 shadow-sm outline-none transition placeholder:text-stone-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-orange-100"
                                                 value={answers[q.Id]?.textValue || ""}
                                                 onChange={e => handleTextChange(q.Id, e.target.value)}
                                                 placeholder="Yanıtınız..."
                                             />
                                         ) : q.Type === 2 ? (
                                             <textarea 
-                                                className="w-full border-surface-muted rounded-md shadow-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-sm p-3 border outline-none transition-all min-h-[120px] resize-y"
+                                                className="min-h-[140px] w-full resize-y rounded-xl border border-stone-200 bg-stone-50/70 px-4 py-3.5 text-sm leading-relaxed text-stone-900 shadow-sm outline-none transition placeholder:text-stone-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-orange-100"
                                                 value={answers[q.Id]?.textValue || ""}
                                                 onChange={e => handleTextChange(q.Id, e.target.value)}
                                                 placeholder="Yanıtınız..."
                                             />
                                         ) : q.Type === 5 ? ( // YesNo
-                                            <div className="space-y-3 mt-4">
-                                                <label className="flex items-center space-x-3 cursor-pointer group">
+                                            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                                                <label className={`survey-choice flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition ${answers[q.Id]?.textValue === 'true' ? "border-orange-300 bg-orange-50 text-orange-950" : "border-stone-200 bg-stone-50/60 text-stone-700 hover:border-orange-200 hover:bg-white"}`}>
                                                         <div className="relative flex items-center">
                                                             <input 
                                                                 type="radio" 
@@ -378,13 +502,13 @@ export const SurveyFillPage = () => {
                                                                 onChange={() => handleTextChange(q.Id, 'true')}
                                                                 className="peer sr-only"
                                                             />
-                                                            <div className="w-5 h-5 rounded-full border-2 border-surface-muted peer-checked:border-brand-primary peer-checked:bg-brand-primary transition-all flex items-center justify-center">
-                                                                <div className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-stone-300 transition peer-checked:border-brand-primary peer-checked:bg-brand-primary">
+                                                                <div className={`h-2 w-2 rounded-full bg-white transition-opacity ${answers[q.Id]?.textValue === 'true' ? "opacity-100" : "opacity-0"}`}></div>
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm text-brand-dark group-hover:text-brand-primary transition-colors">Evet</span>
+                                                        <span className="text-sm font-semibold">Evet</span>
                                                 </label>
-                                                <label className="flex items-center space-x-3 cursor-pointer group">
+                                                <label className={`survey-choice flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition ${answers[q.Id]?.textValue === 'false' ? "border-orange-300 bg-orange-50 text-orange-950" : "border-stone-200 bg-stone-50/60 text-stone-700 hover:border-orange-200 hover:bg-white"}`}>
                                                         <div className="relative flex items-center">
                                                             <input 
                                                                 type="radio" 
@@ -393,17 +517,19 @@ export const SurveyFillPage = () => {
                                                                 onChange={() => handleTextChange(q.Id, 'false')}
                                                                 className="peer sr-only"
                                                             />
-                                                            <div className="w-5 h-5 rounded-full border-2 border-surface-muted peer-checked:border-brand-primary peer-checked:bg-brand-primary transition-all flex items-center justify-center">
-                                                                <div className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-stone-300 transition peer-checked:border-brand-primary peer-checked:bg-brand-primary">
+                                                                <div className={`h-2 w-2 rounded-full bg-white transition-opacity ${answers[q.Id]?.textValue === 'false' ? "opacity-100" : "opacity-0"}`}></div>
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm text-brand-dark group-hover:text-brand-primary transition-colors">Hayır</span>
+                                                        <span className="text-sm font-semibold">Hayır</span>
                                                 </label>
                                             </div>
                                         ) : q.Type === 3 ? ( // Single Choice
-                                            <div className="space-y-3 mt-4">
-                                                {(q.Options || []).map((opt: any) => (
-                                                    <label key={opt.Id} className="flex items-center space-x-3 cursor-pointer group">
+                                            <div className="mt-2 space-y-2.5">
+                                                {(q.Options || []).map((opt: any) => {
+                                                    const isSelected = answers[q.Id]?.selectedOptionIds?.includes(opt.Id) || false;
+                                                    return (
+                                                    <label key={opt.Id} className={`survey-choice flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition ${isSelected ? "border-orange-300 bg-orange-50 text-orange-950" : "border-stone-200 bg-stone-50/60 text-stone-700 hover:border-orange-200 hover:bg-white"}`}>
                                                         <div className="relative flex items-center">
                                                             <input 
                                                                 type="radio" 
@@ -412,18 +538,21 @@ export const SurveyFillPage = () => {
                                                                 onChange={() => handleSingleChoice(q.Id, opt.Id)}
                                                                 className="peer sr-only"
                                                             />
-                                                            <div className="w-5 h-5 rounded-full border-2 border-surface-muted peer-checked:border-brand-primary peer-checked:bg-brand-primary transition-all flex items-center justify-center">
-                                                                <div className="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-stone-300 transition peer-checked:border-brand-primary peer-checked:bg-brand-primary">
+                                                                <div className={`h-2 w-2 rounded-full bg-white transition-opacity ${isSelected ? "opacity-100" : "opacity-0"}`}></div>
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm text-brand-dark group-hover:text-brand-primary transition-colors">{opt.Text}</span>
+                                                        <span className="text-sm font-medium">{opt.Text}</span>
                                                     </label>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : q.Type === 4 ? ( // Multiple Choice
-                                            <div className="space-y-3 mt-4">
-                                                {q.Options?.map((opt: any) => (
-                                                    <label key={opt.Id} className="flex items-center space-x-3 cursor-pointer group">
+                                            <div className="mt-2 space-y-2.5">
+                                                {q.Options?.map((opt: any) => {
+                                                    const isSelected = answers[q.Id]?.selectedOptionIds?.includes(opt.Id) || false;
+                                                    return (
+                                                    <label key={opt.Id} className={`survey-choice flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition ${isSelected ? "border-orange-300 bg-orange-50 text-orange-950" : "border-stone-200 bg-stone-50/60 text-stone-700 hover:border-orange-200 hover:bg-white"}`}>
                                                         <div className="relative flex items-center">
                                                             <input 
                                                                 type="checkbox" 
@@ -431,16 +560,17 @@ export const SurveyFillPage = () => {
                                                                 onChange={e => handleMultipleChoice(q.Id, opt.Id, e.target.checked)}
                                                                 className="peer sr-only"
                                                             />
-                                                            <div className="w-5 h-5 rounded border-2 border-surface-muted peer-checked:border-brand-primary peer-checked:bg-brand-primary transition-all flex items-center justify-center">
-                                                                <svg className="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded-md border-2 border-stone-300 transition peer-checked:border-brand-primary peer-checked:bg-brand-primary">
+                                                                <Check className={`h-3 w-3 text-white transition-opacity ${isSelected ? "opacity-100" : "opacity-0"}`} strokeWidth={3} />
                                                             </div>
                                                         </div>
-                                                        <span className="text-sm text-brand-dark group-hover:text-brand-primary transition-colors">{opt.Text}</span>
+                                                        <span className="text-sm font-medium">{opt.Text}</span>
                                                     </label>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : q.Type === 6 ? ( // Rating
-                                            <div className="flex gap-2 items-center mt-2">
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
                                                 {Array.from({ length: settings.maxStars || 5 }).map((_, i) => {
                                                     const starValue = i + 1;
                                                     const currentValue = answers[q.Id]?.numericValue || 0;
@@ -449,26 +579,28 @@ export const SurveyFillPage = () => {
                                                             key={starValue}
                                                             type="button"
                                                             onClick={() => handleNumberChange(q.Id, starValue)}
-                                                            className="focus:outline-none transition-transform hover:scale-110"
+                                                            aria-label={`${starValue} yıldız`}
+                                                            className={`flex h-12 w-12 items-center justify-center rounded-xl border transition focus:outline-none focus:ring-4 focus:ring-amber-100 ${starValue <= currentValue ? "border-amber-200 bg-amber-50" : "border-stone-200 bg-stone-50 hover:border-amber-200 hover:bg-amber-50/60"}`}
                                                         >
                                                             <Star 
-                                                                className={`w-8 h-8 ${starValue <= currentValue ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} 
+                                                                className={`h-7 w-7 transition ${starValue <= currentValue ? "fill-amber-400 text-amber-400" : "text-stone-300"}`}
                                                             />
                                                         </button>
                                                     );
                                                 })}
                                             </div>
                                         ) : q.Type === 7 ? ( // NPS
-                                            <div className="flex flex-wrap gap-2 mt-4">
+                                            <div className="mt-2 flex flex-wrap gap-2">
                                                 {Array.from({ length: 11 }).map((_, i) => (
                                                     <button
                                                         key={i}
                                                         type="button"
                                                         onClick={() => handleNumberChange(q.Id, i)}
-                                                        className={`w-10 h-10 rounded-md font-medium flex items-center justify-center transition-colors ${
+                                                        aria-label={`Puan ${i}`}
+                                                        className={`flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-semibold transition focus:outline-none focus:ring-4 focus:ring-orange-100 ${
                                                             answers[q.Id]?.numericValue === i 
-                                                            ? "bg-brand-primary text-white border-brand-primary" 
-                                                            : "bg-white border border-surface-muted text-brand-dark hover:border-brand-primary"
+                                                            ? "border-brand-primary bg-brand-primary text-white shadow-sm"
+                                                            : "border-stone-200 bg-stone-50 text-stone-700 hover:border-orange-300 hover:bg-orange-50"
                                                         }`}
                                                     >
                                                         {i}
@@ -478,7 +610,7 @@ export const SurveyFillPage = () => {
                                         ) : q.Type === 8 ? ( // Number
                                             <input 
                                                 type="number" 
-                                                className="w-full max-w-sm border-surface-muted rounded-md shadow-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-sm p-3 border outline-none transition-all"
+                                                className="w-full max-w-sm rounded-xl border border-stone-200 bg-stone-50/70 px-4 py-3.5 text-sm text-stone-900 shadow-sm outline-none transition placeholder:text-stone-400 focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-orange-100"
                                                 value={answers[q.Id]?.numericValue ?? ""}
                                                 onChange={e => handleNumberChange(q.Id, e.target.value === "" ? null : Number(e.target.value))}
                                                 placeholder="Sayı girin..."
@@ -486,12 +618,12 @@ export const SurveyFillPage = () => {
                                         ) : q.Type === 9 ? ( // Date
                                             <input 
                                                 type="date" 
-                                                className="w-full max-w-sm border-surface-muted rounded-md shadow-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary text-sm p-3 border outline-none transition-all"
+                                                className="w-full max-w-sm rounded-xl border border-stone-200 bg-stone-50/70 px-4 py-3.5 text-sm text-stone-900 shadow-sm outline-none transition focus:border-brand-primary focus:bg-white focus:ring-4 focus:ring-orange-100"
                                                 value={answers[q.Id]?.textValue || ""}
                                                 onChange={e => handleTextChange(q.Id, e.target.value)}
                                             />
                                         ) : q.Type === 10 ? ( // Matrix
-                                            <div className="overflow-x-auto mt-4">
+                                            <div className="mt-2 overflow-x-auto rounded-xl border border-stone-200">
                                                 {(() => {
                                                     let rows: string[] = [];
                                                     let cols: string[] = [];
@@ -501,7 +633,7 @@ export const SurveyFillPage = () => {
                                                         cols = s.cols || [];
                                                     } catch {}
 
-                                                    if (rows.length === 0 || cols.length === 0) return <div className="text-sm text-brand-gray">Matris ayarları eksik.</div>;
+                                                    if (rows.length === 0 || cols.length === 0) return <div className="p-4 text-sm text-stone-500">Matris ayarları eksik.</div>;
 
                                                     const currentMatrixVal = answers[q.Id]?.textValue ? JSON.parse(answers[q.Id].textValue!) : {};
 
@@ -511,27 +643,27 @@ export const SurveyFillPage = () => {
                                                     };
 
                                                     return (
-                                                        <table className="w-full text-sm text-left">
+                                                        <table className="w-full min-w-[560px] text-left text-sm">
                                                             <thead>
                                                                 <tr>
-                                                                    <th className="p-2 border-b border-surface-muted bg-surface-ground"></th>
+                                                                    <th className="border-b border-stone-200 bg-stone-100/80 p-3"></th>
                                                                     {cols.map((col, cIdx) => (
-                                                                        <th key={cIdx} className="p-2 border-b border-surface-muted bg-surface-ground text-center font-medium">{col}</th>
+                                                                        <th key={cIdx} className="border-b border-stone-200 bg-stone-100/80 p-3 text-center text-xs font-semibold text-stone-600">{col}</th>
                                                                     ))}
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 {rows.map((row, rIdx) => (
-                                                                    <tr key={rIdx} className="border-b border-surface-muted last:border-0 hover:bg-surface-ground/50 transition-colors">
-                                                                        <td className="p-2 font-medium">{row}</td>
+                                                                    <tr key={rIdx} className="border-b border-stone-100 transition-colors last:border-0 hover:bg-orange-50/30">
+                                                                        <td className="p-3 font-medium text-stone-700">{row}</td>
                                                                         {cols.map((_, cIdx) => (
-                                                                            <td key={cIdx} className="p-2 text-center">
+                                                                            <td key={cIdx} className="p-3 text-center">
                                                                                 <input 
                                                                                     type="radio" 
                                                                                     name={`matrix_${q.Id}_${rIdx}`} 
                                                                                     checked={currentMatrixVal[rIdx] === cIdx}
                                                                                     onChange={() => handleMatrixChange(rIdx, cIdx)}
-                                                                                    className="w-4 h-4 text-brand-primary border-surface-muted focus:ring-brand-primary cursor-pointer"
+                                                                                    className="h-4 w-4 cursor-pointer accent-orange-500 focus:ring-brand-primary"
                                                                                 />
                                                                             </td>
                                                                         ))}
@@ -543,10 +675,10 @@ export const SurveyFillPage = () => {
                                                 })()}
                                             </div>
                                         ) : q.Type === 11 ? ( // File
-                                            <div className="mt-2 space-y-2">
+                                            <div className="mt-2 space-y-3">
                                                 {uploadingFiles[q.Id] ? (
-                                                    <div className="flex items-center text-sm text-brand-primary">
-                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    <div className="flex items-center rounded-xl border border-orange-100 bg-orange-50 p-4 text-sm font-medium text-brand-primary">
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                         Dosya yükleniyor...
                                                     </div>
                                                 ) : !answers[q.Id]?.textValue ? (
@@ -576,13 +708,13 @@ export const SurveyFillPage = () => {
                                                                 e.target.value = '';
                                                             }
                                                         }}
-                                                        className="block w-full text-sm text-brand-dark file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+                                                        className="block w-full cursor-pointer rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3 text-sm text-stone-600 transition file:mr-4 file:rounded-lg file:border-0 file:bg-stone-950 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:border-orange-300 hover:bg-orange-50/30 disabled:opacity-50"
                                                     />
                                                 ) : null}
                                                 
                                                 {answers[q.Id]?.textValue && (
-                                                    <div className="flex items-center justify-between p-3 border border-surface-muted rounded-md bg-surface">
-                                                        <span className="text-sm text-brand-dark truncate">
+                                                    <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                                        <span className="truncate text-sm font-medium text-emerald-900">
                                                             {(() => {
                                                                 try {
                                                                     const data = JSON.parse(answers[q.Id].textValue!);
@@ -596,7 +728,7 @@ export const SurveyFillPage = () => {
                                                             type="button"
                                                             disabled={isSubmitting}
                                                             onClick={() => handleTextChange(q.Id, "")}
-                                                            className="text-red-500 hover:text-red-700 disabled:opacity-50 text-sm ml-2"
+                                                            className="ml-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                                                         >
                                                             Kaldır
                                                         </button>
@@ -606,64 +738,59 @@ export const SurveyFillPage = () => {
                                         ) : q.Type === 12 ? ( // Info
                                             null // Rendered via description above
                                         ) : (
-                                            <div className="text-sm text-brand-gray italic p-4 bg-surface-ground rounded-md border border-surface-muted border-dashed">
+                                            <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50 p-4 text-sm italic text-stone-500">
                                                 Desteklenmeyen soru tipi: {q.Type}
                                             </div>
                                         )}
-                                    </div>
+                                    </section>
                                     );
                                 })}
                             </div>
+                            )}
                         </div>
-                        );
-                    })()}
-                </div>
 
-                <div className="p-8 bg-surface-ground border-t border-surface-muted flex justify-between items-center">
-                    {(() => {
-                        const visibleSections = parsedConfig.map((section: any) => ({
-                            ...section,
-                            Questions: section.Questions.filter(shouldRenderQuestion)
-                        })).filter((s: any) => s.Questions.length > 0);
-                        
-                        const safeRenderIndex = Math.min(currentSectionIndex, visibleSections.length - 1);
-                        const isLastSection = safeRenderIndex >= visibleSections.length - 1;
-                        
-                        return (
-                            <>
+                        <div className="flex flex-col-reverse gap-3 border-t border-stone-100 bg-white px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+                            <button
+                                onClick={() => goToSection(safeRenderIndex - 1)}
+                                disabled={safeRenderIndex <= 0 || isSubmitting}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300 hover:bg-stone-50 focus:outline-none focus:ring-4 focus:ring-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Geri
+                            </button>
+
+                            <div className="hidden text-center sm:block">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone-400">İlerleme</p>
+                                <p className="mt-0.5 text-xs font-semibold text-stone-600">{safeRenderIndex + 1}. bölüm, toplam {visibleSections.length || 1}</p>
+                            </div>
+
+                            {isLastSection ? (
                                 <button
-                                    onClick={() => setCurrentSectionIndex(Math.max(0, safeRenderIndex - 1))}
-                                    disabled={safeRenderIndex <= 0 || isSubmitting}
-                                    className="px-6 py-2.5 border border-surface-muted rounded-md text-sm font-medium text-brand-dark hover:bg-surface-muted transition-colors disabled:opacity-50"
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting || visibleSections.length === 0}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(246,137,76,0.9)] transition hover:-translate-y-0.5 hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    Geri
+                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                    {isSubmitting ? "Gönderiliyor..." : "Anketi tamamla"}
                                 </button>
-                                
-                                <div className="text-xs text-brand-gray">
-                                    Bölüm {safeRenderIndex + 1} / {visibleSections.length || 1}
-                                </div>
-
-                                {isLastSection ? (
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={isSubmitting}
-                                        className="bg-brand-primary text-white font-medium px-8 py-2.5 rounded-md hover:bg-brand-primary/90 transition-colors shadow-sm disabled:opacity-50"
-                                    >
-                                        {isSubmitting ? "Gönderiliyor..." : "Anketi Tamamla"}
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => setCurrentSectionIndex(Math.min(visibleSections.length - 1, safeRenderIndex + 1))}
-                                        disabled={isSubmitting}
-                                        className="bg-brand-dark text-white font-medium px-8 py-2.5 rounded-md hover:bg-brand-dark/90 transition-colors shadow-sm disabled:opacity-50"
-                                    >
-                                        İleri
-                                    </button>
-                                )}
-                            </>
-                        );
-                    })()}
+                            ) : (
+                                <button
+                                    onClick={() => goToSection(safeRenderIndex + 1)}
+                                    disabled={isSubmitting || visibleSections.length === 0}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(28,20,18,0.7)] transition hover:-translate-y-0.5 hover:bg-stone-800 focus:outline-none focus:ring-4 focus:ring-stone-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Sonraki bölüm
+                                    <ArrowRight className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    </main>
                 </div>
+
+                <footer className="mt-6 flex flex-col items-center justify-between gap-2 px-2 text-center text-xs text-stone-500 sm:flex-row sm:text-left">
+                    <p>Formfleks ile güvenli ve erişilebilir anket deneyimi</p>
+                    <p>Yanıtlar gönderilene kadar taslak olarak bu cihazda saklanır.</p>
+                </footer>
             </div>
         </div>
     );

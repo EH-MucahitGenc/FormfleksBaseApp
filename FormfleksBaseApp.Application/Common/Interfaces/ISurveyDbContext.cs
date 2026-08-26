@@ -17,6 +17,7 @@ public interface ISurveyDbContext
     DbSet<SurveyResultViewer> SurveyResultViewers { get; }
     DbSet<SurveyAnswerFile> SurveyAnswerFiles { get; }
     DbSet<SurveyParticipationGuard> SurveyParticipationGuards { get; }
+    DbSet<SavedAudience> SavedAudiences { get; }
 
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

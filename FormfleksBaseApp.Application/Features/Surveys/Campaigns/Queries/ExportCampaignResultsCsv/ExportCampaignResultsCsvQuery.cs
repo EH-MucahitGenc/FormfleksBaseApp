@@ -12,17 +12,17 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv;
 
-public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin) : IRequest<byte[]>;
+public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin, bool IncludeIdentities = false) : IRequest<byte[]>;
 
 public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampaignResultsCsvQuery, byte[]>
 {
     private readonly ISurveyDbContext _context;
-    private readonly IDynamicFormsDbContext _dynamicFormsContext;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory _audienceDirectory;
 
-    public ExportCampaignResultsCsvQueryHandler(ISurveyDbContext context, IDynamicFormsDbContext dynamicFormsContext)
+    public ExportCampaignResultsCsvQueryHandler(ISurveyDbContext context, FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory audienceDirectory)
     {
         _context = context;
-        _dynamicFormsContext = dynamicFormsContext;
+        _audienceDirectory = audienceDirectory;
     }
 
     public async Task<byte[]> Handle(ExportCampaignResultsCsvQuery request, CancellationToken cancellationToken)
@@ -45,21 +45,12 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
         }
 
         var responses = await _context.SurveyResponses
+            .Include(r => r.SurveyAssignment)
             .Include(r => r.Answers)
                 .ThenInclude(a => a.Files)
             .Where(r => r.SurveyCampaignId == request.CampaignId)
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync(cancellationToken);
-
-        var userIds = responses.Where(r => r.UserId.HasValue).Select(r => r.UserId!.Value).Distinct().ToList();
-        var userDict = new Dictionary<Guid, string>();
-        if (userIds.Any() && !campaign.IsAnonymous)
-        {
-            userDict = await _dynamicFormsContext.QdmsPersoneller
-                .AsNoTracking()
-                .Where(u => u.LinkedUserId != null && userIds.Contains(u.LinkedUserId.Value))
-                .ToDictionaryAsync(u => u.LinkedUserId!.Value, u => u.Adi + " " + u.Soyadi, cancellationToken);
-        }
 
         var questions = campaign.SurveyTemplateVersion.Sections.SelectMany(s => s.Questions).OrderBy(q => q.SortOrder).ToList();
 
@@ -77,15 +68,50 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
             return sanitized;
         }
 
+        if (campaign.IsAnonymous || !request.IncludeIdentities)
+        {
+            sb.AppendLine("Soru;Seçenek / Metrik;Sayı;Yüzde;Payda");
+            foreach (var question in questions.Where(q => q.QuestionType != SurveyQuestionType.Info))
+            {
+                var answers = responses.SelectMany(r => r.Answers).Where(a => a.SurveyVersionQuestionId == question.Id).ToList();
+                var validCount = answers.Count;
+                if (question.QuestionType is SurveyQuestionType.SingleChoice or SurveyQuestionType.MultipleChoice)
+                {
+                    var selectedIds = new List<Guid>();
+                    foreach (var answer in answers.Where(a => !string.IsNullOrWhiteSpace(a.ValueJson)))
+                    {
+                        try { selectedIds.AddRange(JsonSerializer.Deserialize<List<Guid>>(answer.ValueJson!) ?? []); }
+                        catch (JsonException) { }
+                    }
+                    foreach (var option in question.Options.OrderBy(o => o.SortOrder))
+                    {
+                        var count = selectedIds.Count(id => id == option.Id);
+                        var percentage = validCount == 0 ? 0 : Math.Round((double)count / validCount * 100, 1);
+                        sb.AppendLine($"{SanitizeCsv(question.Title)};{SanitizeCsv(option.Label)};{count};{percentage};{validCount}");
+                    }
+                }
+                else if (question.QuestionType is SurveyQuestionType.Rating or SurveyQuestionType.NPS or SurveyQuestionType.Number)
+                {
+                    var values = answers.Where(a => a.ValueNumber.HasValue).Select(a => a.ValueNumber!.Value).ToList();
+                    var average = values.Count == 0 ? "" : Math.Round(values.Average(), 2).ToString("0.##");
+                    sb.AppendLine($"{SanitizeCsv(question.Title)};Ortalama;{average};;{values.Count}");
+                }
+                else if (question.QuestionType is SurveyQuestionType.ShortText or SurveyQuestionType.LongText)
+                {
+                    sb.AppendLine($"{SanitizeCsv(question.Title)};Metin yanıtı sayısı;{validCount};;{responses.Count}");
+                }
+                else
+                {
+                    sb.AppendLine($"{SanitizeCsv(question.Title)};Geçerli yanıt;{validCount};{(responses.Count == 0 ? 0 : Math.Round((double)validCount / responses.Count * 100, 1))};{responses.Count}");
+                }
+            }
+
+            var aggregateBytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return Encoding.UTF8.GetPreamble().Concat(aggregateBytes).ToArray();
+        }
+
         // Header
-        if (campaign.IsAnonymous)
-        {
-            sb.Append("Yanıt No;Tarih");
-        }
-        else
-        {
-            sb.Append("Yanıt ID;Katılımcı;Başlama Zamanı;Bitiş Zamanı;Makbuz Kodu");
-        }
+        sb.Append("Yanıt ID;Katılımcı;E-posta;Departman;Lokasyon;Başlama Zamanı;Bitiş Zamanı");
 
         foreach (var q in questions)
         {
@@ -97,20 +123,8 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
         int rowIndex = 1;
         foreach (var r in responses)
         {
-            if (campaign.IsAnonymous)
-            {
-                // Mask identifiers and exact times for anonymity
-                sb.Append($"{rowIndex};{r.SubmittedAt:dd.MM.yyyy}");
-            }
-            else
-            {
-                string participantName = "-";
-                if (r.UserId.HasValue)
-                {
-                    participantName = userDict.GetValueOrDefault(r.UserId.Value, "Bilinmeyen Kullanıcı");
-                }
-                sb.Append($"{r.Id};{participantName};{r.StartedAt:dd.MM.yyyy HH:mm};{r.SubmittedAt:dd.MM.yyyy HH:mm};{r.ReceiptCode ?? "-"}");
-            }
+            var assignment = r.SurveyAssignment;
+            sb.Append($"{r.Id};{SanitizeCsv(assignment?.ParticipantDisplayName ?? "Bilinmeyen Kullanıcı")};{SanitizeCsv(assignment?.ParticipantEmail)};{SanitizeCsv(assignment?.DepartmentSnapshot)};{SanitizeCsv(assignment?.LocationSnapshot)};{r.StartedAt:dd.MM.yyyy HH:mm};{r.SubmittedAt:dd.MM.yyyy HH:mm}");
             
             rowIndex++;
 

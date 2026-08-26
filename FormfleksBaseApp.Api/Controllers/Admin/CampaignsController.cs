@@ -19,11 +19,29 @@ public class CampaignsController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("participants/search")]
+    [HttpGet("participants/facets")]
     [Authorize(Policy = AppPermissions.PolicySurveysPublish)]
-    public async Task<IActionResult> SearchParticipants([FromQuery] string query)
+    public async Task<IActionResult> GetParticipantFacets()
     {
-        var result = await _mediator.Send(new SearchParticipantsQuery(query));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Participants.Queries.GetParticipantFacets.GetParticipantFacetsQuery());
+        return Ok(result);
+    }
+
+    [HttpPost("participants/search")]
+    [Authorize(Policy = AppPermissions.PolicySurveysPublish)]
+    public async Task<IActionResult> SearchParticipants([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromBody] FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter filter = null)
+    {
+        filter ??= new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter();
+        var result = await _mediator.Send(new SearchParticipantsQuery(filter, page, pageSize));
+        return Ok(result);
+    }
+
+    [HttpPost("participants/preview")]
+    [Authorize(Policy = AppPermissions.PolicySurveysPublish)]
+    public async Task<IActionResult> PreviewParticipants([FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromBody] FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter filter = null)
+    {
+        filter ??= new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter();
+        var result = await _mediator.Send(new SearchParticipantsQuery(filter, page, pageSize));
         return Ok(result);
     }
 
@@ -63,9 +81,12 @@ public class CampaignsController : ControllerBase
 
     [HttpGet("{id:guid}/participants")]
     [Authorize(Policy = AppPermissions.PolicySurveysManage)]
-    public async Task<IActionResult> GetCampaignParticipants(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, [FromQuery] string? search = null, [FromQuery] string? status = null)
+    public async Task<IActionResult> GetCampaignParticipants(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 25,
+        [FromQuery] string? search = null, [FromQuery] string? status = null,
+        [FromQuery] string? department = null, [FromQuery] string? location = null)
     {
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignParticipants.GetCampaignParticipantsQuery(id, page, pageSize, search, status));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignParticipants.GetCampaignParticipantsQuery(
+            id, page, pageSize, search, status, department, location));
         return Ok(result);
     }
 
@@ -82,9 +103,9 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> ExportCampaignResults(Guid id)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        // Since we have the policy, they are already verified to have the permission.
-        bool isGlobalAdmin = true; 
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId, isGlobalAdmin));
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
+        var includeIdentities = HasPermission(AppPermissions.SurveysResultsExportIdentified) || HasPermission(AppPermissions.SurveysManage);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId, isGlobalAdmin, includeIdentities));
         return File(result, "text/csv", $"Anket_Sonuclari_{id}.csv");
     }
 
@@ -93,8 +114,51 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetCampaignResults(System.Guid id)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        bool isGlobalAdmin = User.HasClaim(c => c.Type == "Permission" && c.Value == AppPermissions.SurveysResultsView);
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId, isGlobalAdmin));
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/analytics/overview")]
+    [Authorize]
+    public async Task<IActionResult> GetCampaignAnalyticsOverview(Guid id)
+    {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId, isGlobalAdmin));
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/analytics/segments")]
+    [Authorize]
+    public async Task<IActionResult> GetCampaignSegments(Guid id, [FromQuery] string dimension = "department")
+    {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignSegments.GetCampaignSegmentsQuery(id, dimension, userId, isGlobalAdmin));
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/analytics/crosstab")]
+    [Authorize]
+    public async Task<IActionResult> GetCampaignCrosstab(Guid id, [FromQuery] Guid questionId, [FromQuery] string dimension = "department")
+    {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignCrosstab.GetCampaignCrosstabQuery(
+            id, questionId, dimension, userId, isGlobalAdmin));
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/analytics/questions/{questionId:guid}/text")]
+    [Authorize]
+    public async Task<IActionResult> GetQuestionTextAnswers(Guid id, Guid questionId, [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25, [FromQuery] string? search = null)
+    {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetQuestionTextAnswers.GetQuestionTextAnswersQuery(
+            id, questionId, page, pageSize, search, userId, isGlobalAdmin));
         return Ok(result);
     }
 
@@ -103,10 +167,15 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetParticipantResponse(Guid id, [FromQuery] Guid? assignmentId, [FromQuery] string? receiptCode)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        bool isGlobalAdmin = User.HasClaim(c => c.Type == "Permission" && c.Value == AppPermissions.SurveysResultsView);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetParticipantResponse.GetParticipantResponseQuery(id, assignmentId, receiptCode, userId, isGlobalAdmin));
+        if (!assignmentId.HasValue) return BadRequest(new { message = "Kimlikli yanıt için assignmentId gereklidir." });
+        var canViewIdentified = HasPermission(AppPermissions.SurveysResultsViewIdentified) || HasPermission(AppPermissions.SurveysManage);
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetIdentifiedParticipantResponse.GetIdentifiedParticipantResponseQuery(
+            id, assignmentId.Value, userId, canViewIdentified));
         return Ok(result);
     }
+
+    private bool HasPermission(string permission) =>
+        User.HasClaim(c => c.Type == "Permission" && c.Value == permission) || User.IsInRole("Global Admin");
 
     private bool TryGetCurrentUserId(out Guid userId)
     {

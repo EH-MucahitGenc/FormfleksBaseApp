@@ -20,6 +20,11 @@ public static class AppPermissions
     public const string SurveysManage = "Surveys.Manage";
     public const string SurveysResultsView = "Surveys.Results.View";
     public const string SurveysResultsExport = "Surveys.Results.Export";
+    public const string SurveysResultsViewIdentified = "Surveys.Results.ViewIdentified";
+    public const string SurveysResultsExportIdentified = "Surveys.Results.ExportIdentified";
+    public const string SurveysResultsViewDataQuality = "Surveys.Results.ViewDataQuality";
+    public const string SurveysResultsManageTextCoding = "Surveys.Results.ManageTextCoding";
+    public const string SurveysResultsManagePrivacy = "Surveys.Results.ManagePrivacy";
     public const string SurveysSettings = "Surveys.Settings";
 
     // Policy Names for Authorize Attributes
@@ -38,6 +43,8 @@ public static class AppPermissions
     public const string PolicySurveysManage = "Permission:" + SurveysManage;
     public const string PolicySurveysResultsView = "Permission:" + SurveysResultsView;
     public const string PolicySurveysResultsExport = "Permission:" + SurveysResultsExport;
+    public const string PolicySurveysResultsViewIdentified = "Permission:" + SurveysResultsViewIdentified;
+    public const string PolicySurveysResultsExportIdentified = "Permission:" + SurveysResultsExportIdentified;
     public const string PolicySurveysSettings = "Permission:" + SurveysSettings;
 
     public static readonly IReadOnlyList<(string Name, string Description)> All = new List<(string, string)>
@@ -55,6 +62,11 @@ public static class AppPermissions
         (SurveysManage, "Katılımcı, mail ve kampanya süreçlerini yönetme izni."),
         (SurveysResultsView, "Yetkili olduğu anket sonuçlarını görüntüleme izni."),
         (SurveysResultsExport, "Anket sonuçlarını Excel/PDF dışa aktarma izni."),
+        (SurveysResultsViewIdentified, "Kimlikli anketlerde tekil katılımcı yanıtlarını görüntüleme izni."),
+        (SurveysResultsExportIdentified, "Kimlikli anketlerde kişisel yanıtları dışa aktarma izni."),
+        (SurveysResultsViewDataQuality, "Anket veri kalitesi işaretlerini görüntüleme izni."),
+        (SurveysResultsManageTextCoding, "Açık metin tema ve kodlamalarını yönetme izni."),
+        (SurveysResultsManagePrivacy, "Anket raporlama gizlilik ayarlarını yönetme izni."),
         (SurveysSettings, "Anket modülü ayarlarını yönetme izni.")
     };
 }

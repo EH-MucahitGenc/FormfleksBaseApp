@@ -13,6 +13,8 @@ namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCam
 public record CampaignListDto(
     Guid Id,
     string Title,
+    string? Description,
+    bool IsAnonymous,
     string Status,
     int StatusValue,
     DateTime? StartDate,
@@ -39,6 +41,8 @@ public class GetCampaignsQueryHandler : IRequestHandler<GetCampaignsQuery, List<
             .Select(c => new CampaignListDto(
                 c.Id,
                 c.Title,
+                c.Description,
+                c.IsAnonymous,
                 c.Status.ToString(),
                 (int)c.Status,
                 c.StartDate,

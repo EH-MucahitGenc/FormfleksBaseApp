@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Search, UserPlus, X, Rocket, Calendar, Users, Settings } from 'lucide-react';
+import { ChevronRight, Search, X, Rocket, Calendar, Users, Settings } from 'lucide-react';
 import { campaignService } from '../services/campaign.service';
-import type { ParticipantDto } from '../services/campaign.service';
+import type { SurveyAudienceUser, AudienceFilter } from '../services/campaign.service';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import { surveyDesignerService } from '../services/surveyDesigner.service';
+import { SurveyAudienceSelector } from '../components/audience/SurveyAudienceSelector';
 
 const STEPS = [
     { id: 1, title: 'Kampanya Detayları', icon: Calendar },
@@ -32,28 +33,23 @@ export const SurveyCampaignWizardPage = () => {
     const [endDate, setEndDate] = useState('');
 
     // Step 2 State
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedParticipants, setSelectedParticipants] = useState<ParticipantDto[]>([]);
+    const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>({});
+    const [totalAudienceCount, setTotalAudienceCount] = useState<number>(0);
 
     // Step 3 State
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [viewerSearchTerm, setViewerSearchTerm] = useState('');
-    const [selectedViewers, setSelectedViewers] = useState<ParticipantDto[]>([]);
-
-    // Search Query (Participants)
-    const { data: searchResults, isLoading: isSearching } = useQuery({
-        queryKey: ['participantsSearch', searchTerm],
-        queryFn: () => campaignService.searchParticipants(searchTerm),
-        enabled: searchTerm.length >= 2,
-    });
+    const [selectedViewers, setSelectedViewers] = useState<SurveyAudienceUser[]>([]);
 
     // Search Query (Result Viewers)
-    const { data: viewerSearchResults, isLoading: isSearchingViewers } = useQuery({
+    const { data: viewerSearchData, isLoading: isSearchingViewers } = useQuery({
         queryKey: ['viewersSearch', viewerSearchTerm],
-        queryFn: () => campaignService.searchParticipants(viewerSearchTerm),
+        queryFn: () => campaignService.searchAudience({ searchTerm: viewerSearchTerm }, 1, 10),
         enabled: viewerSearchTerm.length >= 2,
     });
+    
+    const viewerSearchResults = viewerSearchData?.items || [];
 
     const handleNext = () => {
         if (currentStep === 1) {
@@ -67,8 +63,8 @@ export const SurveyCampaignWizardPage = () => {
             }
         }
         if (currentStep === 2) {
-            if (selectedParticipants.length === 0) {
-                toast.error('Lütfen en az bir katılımcı seçin.');
+            if (totalAudienceCount === 0) {
+                toast.error('Lütfen en az bir katılımcı içeren bir hedef kitle belirleyin.');
                 return;
             }
         }
@@ -79,15 +75,7 @@ export const SurveyCampaignWizardPage = () => {
         setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
-    const handleToggleParticipant = (p: ParticipantDto) => {
-        setSelectedParticipants(prev => {
-            const exists = prev.find(x => x.userId === p.userId);
-            if (exists) return prev.filter(x => x.userId !== p.userId);
-            return [...prev, p];
-        });
-    };
-
-    const handleToggleViewer = (p: ParticipantDto) => {
+    const handleToggleViewer = (p: SurveyAudienceUser) => {
         setSelectedViewers(prev => {
             const exists = prev.find(x => x.userId === p.userId);
             if (exists) return prev.filter(x => x.userId !== p.userId);
@@ -110,7 +98,7 @@ export const SurveyCampaignWizardPage = () => {
                 startDate: new Date(startDate).toISOString(),
                 endDate: new Date(endDate).toISOString(),
                 isAnonymous,
-                participantUserIds: selectedParticipants.map(p => p.userId as string),
+                audienceDefinition: audienceFilter,
                 resultViewerUserIds: selectedViewers.map(p => p.userId as string),
                 saveAsDraft
             });
@@ -261,73 +249,14 @@ export const SurveyCampaignWizardPage = () => {
                     {currentStep === 2 && (
                         <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-lg font-bold text-brand-dark mb-1">Hedef Kitle (Katılımcılar)</h2>
-                            <p className="text-sm text-brand-gray mb-6">Anketi kimlerin dolduracağını seçin. QDMS veritabanındaki tüm personellerde arama yapabilirsiniz.</p>
+                            <p className="text-sm text-brand-gray mb-6">Anketi kimlerin dolduracağını filtreler aracılığıyla belirleyin. Filtrelere uyan tüm aktif çalışanlar kampanyaya dahil edilecektir.</p>
                             
-                            <div className="flex gap-6 h-[400px]">
-                                {/* Search Panel */}
-                                <div className="flex-1 flex flex-col border border-surface-muted rounded-lg overflow-hidden">
-                                    <div className="p-3 border-b border-surface-muted bg-surface-base">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-gray" />
-                                            <input 
-                                                type="text" 
-                                                value={searchTerm}
-                                                onChange={e => setSearchTerm(e.target.value)}
-                                                placeholder="İsim, e-posta veya departman ara..."
-                                                className="w-full bg-white border border-surface-muted rounded-md pl-9 pr-4 py-2 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1 bg-surface-ground/30">
-                                        {isSearching && <div className="p-4 text-center text-sm text-brand-gray">Aranıyor...</div>}
-                                        {!isSearching && searchTerm.length < 2 && <div className="p-4 text-center text-sm text-brand-gray">Aramaya başlamak için en az 2 karakter girin.</div>}
-                                        {!isSearching && searchTerm.length >= 2 && searchResults?.length === 0 && <div className="p-4 text-center text-sm text-brand-gray">Sonuç bulunamadı.</div>}
-                                        
-                                        {searchResults?.map(p => {
-                                            const isSelected = selectedParticipants.some(x => x.userId === p.userId);
-                                            return (
-                                                <div 
-                                                    key={p.userId} 
-                                                    onClick={() => handleToggleParticipant(p)}
-                                                    className={`p-3 rounded-md border flex items-center justify-between cursor-pointer transition-colors ${isSelected ? 'border-brand-primary bg-brand-primary/5' : 'border-transparent hover:bg-surface-muted'}`}
-                                                >
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-brand-dark">{p.name}</div>
-                                                        <div className="text-xs text-brand-gray">{p.email} • {p.department}</div>
-                                                    </div>
-                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'border-brand-primary bg-brand-primary text-white' : 'border-surface-muted'}`}>
-                                                        {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><path d="M20 6L9 17l-5-5"/></svg>}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Selected Panel */}
-                                <div className="w-1/3 flex flex-col border border-surface-muted rounded-lg overflow-hidden bg-surface-base">
-                                    <div className="p-4 border-b border-surface-muted flex items-center justify-between">
-                                        <h3 className="text-sm font-semibold text-brand-dark">Seçilenler</h3>
-                                        <span className="bg-brand-primary text-white text-xs px-2 py-0.5 rounded-full">{selectedParticipants.length}</span>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1">
-                                        {selectedParticipants.length === 0 ? (
-                                            <div className="p-4 text-center text-sm text-brand-gray flex flex-col items-center">
-                                                <UserPlus className="h-8 w-8 mb-2 opacity-20" />
-                                                Henüz katılımcı seçilmedi.
-                                            </div>
-                                        ) : (
-                                            selectedParticipants.map(p => (
-                                                <div key={p.userId} className="p-2 text-sm bg-white border border-surface-muted rounded-md flex justify-between items-center group">
-                                                    <span className="truncate pr-2">{p.name}</span>
-                                                    <button onClick={() => handleToggleParticipant(p)} className="text-brand-gray hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <X className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
+                            <div className="flex-1 min-h-[450px]">
+                                <SurveyAudienceSelector 
+                                    filter={audienceFilter} 
+                                    onChange={setAudienceFilter} 
+                                    onTotalCountChange={setTotalAudienceCount} 
+                                />
                             </div>
                         </div>
                     )}
@@ -380,7 +309,7 @@ export const SurveyCampaignWizardPage = () => {
                                             ) : viewerSearchResults?.length === 0 && viewerSearchTerm.length >= 2 ? (
                                                 <div className="p-4 text-center text-sm text-brand-gray">Kullanıcı bulunamadı.</div>
                                             ) : (
-                                                viewerSearchResults?.map((p: ParticipantDto) => {
+                                                viewerSearchResults?.map((p: SurveyAudienceUser) => {
                                                     const isSelected = selectedViewers.some(x => x.userId === p.userId);
                                                     return (
                                                         <div 
@@ -389,7 +318,7 @@ export const SurveyCampaignWizardPage = () => {
                                                             className={`p-2 rounded-md border flex items-center justify-between cursor-pointer transition-colors ${isSelected ? 'border-brand-primary bg-brand-primary/5' : 'border-transparent hover:bg-surface-muted'}`}
                                                         >
                                                             <div>
-                                                                <div className="text-sm font-semibold text-brand-dark">{p.name}</div>
+                                                                <div className="text-sm font-semibold text-brand-dark">{p.displayName}</div>
                                                                 <div className="text-xs text-brand-gray">{p.email}</div>
                                                             </div>
                                                             <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'border-brand-primary bg-brand-primary text-white' : 'border-surface-muted'}`}>
@@ -413,7 +342,7 @@ export const SurveyCampaignWizardPage = () => {
                                             ) : (
                                                 selectedViewers.map(p => (
                                                     <div key={p.userId} className="p-2 text-xs bg-white border border-surface-muted rounded-md flex justify-between items-center group">
-                                                        <span className="truncate pr-2">{p.name}</span>
+                                                        <span className="truncate pr-2">{p.displayName}</span>
                                                         <button onClick={() => handleToggleViewer(p)} className="text-brand-gray hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <X className="h-3 w-3" />
                                                         </button>
@@ -440,7 +369,7 @@ export const SurveyCampaignWizardPage = () => {
                                     <div className="font-semibold text-brand-dark">{campaignName}</div>
                                     
                                     <div className="text-brand-gray">Katılımcı Sayısı</div>
-                                    <div className="font-semibold text-brand-dark">{selectedParticipants.length} Kişi</div>
+                                    <div className="font-semibold text-brand-dark">{totalAudienceCount} Kişi</div>
                                     
                                     <div className="text-brand-gray">Zaman Çizelgesi</div>
                                     <div className="font-semibold text-brand-dark">

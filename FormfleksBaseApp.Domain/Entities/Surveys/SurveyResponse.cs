@@ -16,6 +16,13 @@ public class SurveyResponse : BaseEntity
     // Receipt code for anonymous surveys to prove participation without revealing identity
     public string? ReceiptCode { get; set; }
 
+    // Privacy-preserving reporting dimensions; no participant identity is stored here.
+    public string? CompanySnapshot { get; set; }
+    public string? LocationSnapshot { get; set; }
+    public string? DepartmentSnapshot { get; set; }
+    public string? JobTitleSnapshot { get; set; }
+    public string? PersonnelGroupSnapshot { get; set; }
+
     // Navigation properties
     public SurveyCampaign SurveyCampaign { get; set; } = null!;
     public SurveyAssignment? SurveyAssignment { get; set; }

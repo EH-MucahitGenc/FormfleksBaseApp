@@ -19,7 +19,7 @@ public record CreateCampaignCommand(
     DateTime StartDate,
     DateTime EndDate,
     bool IsAnonymous,
-    List<Guid> ParticipantUserIds,
+    FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter AudienceDefinition,
     List<Guid>? ResultViewerUserIds,
     bool SaveAsDraft // If true, status=Draft. Else, Published/Scheduled based on StartDate.
 ) : IRequest<Guid>;
@@ -72,12 +72,13 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
             }
         }
 
-        var uniqueParticipantIds = request.ParticipantUserIds?.Distinct().ToList() ?? new List<Guid>();
-        if (!uniqueParticipantIds.Any())
-            throw new FormfleksBaseApp.Application.Common.BusinessException("En az bir katılımcı seçilmelidir.");
+        if (request.AudienceDefinition == null)
+            throw new FormfleksBaseApp.Application.Common.BusinessException("Hedef kitle tanımı (AudienceDefinition) zorunludur.");
 
         var status = request.SaveAsDraft ? SurveyCampaignStatus.Draft : 
             (request.StartDate <= DateTime.UtcNow ? SurveyCampaignStatus.Published : SurveyCampaignStatus.Scheduled);
+
+        var targetAudienceJson = System.Text.Json.JsonSerializer.Serialize(request.AudienceDefinition);
 
         var campaign = new SurveyCampaign
         {
@@ -88,23 +89,11 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             IsAnonymous = request.IsAnonymous,
-            Status = status
+            Status = status,
+            TargetAudienceJson = targetAudienceJson
         };
 
         _context.SurveyCampaigns.Add(campaign);
-
-        foreach (var userId in uniqueParticipantIds)
-        {
-            var assignment = new SurveyAssignment
-            {
-                Id = Guid.NewGuid(),
-                SurveyCampaignId = campaign.Id,
-                UserId = userId,
-                Status = SurveyAssignmentStatus.Pending,
-                Token = Guid.NewGuid()
-            };
-            _context.SurveyAssignments.Add(assignment);
-        }
 
         if (request.ResultViewerUserIds != null)
         {

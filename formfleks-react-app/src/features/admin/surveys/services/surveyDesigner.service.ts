@@ -58,8 +58,17 @@ export const surveyDesignerService = {
   },
 
   createTemplate: async (title: string, description: string) => {
-    const response = await apiClient.post<string>('/admin/surveys/templates', { title, description });
-    return response.data;
+    const response = await apiClient.post<{ id: string }>('/admin/surveys/templates', { title, description, defaultIsAnonymous: false });
+    return response.data.id;
+  },
+
+  duplicateTemplate: async (id: string) => {
+    const response = await apiClient.post<{ id: string }>(`/admin/surveys/templates/${id}/duplicate`);
+    return response.data.id;
+  },
+
+  deleteTemplate: async (id: string) => {
+    await apiClient.delete(`/admin/surveys/templates/${id}`);
   },
 
   updateTemplate: async (payload: SaveSurveyTemplatePayload) => {
