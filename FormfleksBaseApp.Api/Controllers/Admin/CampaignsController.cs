@@ -104,8 +104,7 @@ public class CampaignsController : ControllerBase
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
         var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
-        var includeIdentities = HasPermission(AppPermissions.SurveysResultsExportIdentified) || HasPermission(AppPermissions.SurveysManage);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId, isGlobalAdmin, includeIdentities));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId, isGlobalAdmin));
         return File(result, "text/csv", $"Anket_Sonuclari_{id}.csv");
     }
 
@@ -168,9 +167,9 @@ public class CampaignsController : ControllerBase
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
         if (!assignmentId.HasValue) return BadRequest(new { message = "Kimlikli yanıt için assignmentId gereklidir." });
-        var canViewIdentified = HasPermission(AppPermissions.SurveysResultsViewIdentified) || HasPermission(AppPermissions.SurveysManage);
+        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetIdentifiedParticipantResponse.GetIdentifiedParticipantResponseQuery(
-            id, assignmentId.Value, userId, canViewIdentified));
+            id, assignmentId.Value, userId, isGlobalAdmin));
         return Ok(result);
     }
 

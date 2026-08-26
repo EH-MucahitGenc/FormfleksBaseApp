@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetIdentifiedParticipantResponse;
 
-public record GetIdentifiedParticipantResponseQuery(Guid CampaignId, Guid AssignmentId, Guid ActorUserId, bool CanViewIdentified)
+public record GetIdentifiedParticipantResponseQuery(Guid CampaignId, Guid AssignmentId, Guid ActorUserId, bool IsGlobalAdmin)
     : IRequest<IdentifiedParticipantResponseDto>;
 
 public sealed class IdentifiedParticipantResponseDto
@@ -49,15 +49,24 @@ public sealed class GetIdentifiedParticipantResponseQueryHandler
 
     public async Task<IdentifiedParticipantResponseDto> Handle(GetIdentifiedParticipantResponseQuery request, CancellationToken cancellationToken)
     {
-        if (!request.CanViewIdentified)
-            throw new FormfleksBaseApp.Application.Common.BusinessException("Kimlikli yanıtları görüntüleme yetkiniz yok.");
-
         var campaign = await _context.SurveyCampaigns.AsNoTracking()
             .Where(c => c.Id == request.CampaignId).Select(c => new { c.IsAnonymous })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
+            
         if (campaign.IsAnonymous)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Anonim kampanyalarda tekil yanıt görüntülenemez.");
+
+        var hasDetailedAccess = request.IsGlobalAdmin;
+        if (!hasDetailedAccess)
+        {
+            var viewer = await _context.SurveyResultViewers.AsNoTracking()
+                .FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
+            hasDetailedAccess = viewer != null && viewer.AccessLevel == FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
+        }
+
+        if (!hasDetailedAccess)
+            throw new FormfleksBaseApp.Application.Common.BusinessException("Kimlikli yanıtları görüntüleme yetkiniz yok (Sadece özet erişiminiz olabilir).");
 
         var response = await _context.SurveyResponses.AsNoTracking()
             .Include(r => r.SurveyAssignment)

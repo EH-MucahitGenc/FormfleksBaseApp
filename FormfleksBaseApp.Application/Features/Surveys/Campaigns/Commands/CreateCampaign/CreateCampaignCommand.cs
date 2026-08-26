@@ -20,9 +20,11 @@ public record CreateCampaignCommand(
     DateTime EndDate,
     bool IsAnonymous,
     FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter AudienceDefinition,
-    List<Guid>? ResultViewerUserIds,
+    List<CampaignViewerDto>? Viewers,
     bool SaveAsDraft // If true, status=Draft. Else, Published/Scheduled based on StartDate.
 ) : IRequest<Guid>;
+
+public record CampaignViewerDto(Guid UserId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel AccessLevel);
 
 public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignCommand, Guid>
 {
@@ -95,15 +97,17 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
 
         _context.SurveyCampaigns.Add(campaign);
 
-        if (request.ResultViewerUserIds != null)
+        if (request.Viewers != null)
         {
-            foreach (var viewerId in request.ResultViewerUserIds.Distinct())
+            // Note: we can group by UserId and pick the highest access level if they sent duplicates, but DistinctBy handles it simply enough.
+            foreach (var viewerDto in request.Viewers.DistinctBy(v => v.UserId))
             {
                 var viewer = new SurveyResultViewer
                 {
                     Id = Guid.NewGuid(),
                     SurveyCampaignId = campaign.Id,
-                    UserId = viewerId
+                    UserId = viewerDto.UserId,
+                    AccessLevel = viewerDto.AccessLevel
                 };
                 _context.SurveyResultViewers.Add(viewer);
             }

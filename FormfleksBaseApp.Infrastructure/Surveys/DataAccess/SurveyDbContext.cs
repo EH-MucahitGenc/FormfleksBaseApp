@@ -250,6 +250,7 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             
             e.Property(x => x.SurveyCampaignId).HasColumnName("survey_campaign_id");
             e.Property(x => x.UserId).HasColumnName("user_id");
+            e.Property(x => x.AccessLevel).HasColumnName("access_level").HasDefaultValue(FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.AggregateOnly);
 
             e.HasOne(x => x.SurveyCampaign)
              .WithMany(x => x.ResultViewers)

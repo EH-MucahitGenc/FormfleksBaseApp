@@ -47,7 +47,8 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
 
-        await EnsureAccessAsync(request, cancellationToken);
+        var currentAccessLevel = await GetAccessLevelAsync(request, cancellationToken);
+        var shouldMaskIdentities = campaign.IsAnonymous || currentAccessLevel < (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
 
         var questionExists = await _context.SurveyVersionQuestions.AsNoTracking().AnyAsync(q =>
             q.Id == request.QuestionId &&
@@ -89,14 +90,14 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
             {
                 AnswerId = a.Id,
                 Text = a.ValueText!,
-                SubmittedAt = campaign.IsAnonymous ? a.SurveyResponse.SubmittedAt.Date : a.SurveyResponse.SubmittedAt,
-                UserId = campaign.IsAnonymous ? null : a.SurveyResponse.UserId,
-                ParticipantName = campaign.IsAnonymous ? null : a.SurveyResponse.SurveyAssignment!.ParticipantDisplayName,
-                Department = campaign.IsAnonymous ? null : a.SurveyResponse.SurveyAssignment!.DepartmentSnapshot,
-                Location = campaign.IsAnonymous ? null : a.SurveyResponse.SurveyAssignment!.LocationSnapshot
+                SubmittedAt = shouldMaskIdentities ? a.SurveyResponse.SubmittedAt.Date : a.SurveyResponse.SubmittedAt,
+                UserId = shouldMaskIdentities ? null : a.SurveyResponse.UserId,
+                ParticipantName = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.ParticipantDisplayName : null),
+                Department = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.DepartmentSnapshot : null),
+                Location = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.LocationSnapshot : null)
             }).ToListAsync(cancellationToken);
 
-        if (campaign.IsAnonymous)
+        if (shouldMaskIdentities)
             foreach (var item in items) item.Text = RedactPotentialPii(item.Text);
 
         return new PagedTextAnswersDto
@@ -109,12 +110,13 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
         };
     }
 
-    private async Task EnsureAccessAsync(GetQuestionTextAnswersQuery request, CancellationToken cancellationToken)
+    private async Task<int> GetAccessLevelAsync(GetQuestionTextAnswersQuery request, CancellationToken cancellationToken)
     {
-        if (request.IsGlobalAdmin) return;
-        var allowed = await _context.SurveyResultViewers.AsNoTracking().AnyAsync(v =>
+        if (request.IsGlobalAdmin) return (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
+        var viewer = await _context.SurveyResultViewers.AsNoTracking().FirstOrDefaultAsync(v =>
             v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-        if (!allowed) throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
+        if (viewer == null) throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
+        return (int)viewer.AccessLevel;
     }
 
     private static string RedactPotentialPii(string value)

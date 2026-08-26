@@ -59,7 +59,7 @@ export interface CreateCampaignPayload {
   endDate: string;
   isAnonymous: boolean;
   audienceDefinition: AudienceFilter;
-  resultViewerUserIds?: string[];
+  viewers?: { userId: string; accessLevel: number; }[];
   saveAsDraft: boolean;
 }
 

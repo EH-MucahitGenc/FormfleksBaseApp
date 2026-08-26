@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv;
 
-public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin, bool IncludeIdentities = false) : IRequest<byte[]>;
+public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin) : IRequest<byte[]>;
 
 public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampaignResultsCsvQuery, byte[]>
 {
@@ -37,11 +37,13 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
         if (campaign == null)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Kampanya bulunamadı.");
 
+        var currentAccessLevel = (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
         if (!request.IsGlobalAdmin)
         {
-            var isViewer = await _context.SurveyResultViewers.AnyAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-            if (!isViewer)
+            var viewer = await _context.SurveyResultViewers.FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
+            if (viewer == null)
                 throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını dışa aktarma yetkiniz yok.");
+            currentAccessLevel = (int)viewer.AccessLevel;
         }
 
         var responses = await _context.SurveyResponses
@@ -68,7 +70,9 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
             return sanitized;
         }
 
-        if (campaign.IsAnonymous || !request.IncludeIdentities)
+        var includeIdentities = currentAccessLevel == (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed && !campaign.IsAnonymous;
+
+        if (!includeIdentities)
         {
             sb.AppendLine("Soru;Seçenek / Metrik;Sayı;Yüzde;Payda");
             foreach (var question in questions.Where(q => q.QuestionType != SurveyQuestionType.Info))

@@ -20,6 +20,7 @@ public sealed class CampaignResultsDto
     public DateTime? EndDate { get; set; }
     public int TotalParticipants { get; set; }
     public int TotalResponses { get; set; }
+    public int CurrentUserAccessLevel { get; set; } = 1; // 1 = Aggregate, 2 = Detailed
     public double ResponseRate => Percentage(TotalResponses, TotalParticipants);
     public ParticipationFunnelDto Funnel { get; set; } = new();
     public ResponseTimingDto Timing { get; set; } = new();
@@ -153,7 +154,7 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             .SingleOrDefaultAsync(c => c.Id == request.CampaignId, cancellationToken)
             ?? throw new FormfleksBaseApp.Application.Common.BusinessException("Kampanya bulunamadı.");
 
-        await EnsureAggregateAccessAsync(request, cancellationToken);
+        var currentAccessLevel = await GetAccessLevelAsync(request, cancellationToken);
 
         var assignments = _context.SurveyAssignments.AsNoTracking()
             .Where(a => a.SurveyCampaignId == request.CampaignId);
@@ -190,6 +191,7 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             EndDate = campaign.EndDate,
             TotalParticipants = totalParticipants,
             TotalResponses = totalResponses,
+            CurrentUserAccessLevel = currentAccessLevel,
             Funnel = new ParticipationFunnelDto
             {
                 Targeted = totalParticipants,
@@ -377,12 +379,16 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
     private static int GetCount<T>(IReadOnlyDictionary<T, int> counts, T key) where T : notnull =>
         counts.TryGetValue(key, out var count) ? count : 0;
 
-    private async Task EnsureAggregateAccessAsync(GetCampaignResultsQuery request, CancellationToken cancellationToken)
+    private async Task<int> GetAccessLevelAsync(GetCampaignResultsQuery request, CancellationToken cancellationToken)
     {
-        if (request.IsGlobalAdmin) return;
-        var isViewer = await _context.SurveyResultViewers.AsNoTracking()
-            .AnyAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-        if (!isViewer)
+        if (request.IsGlobalAdmin) return (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
+        
+        var viewer = await _context.SurveyResultViewers.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
+            
+        if (viewer == null)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
+            
+        return (int)viewer.AccessLevel;
     }
 }

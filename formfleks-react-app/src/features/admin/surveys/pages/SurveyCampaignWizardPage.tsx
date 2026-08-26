@@ -40,7 +40,7 @@ export const SurveyCampaignWizardPage = () => {
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [viewerSearchTerm, setViewerSearchTerm] = useState('');
-    const [selectedViewers, setSelectedViewers] = useState<SurveyAudienceUser[]>([]);
+    const [selectedViewers, setSelectedViewers] = useState<{ user: SurveyAudienceUser, accessLevel: number }[]>([]);
 
     // Search Query (Result Viewers)
     const { data: viewerSearchData, isLoading: isSearchingViewers } = useQuery({
@@ -77,10 +77,14 @@ export const SurveyCampaignWizardPage = () => {
 
     const handleToggleViewer = (p: SurveyAudienceUser) => {
         setSelectedViewers(prev => {
-            const exists = prev.find(x => x.userId === p.userId);
-            if (exists) return prev.filter(x => x.userId !== p.userId);
-            return [...prev, p];
+            const exists = prev.find(x => x.user.userId === p.userId);
+            if (exists) return prev.filter(x => x.user.userId !== p.userId);
+            return [...prev, { user: p, accessLevel: 1 }]; // Default to AggregateOnly (1)
         });
+    };
+
+    const handleUpdateViewerAccessLevel = (userId: string, accessLevel: number) => {
+        setSelectedViewers(prev => prev.map(v => v.user.userId === userId ? { ...v, accessLevel } : v));
     };
 
     const handlePublish = async (saveAsDraft: boolean) => {
@@ -99,7 +103,7 @@ export const SurveyCampaignWizardPage = () => {
                 endDate: new Date(endDate).toISOString(),
                 isAnonymous,
                 audienceDefinition: audienceFilter,
-                resultViewerUserIds: selectedViewers.map(p => p.userId as string),
+                viewers: selectedViewers.map(p => ({ userId: p.user.userId as string, accessLevel: p.accessLevel })),
                 saveAsDraft
             });
             toast.success(saveAsDraft ? 'Kampanya taslak olarak kaydedildi.' : 'Kampanya başarıyla yayınlandı!');
@@ -310,7 +314,7 @@ export const SurveyCampaignWizardPage = () => {
                                                 <div className="p-4 text-center text-sm text-brand-gray">Kullanıcı bulunamadı.</div>
                                             ) : (
                                                 viewerSearchResults?.map((p: SurveyAudienceUser) => {
-                                                    const isSelected = selectedViewers.some(x => x.userId === p.userId);
+                                                    const isSelected = selectedViewers.some(x => x.user.userId === p.userId);
                                                     return (
                                                         <div 
                                                             key={p.userId} 
@@ -340,12 +344,22 @@ export const SurveyCampaignWizardPage = () => {
                                             {selectedViewers.length === 0 ? (
                                                 <div className="p-4 text-center text-xs text-brand-gray">Seçim yapılmadı.</div>
                                             ) : (
-                                                selectedViewers.map(p => (
-                                                    <div key={p.userId} className="p-2 text-xs bg-white border border-surface-muted rounded-md flex justify-between items-center group">
-                                                        <span className="truncate pr-2">{p.displayName}</span>
-                                                        <button onClick={() => handleToggleViewer(p)} className="text-brand-gray hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <X className="h-3 w-3" />
-                                                        </button>
+                                                selectedViewers.map(v => (
+                                                    <div key={v.user.userId} className="p-2 bg-white border border-surface-muted rounded-md group">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="truncate pr-2 font-semibold text-brand-dark">{v.user.displayName}</span>
+                                                            <button onClick={() => handleToggleViewer(v.user)} className="text-brand-gray hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                        <select
+                                                            value={v.accessLevel}
+                                                            onChange={e => handleUpdateViewerAccessLevel(v.user.userId as string, parseInt(e.target.value))}
+                                                            className="mt-1.5 w-full text-xs border border-surface-muted rounded px-1.5 py-1 focus:ring-1 focus:ring-brand-primary outline-none"
+                                                        >
+                                                            <option value={1}>Özet Veri (AggregateOnly)</option>
+                                                            <option value={2}>Detaylı Veri (Detailed)</option>
+                                                        </select>
                                                     </div>
                                                 ))
                                             )}

@@ -38,3 +38,9 @@ public enum SurveyAssignmentStatus : short
     Revoked = 7,
     Expired = 8
 }
+
+public enum SurveyViewerAccessLevel : short
+{
+    AggregateOnly = 1,
+    Detailed = 2
+}
