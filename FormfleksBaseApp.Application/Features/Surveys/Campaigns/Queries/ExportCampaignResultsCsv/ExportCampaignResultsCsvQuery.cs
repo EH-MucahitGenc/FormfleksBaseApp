@@ -12,22 +12,34 @@ using System.Threading.Tasks;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv;
 
-public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin) : IRequest<byte[]>;
+public record ExportCampaignResultsCsvQuery(Guid CampaignId, Guid ActorUserId) : IRequest<byte[]>;
 
-public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampaignResultsCsvQuery, byte[]>
+public sealed class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampaignResultsCsvQuery, byte[]>
 {
     private readonly ISurveyDbContext _context;
     private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory _audienceDirectory;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService _suppressionService;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public ExportCampaignResultsCsvQueryHandler(ISurveyDbContext context, FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory audienceDirectory)
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext _dynamicFormsDb;
+
+    public ExportCampaignResultsCsvQueryHandler(
+        ISurveyDbContext context, 
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory audienceDirectory,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService suppressionService,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService,
+        FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext dynamicFormsDb)
     {
         _context = context;
         _audienceDirectory = audienceDirectory;
+        _suppressionService = suppressionService;
+        _authService = authService;
+        _dynamicFormsDb = dynamicFormsDb;
     }
 
     public async Task<byte[]> Handle(ExportCampaignResultsCsvQuery request, CancellationToken cancellationToken)
     {
-        var campaign = await _context.SurveyCampaigns
+        var campaign = await _context.SurveyCampaigns.AsNoTracking()
             .Include(c => c.SurveyTemplateVersion)
                 .ThenInclude(v => v.Sections)
                     .ThenInclude(s => s.Questions)
@@ -37,14 +49,11 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
         if (campaign == null)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Kampanya bulunamadı.");
 
-        var currentAccessLevel = (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
-        if (!request.IsGlobalAdmin)
-        {
-            var viewer = await _context.SurveyResultViewers.FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-            if (viewer == null)
-                throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını dışa aktarma yetkiniz yok.");
-            currentAccessLevel = (int)viewer.AccessLevel;
-        }
+        // YETKİ KONTROLÜ
+        await _authService.EnsureCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ExportAggregateResults, cancellationToken);
+
+        // Export Identified yetkisi var mı kontrol et
+        var canExportIdentified = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ExportIdentifiedResponses, cancellationToken);
 
         var responses = await _context.SurveyResponses
             .Include(r => r.SurveyAssignment)
@@ -70,48 +79,73 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
             return sanitized;
         }
 
-        var includeIdentities = currentAccessLevel == (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed && !campaign.IsAnonymous;
+        var includeIdentities = canExportIdentified && !campaign.IsAnonymous;
+        var shouldSuppress = _suppressionService.ShouldSuppress(responses.Count, campaign.IsAnonymous);
 
         if (!includeIdentities)
         {
             sb.AppendLine("Soru;Seçenek / Metrik;Sayı;Yüzde;Payda");
-            foreach (var question in questions.Where(q => q.QuestionType != SurveyQuestionType.Info))
+            
+            if (!shouldSuppress)
             {
-                var answers = responses.SelectMany(r => r.Answers).Where(a => a.SurveyVersionQuestionId == question.Id).ToList();
-                var validCount = answers.Count;
-                if (question.QuestionType is SurveyQuestionType.SingleChoice or SurveyQuestionType.MultipleChoice)
+                foreach (var question in questions.Where(q => q.QuestionType != SurveyQuestionType.Info))
                 {
-                    var selectedIds = new List<Guid>();
-                    foreach (var answer in answers.Where(a => !string.IsNullOrWhiteSpace(a.ValueJson)))
+                    var answers = responses.SelectMany(r => r.Answers).Where(a => a.SurveyVersionQuestionId == question.Id).ToList();
+                    var validCount = answers.Count;
+                    if (question.QuestionType is SurveyQuestionType.SingleChoice or SurveyQuestionType.MultipleChoice)
                     {
-                        try { selectedIds.AddRange(JsonSerializer.Deserialize<List<Guid>>(answer.ValueJson!) ?? []); }
-                        catch (JsonException) { }
+                        var selectedIds = new List<Guid>();
+                        foreach (var answer in answers.Where(a => !string.IsNullOrWhiteSpace(a.ValueJson)))
+                        {
+                            try { selectedIds.AddRange(JsonSerializer.Deserialize<List<Guid>>(answer.ValueJson!) ?? []); }
+                            catch (JsonException) { }
+                        }
+                        foreach (var option in question.Options.OrderBy(o => o.SortOrder))
+                        {
+                            var count = selectedIds.Count(id => id == option.Id);
+                            var percentage = validCount == 0 ? 0 : Math.Round((double)count / validCount * 100, 1);
+                            sb.AppendLine($"{SanitizeCsv(question.Title)};{SanitizeCsv(option.Label)};{count};{percentage};{validCount}");
+                        }
                     }
-                    foreach (var option in question.Options.OrderBy(o => o.SortOrder))
+                    else if (question.QuestionType is SurveyQuestionType.Rating or SurveyQuestionType.NPS or SurveyQuestionType.Number)
                     {
-                        var count = selectedIds.Count(id => id == option.Id);
-                        var percentage = validCount == 0 ? 0 : Math.Round((double)count / validCount * 100, 1);
-                        sb.AppendLine($"{SanitizeCsv(question.Title)};{SanitizeCsv(option.Label)};{count};{percentage};{validCount}");
+                        var values = answers.Where(a => a.ValueNumber.HasValue).Select(a => a.ValueNumber!.Value).ToList();
+                        var average = values.Count == 0 ? "" : Math.Round(values.Average(), 2).ToString("0.##");
+                        sb.AppendLine($"{SanitizeCsv(question.Title)};Ortalama;{average};;{values.Count}");
+                    }
+                    else if (question.QuestionType is SurveyQuestionType.ShortText or SurveyQuestionType.LongText)
+                    {
+                        sb.AppendLine($"{SanitizeCsv(question.Title)};Metin yanıtı sayısı;{validCount};;{responses.Count}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{SanitizeCsv(question.Title)};Geçerli yanıt;{validCount};{(responses.Count == 0 ? 0 : Math.Round((double)validCount / responses.Count * 100, 1))};{responses.Count}");
                     }
                 }
-                else if (question.QuestionType is SurveyQuestionType.Rating or SurveyQuestionType.NPS or SurveyQuestionType.Number)
-                {
-                    var values = answers.Where(a => a.ValueNumber.HasValue).Select(a => a.ValueNumber!.Value).ToList();
-                    var average = values.Count == 0 ? "" : Math.Round(values.Average(), 2).ToString("0.##");
-                    sb.AppendLine($"{SanitizeCsv(question.Title)};Ortalama;{average};;{values.Count}");
-                }
-                else if (question.QuestionType is SurveyQuestionType.ShortText or SurveyQuestionType.LongText)
-                {
-                    sb.AppendLine($"{SanitizeCsv(question.Title)};Metin yanıtı sayısı;{validCount};;{responses.Count}");
-                }
-                else
-                {
-                    sb.AppendLine($"{SanitizeCsv(question.Title)};Geçerli yanıt;{validCount};{(responses.Count == 0 ? 0 : Math.Round((double)validCount / responses.Count * 100, 1))};{responses.Count}");
-                }
+            }
+            else 
+            {
+                sb.AppendLine($"Uyarı;Minimum anonim grup büyüklüğü ({_suppressionService.MinimumGroupSize}) sağlanmadığı için sonuçlar gizlenmiştir.;;;");
             }
 
             var aggregateBytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return Encoding.UTF8.GetPreamble().Concat(aggregateBytes).ToArray();
+            var aggregateResult = Encoding.UTF8.GetPreamble().Concat(aggregateBytes).ToArray();
+
+            _dynamicFormsDb.AuditLogs.Add(new FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity
+            {
+                Id = Guid.NewGuid(),
+                EntityType = "SurveyCampaign",
+                EntityId = request.CampaignId,
+                ActionType = "AggregateExportCreated",
+                ActorUserId = request.ActorUserId,
+                DetailJson = JsonSerializer.Serialize(new { 
+                    TotalResponses = responses.Count
+                }),
+                CreatedAt = DateTime.UtcNow
+            });
+            await _dynamicFormsDb.SaveChangesAsync(cancellationToken);
+
+            return aggregateResult;
         }
 
         // Header
@@ -229,6 +263,22 @@ public class ExportCampaignResultsCsvQueryHandler : IRequestHandler<ExportCampai
         var csvString = sb.ToString();
         var bytes = Encoding.UTF8.GetBytes(csvString);
         var bom = Encoding.UTF8.GetPreamble();
-        return bom.Concat(bytes).ToArray();
+        var identifiedResult = bom.Concat(bytes).ToArray();
+
+        _dynamicFormsDb.AuditLogs.Add(new FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            EntityType = "SurveyCampaign",
+            EntityId = request.CampaignId,
+            ActionType = includeIdentities ? "IdentifiedExportCreated" : "AggregateExportCreated",
+            ActorUserId = request.ActorUserId,
+            DetailJson = JsonSerializer.Serialize(new { 
+                TotalResponses = responses.Count
+            }),
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dynamicFormsDb.SaveChangesAsync(cancellationToken);
+
+        return identifiedResult;
     }
 }

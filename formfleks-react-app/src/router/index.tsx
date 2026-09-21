@@ -31,6 +31,7 @@ const Delegations = lazy(() => import('@/features/profile/Delegations').then(m =
 const PersonnelSync = lazy(() => import('@/features/admin/personnel-sync/PersonnelSyncDashboard'));
 const IntegrationQueries = lazy(() => import('@/features/admin/IntegrationQueries').then(m => ({ default: m.IntegrationQueries })));
 const SurveyCenterPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCenterPage').then(m => ({ default: m.SurveyCenterPage })));
+const SurveyAccessRoute = lazy(() => import('@/features/admin/surveys/components/SurveyAccessRoute').then(m => ({ default: m.SurveyAccessRoute })));
 const SurveyTemplateLibraryPage = lazy(() => import('@/features/admin/surveys/pages/SurveyTemplateLibraryPage').then(m => ({ default: m.SurveyTemplateLibraryPage })));
 const SurveyStudioPage = lazy(() => import('@/features/admin/surveys/pages/SurveyStudioPage').then(m => ({ default: m.SurveyStudioPage })));
 const SurveyCampaignWizardPage = lazy(() => import('@/features/admin/surveys/pages/SurveyCampaignWizardPage').then(m => ({ default: m.SurveyCampaignWizardPage })));
@@ -154,18 +155,23 @@ export const router = createBrowserRouter([
               },
               {
                 path: 'surveys',
+                element: <Suspense fallback={<PageFallback />}><SurveyAccessRoute /></Suspense>,
                 children: [
-                  { path: '', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyCenterPage /></Suspense></ProtectedRoute> },
+                  { element: <Suspense fallback={<PageFallback />}><SurveyAccessRoute section="center" /></Suspense>, children: [
+                    { index: true, element: <Suspense fallback={<PageFallback />}><SurveyCenterPage /></Suspense> }
+                  ] },
                   { path: 'templates', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyTemplateLibraryPage /></Suspense></ProtectedRoute> },
                   { path: 'templates/new', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyTemplateLibraryPage /></Suspense></ProtectedRoute> },
                   { path: 'templates/:id/edit', element: <ProtectedRoute requiredPermission="Surveys.Design"><Suspense fallback={<PageFallback />}><SurveyStudioPage /></Suspense></ProtectedRoute> },
                   { path: 'campaigns', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignOverviewPage /></Suspense></ProtectedRoute> },
                   { path: 'campaigns/new', element: <ProtectedRoute requiredPermission="Surveys.Publish"><Suspense fallback={<PageFallback />}><SurveyCampaignWizardPage /></Suspense></ProtectedRoute> },
                   { path: 'campaigns/:id', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignOverviewPage /></Suspense></ProtectedRoute> },
-                  { path: 'campaigns/:id/participants', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
-                  { path: 'campaigns/:id/delivery', element: <ProtectedRoute requiredPermission="Surveys.Manage"><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id/participants', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
+                  { path: 'campaigns/:id/delivery', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyCampaignParticipantsPage /></Suspense></ProtectedRoute> },
                   { path: 'campaigns/:id/results', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyCampaignResultsPage /></Suspense></ProtectedRoute> },
-                  { path: 'viewable-results', element: <ProtectedRoute><Suspense fallback={<PageFallback />}><SurveyViewableResultsPage /></Suspense></ProtectedRoute> }
+                  { element: <Suspense fallback={<PageFallback />}><SurveyAccessRoute section="results" /></Suspense>, children: [
+                    { path: 'viewable-results', element: <Suspense fallback={<PageFallback />}><SurveyViewableResultsPage /></Suspense> }
+                  ] }
                 ]
               }
             ]

@@ -22,6 +22,15 @@ const roleSchema = z.object({
 
 type RoleFormValues = z.infer<typeof roleSchema>;
 
+const surveyPermissionLabels: Record<string, string> = {
+  'Surveys.Design': 'Anket şablonlarını tasarla',
+  'Surveys.Publish': 'Anket kampanyalarını yayınla',
+  'Surveys.Manage': 'Kampanyaları ve izleyicileri yönet',
+  'Surveys.Results.Export': 'Özet sonuçları dışa aktar',
+  'Surveys.Results.ExportIdentified': 'Kimlikli yanıtları dışa aktar',
+  'Surveys.Results.ViewFiles': 'Yanıt dosyalarını görüntüle'
+};
+
 export const Roles: React.FC = () => {
   const queryClient = useQueryClient();
 
@@ -105,6 +114,7 @@ export const Roles: React.FC = () => {
     mutationFn: (data: { roleId: string, perms: string[] }) => adminService.updateRolePermissions(data.roleId, data.perms),
     onSuccess: () => {
       notify.success('Yetkiler başarıyla güncellendi.');
+      queryClient.invalidateQueries({ queryKey: ['adminRolePermissions', roleForPerms?.id] });
       setIsPermDrawerOpen(false);
       setRoleForPerms(null);
     }
@@ -309,6 +319,7 @@ export const Roles: React.FC = () => {
         }
       >
         <div className="flex flex-col gap-3 py-4">
+          <p className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-brand-gray">Anket sonuçlarını kimlerin görebileceği kampanyanın İzleyiciler ekranından belirlenir. Buradaki izinler yönetim, dışa aktarma ve dosya işlemleri içindir; bütün anketlerin sonuçlarına erişim sağlamaz. Rol değişiklikleri için yeniden giriş gerekebilir.</p>
           {isFetchingPerms ? (
              <div className="animate-pulse space-y-3">
                 <div className="h-16 bg-surface-muted rounded-xl w-full border border-surface-muted/50"></div>
@@ -336,7 +347,8 @@ export const Roles: React.FC = () => {
                      className="h-5 w-5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/50 pointer-events-none shrink-0"
                    />
                    <div className="ml-4 flex flex-col">
-                      <span className="font-bold text-brand-dark text-[15px]">{perm.name}</span>
+                      <span className="font-bold text-brand-dark text-[15px]">{surveyPermissionLabels[perm.name] ?? perm.name}</span>
+                      {surveyPermissionLabels[perm.name] && <span className="mt-1 font-mono text-[10px] text-brand-gray">{perm.name}</span>}
                       {perm.description && (
                         <span className="text-xs text-brand-gray mt-1 leading-relaxed">{perm.description}</span>
                       )}

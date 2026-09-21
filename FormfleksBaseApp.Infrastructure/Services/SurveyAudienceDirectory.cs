@@ -28,25 +28,35 @@ public class SurveyAudienceDirectory : ISurveyAudienceDirectory
         // Check if there are ANY base filters (if filterConditionsSql is empty, no base filter applied)
         bool hasBaseFilters = !string.IsNullOrWhiteSpace(filterConditionsSql);
 
+        bool hasIncludedUsers = filter.IncludedUserIds != null && filter.IncludedUserIds.Any();
+
         sb.Append(" AND ( ");
 
-        if (hasBaseFilters)
+        if (filter.SelectedUsersOnly == true)
+        {
+            sb.Append(" u.id = ANY(@IncludedUserIds) ");
+            parameters.Add("IncludedUserIds", filter.IncludedUserIds?.ToArray() ?? Array.Empty<Guid>());
+        }
+        else if (hasBaseFilters && hasIncludedUsers)
+        {
+            sb.Append(" ( (1=1 " + filterConditionsSql + ") OR u.id = ANY(@IncludedUserIds) ) ");
+            parameters.Add("IncludedUserIds", filter.IncludedUserIds.ToArray());
+        }
+        else if (hasBaseFilters && !hasIncludedUsers)
         {
             sb.Append(" (1=1 " + filterConditionsSql + ") ");
         }
-        else
+        else if (!hasBaseFilters && hasIncludedUsers && filter.SelectedUsersOnly != false)
         {
-            // If no base filters, the default is to include NO ONE if IncludedUserIds is used as a specific selection.
-            // But wait, if someone opens the modal without filters, they see everyone.
-            // Let's assume if no filters, it returns everyone. 
-            sb.Append(" 1=1 "); 
-        }
-
-        if (filter.IncludedUserIds != null && filter.IncludedUserIds.Any())
-        {
-            sb.Append(" OR u.id = ANY(@IncludedUserIds) ");
+            sb.Append(" u.id = ANY(@IncludedUserIds) ");
             parameters.Add("IncludedUserIds", filter.IncludedUserIds.ToArray());
         }
+        else
+        {
+            // No base filters and no included users => Return everyone
+            sb.Append(" 1=1 "); 
+        }
+        
         sb.Append(" ) ");
 
         if (filter.ExcludedUserIds != null && filter.ExcludedUserIds.Any())
@@ -142,8 +152,8 @@ public class SurveyAudienceDirectory : ISurveyAudienceDirectory
         if (filter.Roles != null && filter.Roles.Any())
         {
             filterSb.Append(@" AND EXISTS (
-                SELECT 1 FROM ""UserRoles"" ur2 
-                JOIN ""Roles"" r2 ON ur2.role_id = r2.id 
+                SELECT 1 FROM public.user_roles ur2 
+                JOIN public.roles r2 ON ur2.role_id = r2.id 
                 WHERE ur2.user_id = u.id AND r2.name = ANY(@Roles)
             ) ");
             parameters.Add("Roles", filter.Roles.ToArray());
@@ -171,6 +181,18 @@ public class SurveyAudienceDirectory : ISurveyAudienceDirectory
         var (sql, parameters) = GetFullQuery(filter, true);
         var connection = _dbContext.Database.GetDbConnection();
         return await connection.ExecuteScalarAsync<int>(sql, parameters);
+    }
+
+    public async Task<List<Guid>> GetSelectedUserIdsAsync(AudienceFilter filter, IEnumerable<Guid> candidateIds, CancellationToken cancellationToken = default)
+    {
+        var ids = candidateIds.Distinct().ToArray();
+        if (ids.Length == 0) return new List<Guid>();
+        var (sql, parameters) = GetFullQuery(filter, false);
+        parameters.Add("CandidateIds", ids);
+        var selected = await _dbContext.Database.GetDbConnection().QueryAsync<Guid>(new CommandDefinition(
+            "SELECT matched.UserId FROM (" + sql + " AND u.id = ANY(@CandidateIds)) matched",
+            parameters, cancellationToken: cancellationToken));
+        return selected.ToList();
     }
 
     public async Task<List<SurveyAudienceUser>> GetUsersAsync(AudienceFilter filter, int page, int pageSize, CancellationToken cancellationToken = default)

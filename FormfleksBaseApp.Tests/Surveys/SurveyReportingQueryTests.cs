@@ -19,7 +19,7 @@ public sealed class SurveyReportingQueryTests
         context.SurveyCampaigns.Add(campaign);
         await context.SaveChangesAsync();
 
-        var handler = new GetCampaignParticipantsQueryHandler(context, Mock.Of<ISurveyAudienceDirectory>());
+        var handler = new GetCampaignParticipantsQueryHandler(context, Mock.Of<ISurveyAudienceDirectory>(), Mock.Of<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService>());
 
         var exception = await Assert.ThrowsAsync<FormfleksBaseApp.Application.Common.BusinessException>(() =>
             handler.Handle(new GetCampaignParticipantsQuery(campaign.Id), CancellationToken.None));
@@ -36,8 +36,12 @@ public sealed class SurveyReportingQueryTests
         context.SurveyAssignments.AddRange(Enumerable.Range(0, 3).Select(index => NewAssignment(campaign.Id, "Finans", index < 2)));
         await context.SaveChangesAsync();
 
-        var handler = new GetCampaignSegmentsQueryHandler(context);
-        var result = await handler.Handle(new GetCampaignSegmentsQuery(campaign.Id, "department", Guid.NewGuid(), true), CancellationToken.None);
+        var authServiceMock = new Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService>();
+        authServiceMock.Setup(a => a.EnsureCampaignPermissionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<SurveyAction>(), It.IsAny<CancellationToken>()))
+                       .Returns(Task.CompletedTask);
+
+        var handler = new GetCampaignSegmentsQueryHandler(context, new SurveyAnonymousSuppressionService(), authServiceMock.Object);
+        var result = await handler.Handle(new GetCampaignSegmentsQuery(campaign.Id, "department", Guid.NewGuid()), CancellationToken.None);
 
         var segment = Assert.Single(result.Items);
         Assert.True(segment.IsSuppressed);
@@ -58,7 +62,9 @@ public sealed class SurveyReportingQueryTests
         var directory = new Mock<ISurveyAudienceDirectory>();
         directory.Setup(x => x.GetUsersByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        var handler = new GetCampaignParticipantsQueryHandler(context, directory.Object);
+        var auth = new Mock<ISurveyAuthorizationService>();
+        auth.Setup(a => a.HasCampaignPermissionAsync(It.IsAny<Guid>(), campaign.Id, SurveyAction.ManageAudience, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var handler = new GetCampaignParticipantsQueryHandler(context, directory.Object, auth.Object);
 
         var result = await handler.Handle(new GetCampaignParticipantsQuery(campaign.Id, Page: 11, PageSize: 100), CancellationToken.None);
 

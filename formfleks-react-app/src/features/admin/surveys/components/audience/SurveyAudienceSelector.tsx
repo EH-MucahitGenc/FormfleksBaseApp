@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { campaignService } from '../../services/campaign.service';
-import type { AudienceFilter, SurveyAudienceUser } from '../../services/campaign.service';
-import { Search, Users, Check, X, Building2, MapPin, Briefcase, GraduationCap, Grid, ChevronDown, ChevronRight, Save, FolderOpen, Trash2, Filter, XCircle } from 'lucide-react';
+import type { AudienceFilter } from '../../services/campaign.service';
+import { Search, Users, Check, X, Building2, MapPin, Briefcase, GraduationCap, Grid, ChevronDown, ChevronRight, Save, FolderOpen, Trash2 } from 'lucide-react';
 
 interface SurveyAudienceSelectorProps {
   filter: AudienceFilter;
@@ -114,433 +114,241 @@ const AccordionFilter: React.FC<AccordionFilterProps> = ({ title, icon: Icon, op
 
 
 export const SurveyAudienceSelector: React.FC<SurveyAudienceSelectorProps> = ({ filter, onChange, onTotalCountChange }) => {
-  const [localSearch, setLocalSearch] = useState(filter.searchTerm || '');
+  const manual = filter.selectedUsersOnly === true;
+  const [localSearch, setLocalSearch] = useState('');
+  const [search, setSearch] = useState('');
+  const [browseFilters, setBrowseFilters] = useState<AudienceFilter>({});
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedPage, setSelectedPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [showSavedMenu, setShowSavedMenu] = useState(false);
+  const [panel, setPanel] = useState<'selected' | 'excluded'>('selected');
 
-  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onChange({ ...filter, searchTerm: localSearch || undefined });
-      setPage(1);
-    }, 400);
+    const timer = setTimeout(() => setSearch(localSearch.trim()), 300);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSearch]);
 
-  const { data: facets, isLoading: isLoadingFacets } = useQuery({
-    queryKey: ['audienceFacets'],
-    queryFn: () => campaignService.getFacets()
+  const { data: facets } = useQuery({ queryKey: ['audienceFacets'], queryFn: campaignService.getFacets });
+  const { data: savedAudiences, refetch: refetchSavedAudiences } = useQuery({
+    queryKey: ['savedAudiences'], queryFn: campaignService.getSavedAudiences
   });
-
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ['audienceSearch', filter, page, pageSize],
-    queryFn: () => campaignService.searchAudience(filter, page, pageSize)
+  const groupFilters = manual ? browseFilters : filter;
+  // Directory search never changes the saved audience or its selected-user count.
+  const directoryFilter: AudienceFilter = {
+    ...(showAllUsers ? {} : groupFilters),
+    selectedUsersOnly: false, includedUserIds: undefined, excludedUserIds: undefined,
+    searchTerm: search || (showAllUsers ? undefined : groupFilters.searchTerm)
+  };
+  const candidates = useQuery({
+    queryKey: ['audienceCandidates', directoryFilter, filter, page, pageSize],
+    queryFn: () => campaignService.browseAudience(directoryFilter, filter, page, pageSize)
+  });
+  const selected = useQuery({
+    queryKey: ['audienceSelection', filter, selectedPage],
+    queryFn: () => campaignService.searchAudience(filter, selectedPage, 10)
+  });
+  const excluded = useQuery({
+    queryKey: ['audienceExcluded', filter.excludedUserIds, selectedPage],
+    queryFn: () => campaignService.searchAudience({
+      selectedUsersOnly: true, includedUserIds: filter.excludedUserIds || []
+    }, selectedPage, 10),
+    enabled: panel === 'excluded'
   });
 
   useEffect(() => {
-    if (searchResults && onTotalCountChange) {
-      onTotalCountChange(searchResults.totalCount);
-    }
-  }, [searchResults, onTotalCountChange]);
+    onTotalCountChange?.(selected.isFetching || selected.isError ? 0 : selected.data?.totalCount ?? 0);
+  }, [selected.data, selected.isFetching, selected.isError, onTotalCountChange]);
 
-  const handleFilterChange = useCallback((key: keyof AudienceFilter, value: any) => {
-    onChange({ ...filter, [key]: value });
-    setPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, onChange]);
-
-  const handleToggleArrayFilter = useCallback((key: keyof AudienceFilter, value: string) => {
-    const current = (filter[key] as string[]) || [];
-    const next = current.includes(value) ? current.filter(x => x !== value) : [...current, value];
-    handleFilterChange(key, next.length > 0 ? next : undefined);
-  }, [filter, handleFilterChange]);
-
-  const handleToggleExclude = useCallback((userId: string) => {
-    const excluded = filter.excludedUserIds || [];
-    const included = filter.includedUserIds || [];
-
-    if (excluded.includes(userId)) {
-      handleFilterChange('excludedUserIds', excluded.filter(x => x !== userId));
-    } else {
-      handleFilterChange('excludedUserIds', [...excluded, userId]);
-      if (included.includes(userId)) {
-        handleFilterChange('includedUserIds', included.filter(x => x !== userId));
+  const changeAudience = (next: AudienceFilter) => {
+    onTotalCountChange?.(0);
+    setSelectedPage(1);
+    onChange(next);
+  };
+  const setMembership = (userIds: string[], include: boolean) => {
+    const included = new Set(filter.includedUserIds || []);
+    const excludedIds = new Set(filter.excludedUserIds || []);
+    for (const id of userIds) {
+      if (include) {
+        included.add(id);
+        excludedIds.delete(id);
+      } else {
+        included.delete(id);
+        if (!manual) excludedIds.add(id);
       }
     }
-  }, [filter, handleFilterChange]);
-
-  const isExcluded = useCallback((userId: string) => filter.excludedUserIds?.includes(userId) ?? false, [filter.excludedUserIds]);
-
-  // --- Active filter chips ---
-  const activeFilterChips = useMemo(() => {
-    const chips: { label: string; key: keyof AudienceFilter; value: string }[] = [];
-    const addChips = (key: keyof AudienceFilter, label: string) => {
-      const arr = filter[key] as string[] | undefined;
-      if (arr) arr.forEach(v => chips.push({ label: `${label}: ${v}`, key, value: v }));
-    };
-    addChips('companies', 'Şirket');
-    addChips('locations', 'Lokasyon');
-    addChips('departments', 'Departman');
-    addChips('personnelGroups', 'Personel Grubu');
-    addChips('titles', 'Unvan');
-    addChips('roles', 'Rol');
-    if (filter.hasOrganizationData) chips.push({ label: 'Sadece QDMS Kaydı Olanlar', key: 'hasOrganizationData', value: 'true' });
-    return chips;
-  }, [filter]);
-
-  const clearAllFilters = () => {
-    onChange({});
-    setLocalSearch('');
+    changeAudience({ ...filter, includedUserIds: [...included], excludedUserIds: [...excludedIds] });
+  };
+  const changeGroup = (key: keyof AudienceFilter, value: string[] | boolean | undefined) => {
+    const next = { ...groupFilters, [key]: value };
+    if (manual) setBrowseFilters(next);
+    else changeAudience(next);
     setPage(1);
   };
-
-  const removeChip = (chip: { key: keyof AudienceFilter; value: string }) => {
-    if (chip.key === 'hasOrganizationData') {
-      handleFilterChange('hasOrganizationData', undefined);
-      return;
-    }
-    const current = (filter[chip.key] as string[]) || [];
-    const next = current.filter(x => x !== chip.value);
-    handleFilterChange(chip.key, next.length > 0 ? next : undefined);
+  const toggleGroup = (key: keyof AudienceFilter, value: string) => {
+    const values = (groupFilters[key] as string[] | undefined) || [];
+    changeGroup(key, values.includes(value) ? values.filter(x => x !== value) : [...values, value]);
   };
-
-  // --- Saved audiences ---
-  const { data: savedAudiences, refetch: refetchSavedAudiences } = useQuery({
-    queryKey: ['savedAudiences'],
-    queryFn: () => campaignService.getSavedAudiences()
-  });
-
-  const handleSaveAudience = async () => {
-    const name = window.prompt("Kaydedilecek hedef kitlenin adını girin:");
-    if (!name) return;
-    try {
-      await campaignService.createSavedAudience(name, undefined, filter);
-      await refetchSavedAudiences();
-      setShowSavedMenu(false);
-    } catch {
-      alert("Kaydedilirken bir hata oluştu.");
-    }
-  };
-
-  const handleDeleteSavedAudience = async (id: string) => {
-    if (!window.confirm("Bu kayıtlı şablonu silmek istediğinize emin misiniz?")) return;
-    try {
-      await campaignService.deleteSavedAudience(id);
-      await refetchSavedAudiences();
-    } catch {
-      alert("Silinirken bir hata oluştu.");
-    }
-  };
-
-  const handleLoadSavedAudience = (audienceId: string) => {
-    const saved = savedAudiences?.find(x => x.id === audienceId);
-    if (saved) {
-      onChange(saved.audienceDefinition);
-      setLocalSearch(saved.audienceDefinition.searchTerm || '');
-      setShowSavedMenu(false);
-      setPage(1);
-    }
-  };
-
-  // --- Pagination helpers ---
-  const totalPages = searchResults ? Math.ceil(searchResults.totalCount / pageSize) : 0;
-  const excludedCount = filter.excludedUserIds?.length || 0;
-
-  const getPageNumbers = () => {
-    const pages: (number | '...')[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+  const switchMode = (nextManual: boolean) => {
+    if (nextManual === manual) return;
+    setPage(1);
+    setShowAllUsers(false);
+    setPanel('selected');
+    if (nextManual) {
+      // Starting a manual list never silently includes an entire organization.
+      setBrowseFilters({});
+      changeAudience({ selectedUsersOnly: true, includedUserIds: filter.includedUserIds || [] });
     } else {
-      pages.push(1);
-      if (page > 3) pages.push('...');
-      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-      if (page < totalPages - 2) pages.push('...');
-      pages.push(totalPages);
+      changeAudience({ ...browseFilters, selectedUsersOnly: false,
+        includedUserIds: filter.includedUserIds, excludedUserIds: filter.excludedUserIds });
     }
-    return pages;
   };
+  const saveAudience = async () => {
+    const name = window.prompt('Bu hedef kitle listesine bir ad verin:');
+    if (!name?.trim()) return;
+    try {
+      await campaignService.createSavedAudience(name.trim(), undefined, filter);
+      await refetchSavedAudiences();
+      setShowSavedMenu(false);
+    } catch { window.alert('Liste kaydedilemedi. Lütfen tekrar deneyin.'); }
+  };
+  const deleteAudience = async (id: string) => {
+    if (!window.confirm('Kayıtlı liste silinsin mi?')) return;
+    try { await campaignService.deleteSavedAudience(id); await refetchSavedAudiences(); }
+    catch { window.alert('Liste silinemedi.'); }
+  };
+  const panelQuery = panel === 'selected' ? selected : excluded;
+  const candidateItems = candidates.data?.items || [];
+  const totalPages = Math.max(1, Math.ceil((candidates.data?.totalCount || 0) / pageSize));
+  const panelPages = Math.max(1, Math.ceil((panelQuery.data?.totalCount || 0) / 10));
+  const groups: { key: keyof AudienceFilter; title: string; icon: React.ElementType; options?: string[] }[] = [
+    { key: 'companies', title: 'Şirket', icon: Building2, options: facets?.companies },
+    { key: 'locations', title: 'Lokasyon', icon: MapPin, options: facets?.locations },
+    { key: 'departments', title: 'Departman', icon: Briefcase, options: facets?.departments },
+    { key: 'personnelGroups', title: 'Personel Grubu', icon: Grid, options: facets?.personnelGroups },
+    { key: 'titles', title: 'Unvan', icon: GraduationCap, options: facets?.titles },
+    { key: 'roles', title: 'Sistem Rolü', icon: Users, options: facets?.roles }
+  ];
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-surface-muted overflow-hidden">
-      {/* ─── Top Bar ─── */}
-      <div className="p-3 border-b border-surface-muted bg-surface-base">
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-gray" />
-            <input
-              type="text"
-              value={localSearch}
-              onChange={e => setLocalSearch(e.target.value)}
-              placeholder="İsim veya e-posta ara..."
-              className="w-full bg-white border border-surface-muted rounded-lg pl-9 pr-4 py-2 text-sm focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none"
-            />
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Saved Audiences Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSavedMenu(!showSavedMenu)}
-              className="flex items-center gap-1.5 text-xs font-medium text-brand-gray hover:text-brand-dark border border-surface-muted rounded-lg px-3 py-2 bg-white hover:bg-surface-muted/50 transition-colors"
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-              Şablonlar
+    <div className="overflow-hidden rounded-2xl border border-surface-muted bg-white">
+      <div className="border-b border-surface-muted bg-gradient-to-r from-orange-50/80 to-white p-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[{ value: true, title: 'Kişi seç', description: 'Listeye eklediğim kişilere gönder.' },
+            { value: false, title: 'Grupla seç', description: 'Filtreye uyanları dahil et, kişi ekle veya çıkar.' }].map(mode =>
+            <button key={String(mode.value)} type="button" aria-pressed={manual === mode.value}
+              onClick={() => switchMode(mode.value)}
+              className={`rounded-xl border p-3 text-left transition-colors ${manual === mode.value ? 'border-brand-primary bg-white shadow-sm' : 'border-surface-muted bg-white/60 hover:border-brand-primary/40'}`}>
+              <span className="flex items-center gap-2 text-sm font-bold text-brand-dark"><Users className="h-4 w-4 text-brand-primary" />{mode.title}</span>
+              <span className="mt-1 block text-xs text-brand-gray">{mode.description}</span>
             </button>
-
-            {showSavedMenu && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setShowSavedMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg border border-surface-muted z-40 overflow-hidden">
-                  <div className="p-3 border-b border-surface-muted bg-surface-base flex items-center justify-between">
-                    <span className="text-xs font-bold text-brand-dark">Kayıtlı Hedef Kitle Şablonları</span>
-                    <button
-                      onClick={handleSaveAudience}
-                      className="flex items-center gap-1 text-[11px] text-brand-primary hover:text-brand-dark font-semibold"
-                    >
-                      <Save className="w-3 h-3" /> Geçerli Filtreyi Kaydet
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto scrollbar-thin">
-                    {!savedAudiences || savedAudiences.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-brand-gray">Henüz kayıtlı şablon yok.</div>
-                    ) : (
-                      savedAudiences.map(sa => (
-                        <div key={sa.id} className="flex items-center justify-between px-3 py-2.5 hover:bg-surface-muted/50 border-b border-surface-muted/50 last:border-b-0 group">
-                          <button onClick={() => handleLoadSavedAudience(sa.id)} className="flex-1 text-left text-xs font-medium text-brand-dark hover:text-brand-primary truncate">
-                            {sa.name}
-                          </button>
-                          <button onClick={() => handleDeleteSavedAudience(sa.id)} className="p-1 text-brand-gray hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Sil">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Total count badge */}
-          <div className="bg-brand-primary/10 text-brand-primary pl-3 pr-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 border border-brand-primary/20 tabular-nums">
-            <Users className="w-4 h-4" />
-            {isSearching ? '...' : (searchResults?.totalCount ?? 0) - excludedCount} Kişi
-          </div>
+          )}
         </div>
-
-        {/* Active filter chips */}
-        {activeFilterChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-            <Filter className="w-3.5 h-3.5 text-brand-gray mr-0.5" />
-            {activeFilterChips.map((chip, i) => (
-              <span key={i} className="inline-flex items-center gap-1 bg-brand-primary/10 text-brand-primary text-[11px] font-medium pl-2.5 pr-1.5 py-1 rounded-full">
-                {chip.label}
-                <button onClick={() => removeChip(chip)} className="p-0.5 hover:bg-brand-primary/20 rounded-full">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            <button onClick={clearAllFilters} className="text-[11px] text-red-500 hover:text-red-700 font-medium ml-1 flex items-center gap-0.5">
-              <XCircle className="w-3.5 h-3.5" /> Tümünü Temizle
-            </button>
-          </div>
-        )}
+        <p className="mt-3 text-xs leading-5 text-brand-gray">
+          {manual ? 'Arama ve filtreler yalnızca rehberi daraltır. Eklediğiniz kişiler arama değiştiğinde listede kalır.'
+            : 'Grup filtreleri alıcıları belirler. Filtre seçmezseniz tüm aktif kullanıcılar dahildir. Arama alıcıları değiştirmez.'}
+        </p>
       </div>
-
-      {/* ─── Main Content ─── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar: Accordion Filters */}
-        <div className="w-56 border-r border-surface-muted bg-surface-base/50 overflow-y-auto scrollbar-thin flex-shrink-0">
-          {isLoadingFacets ? (
-            <div className="p-4 text-xs text-brand-gray">Filtreler yükleniyor...</div>
-          ) : (
-            <>
-              <AccordionFilter title="Şirket" icon={Building2} options={facets?.companies} selected={(filter.companies as string[]) || []} onToggle={v => handleToggleArrayFilter('companies', v)} />
-              <AccordionFilter title="Lokasyon" icon={MapPin} options={facets?.locations} selected={(filter.locations as string[]) || []} onToggle={v => handleToggleArrayFilter('locations', v)} />
-              <AccordionFilter title="Departman" icon={Briefcase} options={facets?.departments} selected={(filter.departments as string[]) || []} onToggle={v => handleToggleArrayFilter('departments', v)} />
-              <AccordionFilter title="Personel Grubu" icon={Grid} options={facets?.personnelGroups} selected={(filter.personnelGroups as string[]) || []} onToggle={v => handleToggleArrayFilter('personnelGroups', v)} />
-              <AccordionFilter title="Unvan" icon={GraduationCap} options={facets?.titles} selected={(filter.titles as string[]) || []} onToggle={v => handleToggleArrayFilter('titles', v)} />
-              <AccordionFilter title="Sistem Rolü" icon={Users} options={facets?.roles} selected={(filter.roles as string[]) || []} onToggle={v => handleToggleArrayFilter('roles', v)} />
-
-              {/* QDMS toggle */}
-              <div className="px-3 py-3">
-                <label className="flex items-start gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 w-3.5 h-3.5 text-brand-primary rounded border-surface-muted focus:ring-brand-primary cursor-pointer"
-                    checked={filter.hasOrganizationData === true}
-                    onChange={(e) => handleFilterChange('hasOrganizationData', e.target.checked ? true : undefined)}
-                  />
-                  <div>
-                    <span className="text-[11px] font-semibold text-brand-dark group-hover:text-brand-primary transition-colors leading-tight">Sadece QDMS Kaydı Olanlar</span>
-                    <p className="text-[10px] text-brand-gray mt-0.5 leading-tight">Organizasyon bilgisi olan aktif çalışanlar.</p>
-                  </div>
-                </label>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Right Content: Table + Pagination */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-auto scrollbar-thin">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-surface-base border-b border-surface-muted sticky top-0 z-10">
-                <tr className="text-brand-gray text-[11px] uppercase font-semibold tracking-wider">
-                  <th className="px-4 py-2.5">Personel</th>
-                  <th className="px-4 py-2.5">Organizasyon</th>
-                  <th className="px-4 py-2.5 w-24 text-center">Durum</th>
-                  <th className="px-4 py-2.5 w-24 text-center">İşlem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-muted/50">
-                {isSearching && !searchResults ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-sm text-brand-gray">
-                      <div className="animate-pulse">Sonuçlar yükleniyor...</div>
-                    </td>
-                  </tr>
-                ) : searchResults?.items.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-sm text-brand-gray">
-                      Filtrelerle eşleşen kimse bulunamadı.
-                    </td>
-                  </tr>
-                ) : (
-                  searchResults?.items.map((u: SurveyAudienceUser) => {
-                    const excluded = isExcluded(u.userId);
-                    return (
-                      <tr key={u.userId} className={`transition-colors ${excluded ? 'bg-red-50/40' : 'hover:bg-surface-muted/30'}`}>
-                        <td className="px-4 py-2.5">
-                          <div className="font-medium text-brand-dark text-[13px]">{u.displayName}</div>
-                          <div className="text-[11px] text-brand-gray">{u.email}</div>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {u.hasOrganizationData ? (
-                            <>
-                              <div className="text-[13px] text-brand-dark">{u.department}</div>
-                              <div className="text-[11px] text-brand-gray">{u.company} • {u.title}</div>
-                            </>
-                          ) : (
-                            <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Org. Bilgisi Yok</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          {excluded ? (
-                            <span className="inline-flex items-center gap-0.5 text-[11px] text-red-600 bg-red-50 px-2 py-0.5 rounded-full font-medium">
-                              <X className="w-3 h-3" /> Hariç
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-0.5 text-[11px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                              <Check className="w-3 h-3" /> Dahil
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          <button
-                            onClick={() => handleToggleExclude(u.userId)}
-                            className={`text-[11px] px-2.5 py-1 rounded font-medium transition-colors ${
-                              excluded
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-red-50 text-red-500 hover:bg-red-100'
-                            }`}
-                          >
-                            {excluded ? 'Geri Al' : 'Çıkar'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ─── Pagination Footer ─── */}
-          {searchResults && searchResults.totalCount > 0 && (
-            <div className="border-t border-surface-muted px-4 py-2 bg-surface-base flex items-center justify-between flex-shrink-0">
-              {/* Left: page size selector + info */}
-              <div className="flex items-center gap-3 text-[11px] text-brand-gray">
-                <div className="flex items-center gap-1.5">
-                  <span>Sayfa başına:</span>
-                  <select
-                    value={pageSize}
-                    onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
-                    className="bg-white border border-surface-muted rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-brand-primary"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-                <span className="text-brand-gray/70">
-                  {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, searchResults.totalCount)} / {searchResults.totalCount}
-                </span>
-                {excludedCount > 0 && (
-                  <span className="text-red-500 font-medium">({excludedCount} hariç tutuldu)</span>
-                )}
-              </div>
-
-              {/* Right: page numbers */}
-              {totalPages > 1 && (
-                <div className="flex items-center gap-0.5">
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage(1)}
-                    className="px-2 py-1 text-[11px] border border-surface-muted bg-white rounded hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="İlk Sayfa"
-                  >
-                    «
-                  </button>
-                  <button
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                    className="px-2 py-1 text-[11px] border border-surface-muted bg-white rounded hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    ‹
-                  </button>
-                  {getPageNumbers().map((p, i) =>
-                    p === '...' ? (
-                      <span key={`dot-${i}`} className="px-1 text-[11px] text-brand-gray">…</span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => setPage(p as number)}
-                        className={`px-2.5 py-1 text-[11px] rounded border transition-colors ${
-                          page === p
-                            ? 'bg-brand-primary text-white border-brand-primary font-bold'
-                            : 'border-surface-muted bg-white hover:bg-surface-muted text-brand-gray'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    className="px-2 py-1 text-[11px] border border-surface-muted bg-white rounded hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    ›
-                  </button>
-                  <button
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(totalPages)}
-                    className="px-2 py-1 text-[11px] border border-surface-muted bg-white rounded hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                    title="Son Sayfa"
-                  >
-                    »
-                  </button>
-                </div>
-              )}
+      <div className="flex flex-wrap items-center gap-3 border-b border-surface-muted p-3">
+        <label className="relative min-w-48 flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-brand-gray" />
+          <input aria-label="Kullanıcı rehberinde ara" value={localSearch}
+            onChange={e => { setLocalSearch(e.target.value); setPage(1); }}
+            placeholder="İsim veya e-posta ile kişi bul..."
+            className="w-full rounded-lg border border-surface-muted py-2 pl-9 pr-3 text-sm focus:outline-brand-primary" />
+        </label>
+        <div className="relative">
+          <button type="button" onClick={() => setShowSavedMenu(!showSavedMenu)} className="flex items-center gap-2 rounded-lg border border-surface-muted px-3 py-2 text-xs"><FolderOpen className="h-4 w-4" />Kayıtlı listeler</button>
+          {showSavedMenu && <div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-xl border border-surface-muted bg-white p-3 shadow-xl">
+            <button type="button" onClick={saveAudience} className="mb-2 flex items-center gap-2 text-xs font-semibold text-brand-primary"><Save className="h-4 w-4" />Bu hedef kitleyi kaydet</button>
+            <div className="max-h-56 overflow-y-auto">
+              {!savedAudiences?.length && <p className="py-3 text-xs text-brand-gray">Henüz kayıtlı liste yok.</p>}
+              {savedAudiences?.map(saved => <div key={saved.id} className="flex items-center gap-2 border-t border-surface-muted py-2">
+                <button type="button" className="flex-1 truncate text-left text-sm" onClick={() => {
+                  changeAudience(saved.audienceDefinition); setLocalSearch(''); setSearch(''); setPage(1);
+                  setBrowseFilters({}); setShowAllUsers(false); setShowSavedMenu(false);
+                }}>{saved.name}</button>
+                <button type="button" aria-label={`${saved.name} listesini sil`} onClick={() => deleteAudience(saved.id)}><Trash2 className="h-4 w-4 text-brand-gray" /></button>
+              </div>)}
             </div>
-          )}
+          </div>}
         </div>
+      </div>
+      <div className="grid lg:grid-cols-[180px_minmax(0,1fr)_240px]">
+        <aside className="border-b border-surface-muted bg-surface-ground/40 lg:border-b-0 lg:border-r">
+          <div className="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-brand-gray">{manual ? 'Rehber filtreleri' : 'Hedef kitle grupları'}</div>
+          {groups.map(g => <AccordionFilter key={g.key} title={g.title} icon={g.icon} options={g.options}
+            selected={(groupFilters[g.key] as string[]) || []} onToggle={value => toggleGroup(g.key, value)} />)}
+          <label className="flex items-start gap-2 p-3 text-xs text-brand-gray">
+            <input type="checkbox" checked={groupFilters.hasOrganizationData === true}
+              onChange={e => changeGroup('hasOrganizationData', e.target.checked ? true : undefined)} />
+            Organizasyon bilgisi olanlar
+          </label>
+          <button type="button" className="px-3 pb-3 text-xs text-brand-primary" onClick={() => {
+            if (manual) setBrowseFilters({});
+            else changeAudience({ selectedUsersOnly: false, includedUserIds: filter.includedUserIds, excludedUserIds: filter.excludedUserIds });
+            setPage(1);
+          }}>Grup filtrelerini temizle</button>
+          {!manual && filter.searchTerm && <p className="px-3 pb-3 text-xs text-brand-gray">Kayıtlı arama kuralı: {filter.searchTerm}</p>}
+        </aside>
+        <section className="min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-surface-muted p-3">
+            <label className="flex items-center gap-2 text-xs text-brand-gray">
+              <input type="checkbox" checked={showAllUsers} onChange={e => { setShowAllUsers(e.target.checked); setPage(1); }} />
+              Tüm aktif kullanıcıları göster
+            </label>
+            <button type="button" disabled={candidates.isFetching || !candidateItems.length}
+              onClick={() => setMembership(candidateItems.map(x => x.user.userId), true)}
+              className="text-xs font-semibold text-brand-primary disabled:opacity-40">Bu sayfadakileri ekle</button>
+          </div>
+          <div className="max-h-[480px] min-h-64 overflow-auto">
+            {candidates.isError ? <div role="alert" className="p-5 text-sm text-red-600">Rehber yüklenemedi. <button onClick={() => candidates.refetch()} className="underline">Tekrar dene</button></div>
+              : candidates.isPending ? <p className="p-5 text-sm text-brand-gray">Kullanıcılar yükleniyor...</p>
+              : !candidateItems.length ? <p className="p-5 text-sm text-brand-gray">Bu aramaya uygun aktif kullanıcı yok. Aramayı veya filtreleri değiştirin.</p>
+              : <table className="w-full text-left text-sm"><thead className="sticky top-0 bg-surface-ground text-[11px] uppercase text-brand-gray"><tr><th className="p-3">Kullanıcı</th><th className="p-3 text-right">Seçim</th></tr></thead>
+                <tbody>{candidateItems.map(({ user, isSelected }) => <tr key={user.userId} className={`border-b border-surface-muted/60 ${isSelected ? 'bg-orange-50/40' : ''}`}>
+                  <td className="p-3"><p className="font-semibold text-brand-dark">{user.displayName || user.email}</p><p className="break-all text-xs text-brand-gray">{user.email}</p><p className="mt-1 text-[11px] text-brand-gray">{[user.company, user.department, user.location].filter(Boolean).join(' · ') || 'Organizasyon bilgisi yok'}</p></td>
+                  <td className="p-3 text-right"><button type="button" disabled={candidates.isFetching} aria-pressed={isSelected}
+                    aria-label={`${user.displayName || user.email}: ${isSelected ? 'listeden çıkar' : 'listeye ekle'}`}
+                    onClick={() => setMembership([user.userId], !isSelected)}
+                    className={`inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40 ${isSelected ? 'border-orange-200 bg-orange-50 text-brand-primary' : 'border-surface-muted text-brand-dark hover:border-brand-primary'}`}>
+                    {isSelected ? <Check className="h-3 w-3" /> : <Users className="h-3 w-3" />}{isSelected ? 'Çıkar' : 'Ekle'}
+                  </button>{filter.excludedUserIds?.includes(user.userId) && <p className="mt-1 text-[10px] text-red-600">Hariç tutuldu</p>}</td>
+                </tr>)}</tbody></table>}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 text-xs text-brand-gray">
+            <label>Sayfa boyutu <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="rounded border border-surface-muted p-1">{[10,25,50,100].map(n => <option key={n}>{n}</option>)}</select></label>
+            <span>{candidates.data?.totalCount ?? 0} kullanıcı</span>
+            <div className="flex items-center gap-2"><button disabled={page <= 1} onClick={() => setPage(page - 1)} className="disabled:opacity-30" aria-label="Önceki rehber sayfası">‹</button><span>{page} / {totalPages}</span><button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="disabled:opacity-30" aria-label="Sonraki rehber sayfası">›</button></div>
+          </div>
+        </section>
+        <aside className="border-t border-surface-muted bg-orange-50/30 lg:border-l lg:border-t-0">
+          <div className="border-b border-surface-muted p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">Gönderim listesi</p>
+            <p aria-live="polite" className="mt-1 text-2xl font-bold text-brand-dark">{selected.isFetching ? '...' : selected.data?.totalCount ?? 0} <span className="text-sm font-medium">kişi</span></p>
+            <p className="mt-1 text-xs leading-5 text-brand-gray">{manual ? 'Yalnızca bu listedeki aktif kişilere gönderilir.' : 'Grup seçimleri ve kişisel ekleme/çıkarmaların sonucu.'}</p>
+          </div>
+          <div className="flex gap-3 px-4 pt-3 text-xs">
+            <button className={panel === 'selected' ? 'font-bold text-brand-primary' : 'text-brand-gray'} onClick={() => { setPanel('selected'); setSelectedPage(1); }}>Dahil edilenler</button>
+            <button className={panel === 'excluded' ? 'font-bold text-brand-primary' : 'text-brand-gray'} onClick={() => { setPanel('excluded'); setSelectedPage(1); }}>Hariç tutulanlar</button>
+          </div>
+          <div className="max-h-80 overflow-auto p-3">
+            {panelQuery.isError ? <p role="alert" className="text-xs text-red-600">Liste doğrulanamadı. <button className="underline" onClick={() => panelQuery.refetch()}>Tekrar dene</button></p>
+              : panelQuery.isFetching ? <p className="p-2 text-xs text-brand-gray">Liste güncelleniyor...</p>
+              : !panelQuery.data?.items.length ? <p className="p-2 text-xs leading-5 text-brand-gray">{panel === 'selected' ? 'Listeniz boş. Soldaki rehberden kişi ekleyin.' : 'Hariç tutulan aktif kullanıcı yok.'}</p>
+              : panelQuery.data.items.map(user => <div key={user.userId} className="mb-2 flex items-start gap-2 rounded-lg border border-surface-muted bg-white p-2">
+                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.displayName || user.email}</p><p className="truncate text-[11px] text-brand-gray">{user.email}</p></div>
+                <button type="button" aria-label={`${user.displayName}: ${panel === 'selected' ? 'çıkar' : 'geri ekle'}`}
+                  onClick={() => setMembership([user.userId], panel === 'excluded')}
+                  className="text-xs text-brand-primary">{panel === 'selected' ? <X className="h-4 w-4" /> : 'Ekle'}</button>
+              </div>)}
+          </div>
+          <div className="flex items-center justify-between px-4 pb-3 text-xs"><button disabled={selectedPage <= 1} onClick={() => setSelectedPage(selectedPage - 1)} className="disabled:opacity-30">Önceki</button><span>{selectedPage} / {panelPages}</span><button disabled={selectedPage >= panelPages} onClick={() => setSelectedPage(selectedPage + 1)} className="disabled:opacity-30">Sonraki</button></div>
+          <button type="button" className="m-3 mt-0 text-xs font-medium text-red-600" onClick={() => {
+            setBrowseFilters({}); setPanel('selected'); changeAudience({ selectedUsersOnly: true, includedUserIds: [] });
+          }}>Listeyi boşalt</button>
+        </aside>
       </div>
     </div>
   );

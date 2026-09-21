@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignSegments;
 
-public record GetCampaignSegmentsQuery(Guid CampaignId, string Dimension, Guid ActorUserId, bool IsGlobalAdmin)
+public record GetCampaignSegmentsQuery(Guid CampaignId, string Dimension, Guid ActorUserId)
     : IRequest<CampaignSegmentsDto>;
 
 public sealed class CampaignSegmentsDto
@@ -26,10 +26,19 @@ public sealed class CampaignSegmentItemDto
 
 public sealed class GetCampaignSegmentsQueryHandler : IRequestHandler<GetCampaignSegmentsQuery, CampaignSegmentsDto>
 {
-    private const int MinimumAnonymousGroupSize = 10;
     private readonly ISurveyDbContext _context;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService _suppressionService;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public GetCampaignSegmentsQueryHandler(ISurveyDbContext context) => _context = context;
+    public GetCampaignSegmentsQueryHandler(
+        ISurveyDbContext context, 
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService suppressionService,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService)
+    {
+        _context = context;
+        _suppressionService = suppressionService;
+        _authService = authService;
+    }
 
     public async Task<CampaignSegmentsDto> Handle(GetCampaignSegmentsQuery request, CancellationToken cancellationToken)
     {
@@ -37,7 +46,8 @@ public sealed class GetCampaignSegmentsQueryHandler : IRequestHandler<GetCampaig
             .Where(c => c.Id == request.CampaignId).Select(c => (bool?)c.IsAnonymous)
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
-        await EnsureAccessAsync(request, cancellationToken);
+        
+        await _authService.EnsureCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewAggregateResults, cancellationToken);
 
         var dimension = request.Dimension.Trim().ToLowerInvariant();
         if (dimension is not ("company" or "location" or "department" or "title" or "personnelgroup"))
@@ -54,13 +64,14 @@ public sealed class GetCampaignSegmentsQueryHandler : IRequestHandler<GetCampaig
         };
 
         var rows = await grouped.OrderByDescending(x => x.Participants).ThenBy(x => x.Label).ToListAsync(cancellationToken);
-        return new CampaignSegmentsDto
+        var dto = new CampaignSegmentsDto
         {
             Dimension = dimension,
             IsAnonymous = isAnonymous,
+            MinimumGroupSize = _suppressionService.MinimumGroupSize,
             Items = rows.Select(row =>
             {
-                var suppressed = isAnonymous && row.Responses < MinimumAnonymousGroupSize;
+                var suppressed = _suppressionService.ShouldSuppress(row.Responses, isAnonymous);
                 return new CampaignSegmentItemDto
                 {
                     Label = row.Label,
@@ -71,14 +82,8 @@ public sealed class GetCampaignSegmentsQueryHandler : IRequestHandler<GetCampaig
                 };
             }).ToList()
         };
-    }
 
-    private async Task EnsureAccessAsync(GetCampaignSegmentsQuery request, CancellationToken cancellationToken)
-    {
-        if (request.IsGlobalAdmin) return;
-        var allowed = await _context.SurveyResultViewers.AsNoTracking().AnyAsync(v =>
-            v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-        if (!allowed) throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
+        return dto;
     }
 
     private sealed class SegmentProjection

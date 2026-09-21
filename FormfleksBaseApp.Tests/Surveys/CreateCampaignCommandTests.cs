@@ -9,11 +9,29 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using MockQueryable.Moq;
+using Moq;
 
 namespace FormfleksBaseApp.Tests.Surveys
 {
     public class CreateCampaignCommandTests
     {
+        [Theory]
+        [InlineData(0, null)]
+        [InlineData(2, 3)]
+        public async Task Publish_RejectsEmptyOrChangedAudience(int actual, int? expected)
+        {
+            using var context = new SurveyDbContext(new DbContextOptionsBuilder<SurveyDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            var directory = new Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory>();
+            directory.Setup(d => d.GetTotalUsersCountAsync(It.IsAny<FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync(actual);
+            var handler = new CreateCampaignCommandHandler(context, Mock.Of<IServiceProvider>(), Mock.Of<IDynamicFormsDbContext>(), directory.Object);
+            var command = new CreateCampaignCommand(Guid.NewGuid(), "Test", "", DateTime.UtcNow, DateTime.UtcNow.AddDays(1), false,
+                new() { SelectedUsersOnly = true }, null, false, Guid.NewGuid(), expected);
+            await Assert.ThrowsAsync<FormfleksBaseApp.Application.Common.BusinessException>(() => handler.Handle(command, CancellationToken.None));
+            Assert.Empty(context.SurveyCampaigns);
+        }
+
         [Fact]
         public async Task Handle_ShouldCreateCampaign_WhenValidRequest()
         {
@@ -31,7 +49,15 @@ namespace FormfleksBaseApp.Tests.Surveys
             await context.SaveChangesAsync(CancellationToken.None);
 
             var mockServiceProvider = new Moq.Mock<IServiceProvider>();
-            var handler = new CreateCampaignCommandHandler(context, mockServiceProvider.Object);
+            var mockDynamicFormsDb = new Moq.Mock<IDynamicFormsDbContext>();
+            var mockAuditLogs = new List<FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity>().AsQueryable().BuildMockDbSet();
+            mockDynamicFormsDb.Setup(d => d.AuditLogs).Returns(mockAuditLogs.Object);
+
+            var mockAudienceDir = new Moq.Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory>();
+            mockAudienceDir.Setup(x => x.GetTotalUsersCountAsync(Moq.It.IsAny<FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter>(), Moq.It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1); // 1 expected participant
+
+            var handler = new CreateCampaignCommandHandler(context, mockServiceProvider.Object, mockDynamicFormsDb.Object, mockAudienceDir.Object);
 
             var command = new CreateCampaignCommand(
                 template.Id,
@@ -42,7 +68,8 @@ namespace FormfleksBaseApp.Tests.Surveys
                 false,
                 new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter { IncludedUserIds = new List<Guid> { Guid.NewGuid() } },
                 null,
-                false
+                false,
+                Guid.NewGuid()
             );
 
             // Act

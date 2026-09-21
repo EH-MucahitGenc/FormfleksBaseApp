@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetIdentifiedParticipantResponse;
 
-public record GetIdentifiedParticipantResponseQuery(Guid CampaignId, Guid AssignmentId, Guid ActorUserId, bool IsGlobalAdmin)
+public record GetIdentifiedParticipantResponseQuery(Guid CampaignId, Guid AssignmentId, Guid ActorUserId)
     : IRequest<IdentifiedParticipantResponseDto>;
 
 public sealed class IdentifiedParticipantResponseDto
@@ -37,15 +37,34 @@ public sealed class IdentifiedAnswerDto
     public DateTime? DateValue { get; set; }
     public string? JsonValue { get; set; }
     public List<string> SelectedOptions { get; set; } = new();
-    public List<string> Files { get; set; } = new();
+    public List<IdentifiedFileDto> Files { get; set; } = new();
+}
+
+public sealed class IdentifiedFileDto
+{
+    public string FileId { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
 }
 
 public sealed class GetIdentifiedParticipantResponseQueryHandler
     : IRequestHandler<GetIdentifiedParticipantResponseQuery, IdentifiedParticipantResponseDto>
 {
     private readonly ISurveyDbContext _context;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public GetIdentifiedParticipantResponseQueryHandler(ISurveyDbContext context) => _context = context;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext _dynamicFormsDb;
+
+    public GetIdentifiedParticipantResponseQueryHandler(
+        ISurveyDbContext context, 
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService,
+        FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext dynamicFormsDb)
+    {
+        _context = context;
+        _authService = authService;
+        _dynamicFormsDb = dynamicFormsDb;
+    }
 
     public async Task<IdentifiedParticipantResponseDto> Handle(GetIdentifiedParticipantResponseQuery request, CancellationToken cancellationToken)
     {
@@ -57,14 +76,7 @@ public sealed class GetIdentifiedParticipantResponseQueryHandler
         if (campaign.IsAnonymous)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Anonim kampanyalarda tekil yanıt görüntülenemez.");
 
-        var hasDetailedAccess = request.IsGlobalAdmin;
-        if (!hasDetailedAccess)
-        {
-            var viewer = await _context.SurveyResultViewers.AsNoTracking()
-                .FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-            hasDetailedAccess = viewer != null && viewer.AccessLevel == FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
-        }
-
+        var hasDetailedAccess = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewIdentifiedResponses, cancellationToken);
         if (!hasDetailedAccess)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Kimlikli yanıtları görüntüleme yetkiniz yok (Sadece özet erişiminiz olabilir).");
 
@@ -77,7 +89,7 @@ public sealed class GetIdentifiedParticipantResponseQueryHandler
 
         var assignment = response.SurveyAssignment
             ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Katılımcı ataması bulunamadı.");
-        return new IdentifiedParticipantResponseDto
+        var dto = new IdentifiedParticipantResponseDto
         {
             ResponseId = response.Id,
             AssignmentId = assignment.Id,
@@ -103,9 +115,31 @@ public sealed class GetIdentifiedParticipantResponseQueryHandler
                 DateValue = a.ValueDate,
                 JsonValue = a.ValueJson,
                 SelectedOptions = ResolveSelectedOptions(a.ValueJson, a.SurveyVersionQuestion.Options.ToDictionary(o => o.Id, o => o.Label)),
-                Files = a.Files.Select(f => f.FileName).ToList()
+                Files = a.Files.Select(f => new IdentifiedFileDto {
+                    FileId = f.FilePath,
+                    DisplayName = f.FileName,
+                    ContentType = f.ContentType,
+                    FileSize = f.FileSize
+                }).ToList()
             }).ToList()
         };
+
+        _dynamicFormsDb.AuditLogs.Add(new FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            EntityType = "SurveyCampaign",
+            EntityId = request.CampaignId,
+            ActionType = "IdentifiedResponseViewed",
+            ActorUserId = request.ActorUserId,
+            DetailJson = JsonSerializer.Serialize(new { 
+                ResponseId = response.Id,
+                ParticipantUserId = assignment.UserId
+            }),
+            CreatedAt = DateTime.UtcNow
+        });
+        await _dynamicFormsDb.SaveChangesAsync(cancellationToken);
+
+        return dto;
     }
 
     private static List<string> ResolveSelectedOptions(string? json, IReadOnlyDictionary<Guid, string> labels)

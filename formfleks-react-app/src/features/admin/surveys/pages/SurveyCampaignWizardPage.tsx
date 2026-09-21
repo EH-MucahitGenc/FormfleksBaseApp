@@ -4,7 +4,7 @@ import { ChevronRight, Search, X, Rocket, Calendar, Users, Settings } from 'luci
 import { campaignService } from '../services/campaign.service';
 import type { SurveyAudienceUser, AudienceFilter } from '../services/campaign.service';
 import toast from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { surveyDesignerService } from '../services/surveyDesigner.service';
 import { SurveyAudienceSelector } from '../components/audience/SurveyAudienceSelector';
 
@@ -15,6 +15,7 @@ const STEPS = [
 ];
 
 export const SurveyCampaignWizardPage = () => {
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const templateId = searchParams.get('templateId');
@@ -33,7 +34,7 @@ export const SurveyCampaignWizardPage = () => {
     const [endDate, setEndDate] = useState('');
 
     // Step 2 State
-    const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>({});
+    const [audienceFilter, setAudienceFilter] = useState<AudienceFilter>({ selectedUsersOnly: true });
     const [totalAudienceCount, setTotalAudienceCount] = useState<number>(0);
 
     // Step 3 State
@@ -103,10 +104,12 @@ export const SurveyCampaignWizardPage = () => {
                 endDate: new Date(endDate).toISOString(),
                 isAnonymous,
                 audienceDefinition: audienceFilter,
+                expectedAudienceCount: totalAudienceCount,
                 viewers: selectedViewers.map(p => ({ userId: p.user.userId as string, accessLevel: p.accessLevel })),
                 saveAsDraft
             });
             toast.success(saveAsDraft ? 'Kampanya taslak olarak kaydedildi.' : 'Kampanya başarıyla yayınlandı!');
+            void queryClient.invalidateQueries({ queryKey: ['surveyNavigation'] });
             navigate(`/admin/surveys/campaigns/${result.id}`);
         } catch (error) {
             console.error(error);
@@ -171,7 +174,7 @@ export const SurveyCampaignWizardPage = () => {
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto mt-8 px-6">
+            <main className={`${currentStep === 2 ? 'max-w-7xl' : 'max-w-4xl'} mx-auto mt-8 px-4 sm:px-6`}>
                 {/* Stepper */}
                 <div className="flex items-center justify-between mb-12 relative">
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-surface-muted -z-10"></div>
@@ -253,7 +256,7 @@ export const SurveyCampaignWizardPage = () => {
                     {currentStep === 2 && (
                         <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-lg font-bold text-brand-dark mb-1">Hedef Kitle (Katılımcılar)</h2>
-                            <p className="text-sm text-brand-gray mb-6">Anketi kimlerin dolduracağını filtreler aracılığıyla belirleyin. Filtrelere uyan tüm aktif çalışanlar kampanyaya dahil edilecektir.</p>
+                            <p className="text-sm text-brand-gray mb-6">Kişileri tek tek seçin veya bir grubu dahil edip listenizi özelleştirin. Yalnızca sistemdeki aktif kullanıcılar alıcı olabilir.</p>
                             
                             <div className="flex-1 min-h-[450px]">
                                 <SurveyAudienceSelector 

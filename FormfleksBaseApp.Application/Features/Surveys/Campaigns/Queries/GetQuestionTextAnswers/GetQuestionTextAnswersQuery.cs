@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetQuestionTextAnswers;
 
 public record GetQuestionTextAnswersQuery(Guid CampaignId, Guid QuestionId, int Page, int PageSize,
-    string? Search, Guid ActorUserId, bool IsGlobalAdmin) : IRequest<PagedTextAnswersDto>;
+    string? Search, Guid ActorUserId) : IRequest<PagedTextAnswersDto>;
 
 public sealed class PagedTextAnswersDto
 {
@@ -34,10 +34,19 @@ public sealed class TextAnswerItemDto
 
 public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQuestionTextAnswersQuery, PagedTextAnswersDto>
 {
-    private const int MinimumAnonymousGroupSize = 10;
     private readonly ISurveyDbContext _context;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService _suppressionService;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public GetQuestionTextAnswersQueryHandler(ISurveyDbContext context) => _context = context;
+    public GetQuestionTextAnswersQueryHandler(
+        ISurveyDbContext context,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService suppressionService,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService)
+    {
+        _context = context;
+        _suppressionService = suppressionService;
+        _authService = authService;
+    }
 
     public async Task<PagedTextAnswersDto> Handle(GetQuestionTextAnswersQuery request, CancellationToken cancellationToken)
     {
@@ -47,8 +56,10 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
 
-        var currentAccessLevel = await GetAccessLevelAsync(request, cancellationToken);
-        var shouldMaskIdentities = campaign.IsAnonymous || currentAccessLevel < (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
+        await _authService.EnsureCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewAggregateResults, cancellationToken);
+        var canViewIdentified = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewTextAnswers, cancellationToken);
+        
+        var shouldMaskIdentities = campaign.IsAnonymous || !canViewIdentified;
 
         var questionExists = await _context.SurveyVersionQuestions.AsNoTracking().AnyAsync(q =>
             q.Id == request.QuestionId &&
@@ -71,7 +82,7 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        if (campaign.IsAnonymous && totalCount < MinimumAnonymousGroupSize)
+        if (_suppressionService.ShouldSuppress(totalCount, campaign.IsAnonymous))
         {
             return new PagedTextAnswersDto
             {
@@ -80,7 +91,8 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
                 PageSize = pageSize,
                 IsAnonymous = true,
                 IsSuppressed = true,
-                SuppressionReason = "Anonimliği korumak için en az 10 metin yanıtı gereklidir."
+                MinimumGroupSize = _suppressionService.MinimumGroupSize,
+                SuppressionReason = $"Anonimliği korumak için en az {_suppressionService.MinimumGroupSize} metin yanıtı gereklidir."
             };
         }
 
@@ -91,7 +103,7 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
                 AnswerId = a.Id,
                 Text = a.ValueText!,
                 SubmittedAt = shouldMaskIdentities ? a.SurveyResponse.SubmittedAt.Date : a.SurveyResponse.SubmittedAt,
-                UserId = shouldMaskIdentities ? null : a.SurveyResponse.UserId,
+                UserId = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? (Guid?)a.SurveyResponse.SurveyAssignment.UserId : null),
                 ParticipantName = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.ParticipantDisplayName : null),
                 Department = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.DepartmentSnapshot : null),
                 Location = shouldMaskIdentities ? null : (a.SurveyResponse.SurveyAssignment != null ? a.SurveyResponse.SurveyAssignment.LocationSnapshot : null)
@@ -110,19 +122,14 @@ public sealed class GetQuestionTextAnswersQueryHandler : IRequestHandler<GetQues
         };
     }
 
-    private async Task<int> GetAccessLevelAsync(GetQuestionTextAnswersQuery request, CancellationToken cancellationToken)
-    {
-        if (request.IsGlobalAdmin) return (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
-        var viewer = await _context.SurveyResultViewers.AsNoTracking().FirstOrDefaultAsync(v =>
-            v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-        if (viewer == null) throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
-        return (int)viewer.AccessLevel;
-    }
 
     private static string RedactPotentialPii(string value)
     {
         value = Regex.Replace(value, @"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[E-POSTA MASKELENDİ]", RegexOptions.IgnoreCase);
         value = Regex.Replace(value, @"(?<!\d)(?:\+?90\s*)?(?:0?5\d{2})[\s.-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}(?!\d)", "[TELEFON MASKELENDİ]");
+        value = Regex.Replace(value, @"(?<!\d)[1-9]{1}\d{10}(?!\d)", "[TC KİMLİK MASKELENDİ]"); // Basic Turkish ID Check
+        value = Regex.Replace(value, @"(?<!\d)(?:sicil|personel|id|no)[\s.:-]*(\d{4,8})(?!\d)", "[SİCİL MASKELENDİ]", RegexOptions.IgnoreCase);
+        // Not: Otomatik maskeleme regex temellidir ve metindeki tüm hassas kişisel verileri garanti bir şekilde gizleyemez. İnsan incelemesi gerekebilir.
         return value;
     }
 }

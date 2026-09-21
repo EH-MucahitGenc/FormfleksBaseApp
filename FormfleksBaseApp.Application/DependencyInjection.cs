@@ -12,6 +12,8 @@ public static class DependencyInjection
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
         });
         services.AddScoped<Common.Interfaces.IApprovalEngineService, DynamicForms.Business.Services.ApprovalEngineService>();
+        services.AddScoped<Features.Surveys.Common.ISurveyAnonymousSuppressionService, Features.Surveys.Common.SurveyAnonymousSuppressionService>();
+        services.AddScoped<Features.Surveys.Common.ISurveyAuthorizationService, Features.Surveys.Common.SurveyAuthorizationService>();
 
         return services;
     }

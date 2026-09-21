@@ -4,11 +4,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useNavigate } from "react-router-dom";
 import { Plus, BarChart2, Users, Calendar } from "lucide-react";
 import { campaignService, type CampaignListDto } from "../services/campaign.service";
+import { SurveyAccessDialog } from '../components/SurveyAccessDialog';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const SurveyCampaignOverviewPage = () => {
     const navigate = useNavigate();
     const [campaigns, setCampaigns] = useState<CampaignListDto[]>([]);
     const [loading, setLoading] = useState(true);
+    const [accessCampaignId, setAccessCampaignId] = useState<string | null>(null);
+    const canManageAccess = useAuthStore(state => state.user?.permissions?.includes('Surveys.Manage'));
 
     useEffect(() => {
         loadCampaigns();
@@ -90,6 +94,7 @@ export const SurveyCampaignOverviewPage = () => {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
+                                        {canManageAccess && <button onClick={() => setAccessCampaignId(camp.id)} className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 font-semibold text-brand-primary">İzleyiciler</button>}
                                         {camp.statusValue === 1 && (
                                             <button 
                                                 onClick={() => handleStatusChange(camp.id, 2, "Bu taslak kampanyayı yayına almak istediğinize emin misiniz? Katılımcılara e-posta gönderilecektir.")}
@@ -136,6 +141,7 @@ export const SurveyCampaignOverviewPage = () => {
                     </tbody>
                 </table>
             </div>
+            {accessCampaignId && <SurveyAccessDialog campaignId={accessCampaignId} onClose={() => setAccessCampaignId(null)} />}
         </PageContainer>
     );
 };

@@ -26,4 +26,8 @@
     <ProjectReference Include="..\FormfleksBaseApp.Domain\FormfleksBaseApp.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Persistence/Seeders/RetireSurveyPermissions.sql" />
+  </ItemGroup>
+
 </Project>

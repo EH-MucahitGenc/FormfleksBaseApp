@@ -9,6 +9,7 @@ export interface ParticipantDto {
 }
 
 export interface AudienceFilter {
+  selectedUsersOnly?: boolean;
   searchTerm?: string;
   companies?: string[];
   locations?: string[];
@@ -61,6 +62,7 @@ export interface CreateCampaignPayload {
   audienceDefinition: AudienceFilter;
   viewers?: { userId: string; accessLevel: number; }[];
   saveAsDraft: boolean;
+  expectedAudienceCount?: number;
 }
 
 export interface CampaignListDto {
@@ -191,6 +193,16 @@ export interface PagedTextAnswers {
 }
 
 export const campaignService = {
+  getAccess: async (id: string) => (await apiClient.get<CampaignAccess>(`/admin/surveys/campaigns/${id}/access`)).data,
+  getAccessCandidates: async (id: string, search: string) => (await apiClient.get<{ items: SurveyAudienceUser[] }>(`/admin/surveys/campaigns/${id}/access/candidates`, { params: { search } })).data,
+  setAccess: async (id: string, userId: string, values: { accessLevel: number; revoke: boolean; reason: string; validUntil?: string }) => {
+    await apiClient.put(`/admin/surveys/campaigns/${id}/access/${userId}`, values);
+  },
+  browseAudience: async (directoryFilter: AudienceFilter, audienceDefinition: AudienceFilter, page = 1, pageSize = 25) => {
+    const response = await apiClient.post<{ items: { user: SurveyAudienceUser; isSelected: boolean }[]; totalCount: number }>(
+      '/admin/surveys/campaigns/participants/browse', { directoryFilter, audienceDefinition, page, pageSize });
+    return response.data;
+  },
   getCampaigns: async (): Promise<CampaignListDto[]> => {
     const response = await apiClient.get<CampaignListDto[]>('/admin/surveys/campaigns');
     return response.data;
@@ -285,3 +297,13 @@ export const campaignService = {
     return response.data;
   }
 };
+
+export interface CampaignAccess {
+  title: string;
+  isAnonymous: boolean;
+  entries: {
+    userId: string; displayName: string; email: string; isActiveUser: boolean;
+    accessLevel: number; isImplicit: boolean; isEffective: boolean;
+    grantedAt?: string; revokedAt?: string; validUntil?: string;
+  }[];
+}

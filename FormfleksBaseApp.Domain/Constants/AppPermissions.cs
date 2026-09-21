@@ -18,14 +18,9 @@ public static class AppPermissions
     public const string SurveysDesign = "Surveys.Design";
     public const string SurveysPublish = "Surveys.Publish";
     public const string SurveysManage = "Surveys.Manage";
-    public const string SurveysResultsView = "Surveys.Results.View";
     public const string SurveysResultsExport = "Surveys.Results.Export";
-    public const string SurveysResultsViewIdentified = "Surveys.Results.ViewIdentified";
     public const string SurveysResultsExportIdentified = "Surveys.Results.ExportIdentified";
-    public const string SurveysResultsViewDataQuality = "Surveys.Results.ViewDataQuality";
-    public const string SurveysResultsManageTextCoding = "Surveys.Results.ManageTextCoding";
-    public const string SurveysResultsManagePrivacy = "Surveys.Results.ManagePrivacy";
-    public const string SurveysSettings = "Surveys.Settings";
+    public const string SurveysResultsViewFiles = "Surveys.Results.ViewFiles";
 
     // Policy Names for Authorize Attributes
     public const string PolicyFormsDesign = "Permission:" + FormsDesign;
@@ -41,11 +36,7 @@ public static class AppPermissions
     public const string PolicySurveysDesign = "Permission:" + SurveysDesign;
     public const string PolicySurveysPublish = "Permission:" + SurveysPublish;
     public const string PolicySurveysManage = "Permission:" + SurveysManage;
-    public const string PolicySurveysResultsView = "Permission:" + SurveysResultsView;
     public const string PolicySurveysResultsExport = "Permission:" + SurveysResultsExport;
-    public const string PolicySurveysResultsViewIdentified = "Permission:" + SurveysResultsViewIdentified;
-    public const string PolicySurveysResultsExportIdentified = "Permission:" + SurveysResultsExportIdentified;
-    public const string PolicySurveysSettings = "Permission:" + SurveysSettings;
 
     public static readonly IReadOnlyList<(string Name, string Description)> All = new List<(string, string)>
     {
@@ -59,14 +50,9 @@ public static class AppPermissions
         (PersonnelSync, "IK Personel senkronizasyonunu başlatma izni."),
         (SurveysDesign, "Anket şablonu oluşturma ve düzenleme izni."),
         (SurveysPublish, "Anket kampanyası hazırlama ve yayınlama izni."),
-        (SurveysManage, "Katılımcı, mail ve kampanya süreçlerini yönetme izni."),
-        (SurveysResultsView, "Yetkili olduğu anket sonuçlarını görüntüleme izni."),
-        (SurveysResultsExport, "Anket sonuçlarını Excel/PDF dışa aktarma izni."),
-        (SurveysResultsViewIdentified, "Kimlikli anketlerde tekil katılımcı yanıtlarını görüntüleme izni."),
-        (SurveysResultsExportIdentified, "Kimlikli anketlerde kişisel yanıtları dışa aktarma izni."),
-        (SurveysResultsViewDataQuality, "Anket veri kalitesi işaretlerini görüntüleme izni."),
-        (SurveysResultsManageTextCoding, "Açık metin tema ve kodlamalarını yönetme izni."),
-        (SurveysResultsManagePrivacy, "Anket raporlama gizlilik ayarlarını yönetme izni."),
-        (SurveysSettings, "Anket modülü ayarlarını yönetme izni.")
+        (SurveysManage, "Kampanya, katılımcı, e-posta ve sonuç izleyicisi atamalarını yönetir; tüm yanıtları okuma yetkisi vermez."),
+        (SurveysResultsExport, "Erişimi bulunan kampanyaların özet sonuçlarını CSV olarak dışa aktarır."),
+        (SurveysResultsExportIdentified, "Detaylı izleyici olduğu kimlikli kampanyalarda kişisel yanıtları dışa aktarır. Özet dışa aktarma izni de gereklidir."),
+        (SurveysResultsViewFiles, "Detaylı izleyici olduğu kampanyalardaki yanıt dosyalarını görüntüler. Anonimlik kontrollerini kaldırmaz.")
     };
 }

@@ -21,7 +21,9 @@ public record CreateCampaignCommand(
     bool IsAnonymous,
     FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter AudienceDefinition,
     List<CampaignViewerDto>? Viewers,
-    bool SaveAsDraft // If true, status=Draft. Else, Published/Scheduled based on StartDate.
+    bool SaveAsDraft, // If true, status=Draft. Else, Published/Scheduled based on StartDate.
+    Guid ActorUserId,
+    int? ExpectedAudienceCount = null
 ) : IRequest<Guid>;
 
 public record CampaignViewerDto(Guid UserId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel AccessLevel);
@@ -30,15 +32,46 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
 {
     private readonly ISurveyDbContext _context;
     private readonly IServiceProvider _serviceProvider;
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext _dynamicFormsDb;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory _audienceDirectory;
 
-    public CreateCampaignCommandHandler(ISurveyDbContext context, IServiceProvider serviceProvider)
+    public CreateCampaignCommandHandler(
+        ISurveyDbContext context, 
+        IServiceProvider serviceProvider, 
+        FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext dynamicFormsDb,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory audienceDirectory)
     {
         _context = context;
         _serviceProvider = serviceProvider;
+        _dynamicFormsDb = dynamicFormsDb;
+        _audienceDirectory = audienceDirectory;
     }
 
     public async Task<Guid> Handle(CreateCampaignCommand request, CancellationToken cancellationToken)
     {
+        if (request.ActorUserId == Guid.Empty)
+            throw new FormfleksBaseApp.Application.Common.BusinessException("Kampanyayı oluşturan kullanıcı belirlenemedi. Lütfen yeniden giriş yapın.");
+        if (request.AudienceDefinition == null)
+            throw new FormfleksBaseApp.Application.Common.BusinessException("Hedef kitle tanımı zorunludur.");
+        if (!request.SaveAsDraft)
+        {
+            var actualCount = await _audienceDirectory.GetTotalUsersCountAsync(request.AudienceDefinition, cancellationToken);
+            if (actualCount == 0)
+                throw new FormfleksBaseApp.Application.Common.BusinessException("Yayınlamak için en az bir aktif kullanıcı seçin.");
+            if (request.ExpectedAudienceCount.HasValue && actualCount != request.ExpectedAudienceCount.Value)
+            {
+                throw new FormfleksBaseApp.Application.Common.BusinessException($"Seçilen hedef kitle önizlemedeki sayıyla eşleşmiyor (Beklenen: {request.ExpectedAudienceCount.Value}, Bulunan: {actualCount}). Filtreler arka planda değişmiş olabilir. Lütfen işlemi yenileyin.");
+            }
+        }
+
+        if (request.Viewers?.Count > 0)
+        {
+            var viewerIds = request.Viewers.Select(v => v.UserId).Distinct().ToList();
+            var activeViewers = await _audienceDirectory.GetUsersByIdsAsync(viewerIds, cancellationToken);
+            if (activeViewers.Count != viewerIds.Count)
+                throw new FormfleksBaseApp.Application.Common.BusinessException("Sonuç izleyicileri aktif sistem kullanıcıları olmalıdır.");
+        }
+
         var template = await _context.SurveyTemplates
             .Include(t => t.Versions)
             .FirstOrDefaultAsync(t => t.Id == request.TemplateId, cancellationToken);
@@ -74,9 +107,6 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
             }
         }
 
-        if (request.AudienceDefinition == null)
-            throw new FormfleksBaseApp.Application.Common.BusinessException("Hedef kitle tanımı (AudienceDefinition) zorunludur.");
-
         var status = request.SaveAsDraft ? SurveyCampaignStatus.Draft : 
             (request.StartDate <= DateTime.UtcNow ? SurveyCampaignStatus.Published : SurveyCampaignStatus.Scheduled);
 
@@ -92,46 +122,66 @@ public class CreateCampaignCommandHandler : IRequestHandler<CreateCampaignComman
             EndDate = request.EndDate,
             IsAnonymous = request.IsAnonymous,
             Status = status,
-            TargetAudienceJson = targetAudienceJson
+            TargetAudienceJson = targetAudienceJson,
+            OwnerUserId = request.ActorUserId,
+            CreatedByUserId = request.ActorUserId
         };
 
         _context.SurveyCampaigns.Add(campaign);
 
         if (request.Viewers != null)
         {
-            // Note: we can group by UserId and pick the highest access level if they sent duplicates, but DistinctBy handles it simply enough.
-            foreach (var viewerDto in request.Viewers.DistinctBy(v => v.UserId))
+            // Deterministik kural: Aynı kullanıcı birden fazla gelirse, en yüksek yetkiyi (Detailed) seç.
+            var groupedViewers = request.Viewers
+                .GroupBy(v => v.UserId)
+                .Select(g => g.OrderByDescending(v => v.AccessLevel).First());
+
+            foreach (var viewerDto in groupedViewers)
             {
                 var viewer = new SurveyResultViewer
                 {
                     Id = Guid.NewGuid(),
                     SurveyCampaignId = campaign.Id,
                     UserId = viewerDto.UserId,
-                    AccessLevel = viewerDto.AccessLevel
+                    AccessLevel = viewerDto.AccessLevel,
+                    GrantedByUserId = request.ActorUserId,
+                    GrantedAt = DateTime.UtcNow,
+                    ValidFrom = DateTime.UtcNow
                 };
                 _context.SurveyResultViewers.Add(viewer);
+                
+                _dynamicFormsDb.AuditLogs.Add(new FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity
+                {
+                    Id = Guid.NewGuid(),
+                    EntityType = "SurveyCampaign",
+                    EntityId = campaign.Id,
+                    ActionType = "CampaignAccessGranted",
+                    ActorUserId = request.ActorUserId,
+                    DetailJson = System.Text.Json.JsonSerializer.Serialize(new { 
+                        ViewerUserId = viewerDto.UserId,
+                        AccessLevel = viewerDto.AccessLevel.ToString()
+                    }),
+                    CreatedAt = DateTime.UtcNow
+                });
             }
         }
-
+        
+        // 1. Save Campaign first
         await _context.SaveChangesAsync(cancellationToken);
 
-        if (status == SurveyCampaignStatus.Published)
+        // 2. Save Audits safely
+        try
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    var mediator = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<IMediator>(scope.ServiceProvider);
-                    await mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Commands.ProcessSurveyCampaigns.ProcessSurveyCampaignsCommand());
-                }
-                catch
-                {
-                    // Ignore background errors
-                }
-            });
+            await _dynamicFormsDb.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Log this to generic logger ideally, but don't fail the campaign creation.
         }
 
+        // Background processing is now fully handled by SurveyEmailBackgroundJob cron/hosted service.
+        // We do not use Task.Run here to avoid losing tasks if the app domain unloads.
+        
         return campaign.Id;
     }
 }

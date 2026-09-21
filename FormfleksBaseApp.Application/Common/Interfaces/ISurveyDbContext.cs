@@ -19,6 +19,9 @@ public interface ISurveyDbContext
     DbSet<SurveyParticipationGuard> SurveyParticipationGuards { get; }
     DbSet<SavedAudience> SavedAudiences { get; }
 
+    DbSet<SurveyTempFileUpload> SurveyTempFileUploads { get; }
+
     Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task SaveAccessChangesAsync(FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity audit, CancellationToken cancellationToken = default);
 }

@@ -19,6 +19,7 @@ import { toast } from "react-hot-toast";
 import { PageContainer } from "@/components/ui/PageContainer";
 import { campaignService } from "../services/campaign.service";
 import type { CampaignListDto } from "../services/campaign.service";
+import { useAuthStore } from '@/store/useAuthStore';
 
 type CampaignFilter = "all" | "active" | "completed";
 
@@ -79,6 +80,7 @@ function ResultsSkeleton() {
 }
 
 export function SurveyViewableResultsPage() {
+    const canManageAccess = useAuthStore(state => state.user?.permissions?.includes('Surveys.Manage'));
     const [campaigns, setCampaigns] = useState<CampaignListDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -143,6 +145,7 @@ export function SurveyViewableResultsPage() {
                         <div className="mt-5 inline-flex items-center gap-2 text-xs font-medium text-emerald-200/90">
                             <ShieldCheck className="h-4 w-4" /> Yalnızca erişim yetkiniz bulunan sonuçlar gösterilir
                         </div>
+                        {canManageAccess && <div className="mt-4"><Link to="/admin/surveys/campaigns" className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10"><ShieldCheck className="h-4 w-4" />Kampanya izleyicilerini yönet</Link></div>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-4 xl:grid-cols-2">
@@ -214,7 +217,7 @@ export function SurveyViewableResultsPage() {
                         <div className="mx-auto grid h-16 w-16 place-items-center rounded-[20px] bg-orange-50 text-brand-primary"><BarChart3 className="h-7 w-7" /></div>
                         <h2 className="mt-5 text-lg font-bold text-brand-dark">{campaigns.length ? "Aramanızla eşleşen rapor yok" : "Henüz erişilebilir rapor yok"}</h2>
                         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-brand-gray">
-                            {campaigns.length ? "Arama ifadenizi değiştirin veya durum filtresini temizleyin." : "Bir kampanyaya sonuç görüntüleyicisi olarak eklendiğinizde rapor burada görünecek."}
+                            {campaigns.length ? "Arama ifadenizi değiştirin veya durum filtresini temizleyin." : "Oluşturduğunuz veya sonuç izleyicisi olarak yetkilendirildiğiniz kampanyalar burada görünür. Erişimi kaldırılmış kampanyalar listelenmez."}
                         </p>
                         {campaigns.length > 0 && <button type="button" onClick={() => { setSearch(""); setFilter("all"); }} className="mt-4 text-sm font-semibold text-brand-primary hover:underline">Filtreleri temizle</button>}
                     </div>

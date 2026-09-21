@@ -26,5 +26,11 @@ public class CreateCampaignCommandValidator : AbstractValidator<CreateCampaignCo
 
         RuleFor(x => x.Description)
             .MaximumLength(500).WithMessage("Açıklama en fazla 500 karakter olabilir.");
+
+        RuleForEach(x => x.Viewers).ChildRules(v =>
+        {
+            v.RuleFor(x => x.UserId).NotEmpty().WithMessage("Görüntüleyici kullanıcı ID'si boş olamaz.");
+            v.RuleFor(x => x.AccessLevel).IsInEnum().WithMessage("Geçersiz erişim seviyesi (AccessLevel).");
+        });
     }
 }

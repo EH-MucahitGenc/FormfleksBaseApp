@@ -17,16 +17,21 @@ public class GetMyViewableCampaignsQueryHandler : IRequestHandler<GetMyViewableC
 {
     private readonly ISurveyDbContext _context;
 
-    public GetMyViewableCampaignsQueryHandler(ISurveyDbContext context)
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
+    
+    public GetMyViewableCampaignsQueryHandler(ISurveyDbContext context, FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService)
     {
         _context = context;
+        _authService = authService;
     }
 
     public async Task<List<CampaignListDto>> Handle(GetMyViewableCampaignsQuery request, CancellationToken cancellationToken)
     {
-        var campaigns = await _context.SurveyResultViewers
-            .Where(v => v.UserId == request.UserId)
-            .Select(v => v.SurveyCampaign)
+        if (!await _authService.IsActiveUserAsync(request.UserId, cancellationToken)) return new List<CampaignListDto>();
+
+        var now = DateTime.UtcNow;
+        var campaigns = await _context.SurveyCampaigns.AsNoTracking()
+            .Where(FormfleksBaseApp.Application.Features.Surveys.Common.SurveyResultAccess.VisibleTo(request.UserId, now))
             .OrderByDescending(c => c.StartDate)
             .Select(c => new CampaignListDto(
                 c.Id,

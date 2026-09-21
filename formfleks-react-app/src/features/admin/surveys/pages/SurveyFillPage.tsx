@@ -142,12 +142,60 @@ export const SurveyFillPage = () => {
             .filter((section: any) => section.Questions.length > 0)
         : [];
 
+    const isQuestionAnswered = (q: any) => {
+        if (q.Type === 12) return true;
+        const answer = answers[q.Id];
+        
+        if (q.Type === 10) {
+            try {
+                const s = JSON.parse(q.SettingsJson || '{}');
+                const expectedRows = s.rows?.length || 0;
+                const parsedVal = answer?.textValue ? JSON.parse(answer.textValue) : {};
+                return Object.keys(parsedVal).length >= expectedRows && expectedRows > 0;
+            } catch {
+                return false;
+            }
+        }
+
+        return !!answer && (
+            (typeof answer.textValue === 'string' && answer.textValue.trim() !== "") ||
+            (Array.isArray(answer.selectedOptionIds) && answer.selectedOptionIds.length > 0) ||
+            (answer.numericValue !== undefined && answer.numericValue !== null)
+        );
+    };
+
+    const completionStats = useMemo(() => {
+        let totalQuestions = 0;
+        let totalAnswered = 0;
+        
+        const sectionsData = visibleSections.map((section: any) => {
+            const expectAnswerQuestions = section.Questions.filter((q: any) => q.Type !== 12);
+            const sectionTotal = expectAnswerQuestions.length;
+            const sectionAnswered = expectAnswerQuestions.filter((q: any) => isQuestionAnswered(q)).length;
+            
+            totalQuestions += sectionTotal;
+            totalAnswered += sectionAnswered;
+            
+            return {
+                sectionId: section.Id,
+                title: section.Title,
+                total: sectionTotal,
+                answered: sectionAnswered,
+                percentage: sectionTotal > 0 ? Math.round((sectionAnswered / sectionTotal) * 100) : 100
+            };
+        });
+
+        return {
+            sections: sectionsData,
+            totalPercentage: totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0,
+            totalQuestions,
+            totalAnswered
+        };
+    }, [visibleSections, answers]);
+
     const safeRenderIndex = Math.min(currentSectionIndex, Math.max(visibleSections.length - 1, 0));
     const currentSection = visibleSections[safeRenderIndex];
     const isLastSection = safeRenderIndex >= visibleSections.length - 1;
-    const sectionProgress = visibleSections.length > 0
-        ? Math.round(((safeRenderIndex + 1) / visibleSections.length) * 100)
-        : 0;
 
     const goToSection = (index: number) => {
         setCurrentSectionIndex(Math.max(0, Math.min(index, visibleSections.length - 1)));
@@ -386,13 +434,26 @@ export const SurveyFillPage = () => {
                                 <div className="mt-8 border-t border-white/10 pt-6">
                                     <div className="flex items-end justify-between gap-3">
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">İlerleme</p>
-                                            <p className="mt-1 text-sm font-semibold text-stone-200">Bölüm {safeRenderIndex + 1} / {visibleSections.length || 1}</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone-500">BÖLÜM İLERLEMESİ</p>
+                                            <p className="mt-1 text-sm font-semibold text-stone-200">
+                                                {completionStats.sections[safeRenderIndex]?.answered || 0} / {completionStats.sections[safeRenderIndex]?.total || 0} Soru
+                                            </p>
                                         </div>
-                                        <span className="text-2xl font-semibold text-white">%{sectionProgress}</span>
+                                        <span className="text-xl font-semibold text-white">%{completionStats.sections[safeRenderIndex]?.percentage || 0}</span>
                                     </div>
-                                    <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-                                        <div className="h-full rounded-full bg-gradient-to-r from-brand-primary to-orange-300 transition-all duration-500" style={{ width: `${sectionProgress}%` }} />
+                                    <div className="mt-4 mb-6 h-1.5 overflow-hidden rounded-full bg-white/10">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-300 transition-all duration-500" style={{ width: `${completionStats.sections[safeRenderIndex]?.percentage || 0}%` }} />
+                                    </div>
+
+                                    <div className="flex items-end justify-between gap-3 border-t border-white/5 pt-4">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand-primary">GENEL İLERLEME</p>
+                                            <p className="mt-1 text-xs font-medium text-stone-400">Tüm bölümler</p>
+                                        </div>
+                                        <span className="text-2xl font-bold text-white">%{completionStats.totalPercentage}</span>
+                                    </div>
+                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-brand-primary to-orange-400 transition-all duration-500" style={{ width: `${completionStats.totalPercentage}%` }} />
                                     </div>
                                 </div>
                             </div>

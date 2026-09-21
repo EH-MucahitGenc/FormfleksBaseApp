@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignCrosstab;
 
 public record GetCampaignCrosstabQuery(Guid CampaignId, Guid QuestionId, string Dimension,
-    Guid ActorUserId, bool IsGlobalAdmin) : IRequest<CampaignCrosstabDto>;
+    Guid ActorUserId) : IRequest<CampaignCrosstabDto>;
 
 public sealed class CampaignCrosstabDto
 {
@@ -45,19 +45,28 @@ public sealed class StatisticalTestDto
 
 public sealed class GetCampaignCrosstabQueryHandler : IRequestHandler<GetCampaignCrosstabQuery, CampaignCrosstabDto>
 {
-    private const int MinimumAnonymousGroupSize = 10;
     private readonly ISurveyDbContext _context;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService _suppressionService;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public GetCampaignCrosstabQueryHandler(ISurveyDbContext context) => _context = context;
+    public GetCampaignCrosstabQueryHandler(
+        ISurveyDbContext context,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService suppressionService,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService)
+    {
+        _context = context;
+        _suppressionService = suppressionService;
+        _authService = authService;
+    }
 
     public async Task<CampaignCrosstabDto> Handle(GetCampaignCrosstabQuery request, CancellationToken cancellationToken)
     {
         var campaign = await _context.SurveyCampaigns.AsNoTracking()
-            .Where(c => c.Id == request.CampaignId)
-            .Select(c => new { c.IsAnonymous, c.SurveyTemplateVersionId })
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
-        await EnsureAccessAsync(request, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == request.CampaignId, cancellationToken);
+
+        if (campaign == null) throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
+        
+        await _authService.EnsureCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewAggregateResults, cancellationToken);
 
         var question = await _context.SurveyVersionQuestions.AsNoTracking().Include(q => q.Options)
             .SingleOrDefaultAsync(q => q.Id == request.QuestionId &&
@@ -100,7 +109,7 @@ public sealed class GetCampaignCrosstabQueryHandler : IRequestHandler<GetCampaig
         foreach (var group in observations.GroupBy(x => x.Row).OrderByDescending(g => g.Count()))
         {
             var respondentCount = raw.Count(x => (x.DimensionValue ?? "Belirtilmemiş") == group.Key);
-            var suppressed = campaign.IsAnonymous && respondentCount < MinimumAnonymousGroupSize;
+            var suppressed = _suppressionService.ShouldSuppress(respondentCount, campaign.IsAnonymous);
             var row = new CrosstabRowDto { Label = group.Key, Respondents = suppressed ? null : respondentCount, IsSuppressed = suppressed };
             foreach (var column in columns)
             {
@@ -162,12 +171,7 @@ public sealed class GetCampaignCrosstabQueryHandler : IRequestHandler<GetCampaig
         };
     }
 
-    private async Task EnsureAccessAsync(GetCampaignCrosstabQuery request, CancellationToken cancellationToken)
-    {
-        if (request.IsGlobalAdmin) return;
-        var allowed = await _context.SurveyResultViewers.AsNoTracking().AnyAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-        if (!allowed) throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
-    }
+
 
     private sealed class CrosstabProjection
     {

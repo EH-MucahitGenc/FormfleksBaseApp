@@ -25,6 +25,7 @@ import { cn } from '@/components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
 import { useNavigationStore } from '@/store/useNavigationStore';
+import { useSurveyNavigation } from '@/features/admin/surveys/hooks/useSurveyNavigation';
 
 type NavItemDefinition = {
   to: string;
@@ -192,8 +193,8 @@ export const DynamicSidebar = ({
   const canSeeHrReports = hasPermission('Reports.View');
   const canSeeFormDesigner = hasPermission('Forms.Design');
   const canSeeWorkflowDesigner = hasPermission('Workflows.Manage');
-  const canSeeSurveys = hasPermission('Surveys.Design') || hasPermission('Surveys.Manage') || hasPermission('Surveys.Publish') || isAdminRole;
-  const canSeeSurveyResults = true; // Any user can be a viewer
+  const { access: surveyAccess, canOpenCenter: canSeeSurveys } = useSurveyNavigation();
+  const canSeeSurveyResults = surveyAccess?.canViewResults === true;
   const canSeeDesignersSection = canSeeHrReports || canSeeFormDesigner || canSeeWorkflowDesigner || canSeeSurveys || canSeeSurveyResults;
 
   const canSeeUsers = hasPermission('Users.Manage');
@@ -245,7 +246,7 @@ export const DynamicSidebar = ({
 
   const surveyItems: NavItemDefinition[] = [
     ...(canSeeSurveys ? [{ to: '/admin/surveys', icon: FileText, label: 'Anket Merkezi' }] : []),
-    { to: '/admin/surveys/viewable-results', icon: FileText, label: 'İzlenebilir Sonuçlarım' }
+    ...(canSeeSurveyResults ? [{ to: '/admin/surveys/viewable-results', icon: FileText, label: 'İzlenebilir Sonuçlarım' }] : [])
   ];
 
   const reportItems: NavItemDefinition[] = canSeeHrReports ? [{ to: '/hr/reports', icon: BarChart2, label: 'Form Analizleri' }] : [];

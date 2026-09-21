@@ -38,17 +38,20 @@ public sealed record GetCampaignParticipantsQuery(
     string? Search = null,
     string? Status = null,
     string? Department = null,
-    string? Location = null) : IRequest<PaginatedList<CampaignParticipantDto>>;
+    string? Location = null,
+    Guid ActorUserId = default) : IRequest<PaginatedList<CampaignParticipantDto>>;
 
 public sealed class GetCampaignParticipantsQueryHandler : IRequestHandler<GetCampaignParticipantsQuery, PaginatedList<CampaignParticipantDto>>
 {
     private readonly ISurveyDbContext _surveyContext;
     private readonly ISurveyAudienceDirectory _audienceDirectory;
+    private readonly ISurveyAuthorizationService _authService;
 
-    public GetCampaignParticipantsQueryHandler(ISurveyDbContext surveyContext, ISurveyAudienceDirectory audienceDirectory)
+    public GetCampaignParticipantsQueryHandler(ISurveyDbContext surveyContext, ISurveyAudienceDirectory audienceDirectory, ISurveyAuthorizationService authService)
     {
         _surveyContext = surveyContext;
         _audienceDirectory = audienceDirectory;
+        _authService = authService;
     }
 
     public async Task<PaginatedList<CampaignParticipantDto>> Handle(GetCampaignParticipantsQuery request, CancellationToken cancellationToken)
@@ -61,6 +64,13 @@ public sealed class GetCampaignParticipantsQueryHandler : IRequestHandler<GetCam
 
         if (campaign.IsAnonymous)
             throw new FormfleksBaseApp.Application.Common.BusinessException("Anonim kampanyalarda katılımcı ve yanıt gezgini kullanılamaz.");
+
+        var canViewResponses = await _authService.HasCampaignPermissionAsync(
+            request.ActorUserId, request.CampaignId, SurveyAction.ViewIdentifiedResponses, cancellationToken);
+        var canManageAudience = await _authService.HasCampaignPermissionAsync(
+            request.ActorUserId, request.CampaignId, SurveyAction.ManageAudience, cancellationToken);
+        if (!canViewResponses && !canManageAudience)
+            throw new FormfleksBaseApp.Application.Common.BusinessException("Bu kampanyanın katılımcı listesini görüntüleme yetkiniz bulunmamaktadır.");
 
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 10, 100);
@@ -92,10 +102,11 @@ public sealed class GetCampaignParticipantsQueryHandler : IRequestHandler<GetCam
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
 
         var assignmentIds = assignments.Select(a => a.Id).ToList();
-        var responseIds = await _surveyContext.SurveyResponses.AsNoTracking()
+        var responseIds = canViewResponses ? await _surveyContext.SurveyResponses.AsNoTracking()
             .Where(r => r.SurveyAssignmentId.HasValue && assignmentIds.Contains(r.SurveyAssignmentId.Value))
             .Select(r => new { AssignmentId = r.SurveyAssignmentId!.Value, r.Id })
-            .ToDictionaryAsync(x => x.AssignmentId, x => x.Id, cancellationToken);
+            .ToDictionaryAsync(x => x.AssignmentId, x => x.Id, cancellationToken)
+            : new Dictionary<Guid, Guid>();
 
         var missingSnapshotIds = assignments.Where(a => string.IsNullOrWhiteSpace(a.ParticipantDisplayName))
             .Select(a => a.UserId).Distinct().ToList();
@@ -124,7 +135,7 @@ public sealed class GetCampaignParticipantsQueryHandler : IRequestHandler<GetCam
                 startedAt,
                 a.CompletedAt,
                 startedAt.HasValue && a.CompletedAt.HasValue ? Math.Round((a.CompletedAt.Value - startedAt.Value).TotalSeconds, 1) : null,
-                responseIds.GetValueOrDefault(a.Id),
+                responseIds.TryGetValue(a.Id, out var responseId) ? responseId : null,
                 string.IsNullOrWhiteSpace(a.SnapshotSource) ? "LegacyCurrentFallback" : a.SnapshotSource);
         }).ToList();
 

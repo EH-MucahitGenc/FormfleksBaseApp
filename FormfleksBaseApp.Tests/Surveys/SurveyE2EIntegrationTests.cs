@@ -43,7 +43,7 @@ namespace FormfleksBaseApp.Tests.Surveys
                         var defaultConn = doc.RootElement.GetProperty("ConnectionStrings").GetProperty("Default").GetString();
                         if (!string.IsNullOrEmpty(defaultConn))
                         {
-                            _connectionString = defaultConn.Replace("Database=formfleks_base_app", "Database=formfleks_base_app_test");
+                            _connectionString = defaultConn.Replace("Database=formfleks_base_app", "Database=formfleks_base_app_test_e2e");
                         }
                     }
                     catch { /* ignore */ }
@@ -53,7 +53,7 @@ namespace FormfleksBaseApp.Tests.Surveys
             if (string.IsNullOrEmpty(_connectionString))
             {
                 // Fallback (expected to fail if postgres requires auth)
-                _connectionString = "Host=localhost;Port=5432;Database=formfleks_base_app_test;Username=postgres;";
+                _connectionString = "Host=localhost;Port=5432;Database=formfleks_base_app_test_e2e;Username=postgres;";
             }
 
             var options = new DbContextOptionsBuilder<SurveyDbContext>()
@@ -61,6 +61,7 @@ namespace FormfleksBaseApp.Tests.Surveys
                 .Options;
 
             _context = new SurveyDbContext(options);
+            _context.Database.EnsureDeleted();
             _context.Database.Migrate(); // Run migrations on test DB
         }
 
@@ -143,11 +144,27 @@ namespace FormfleksBaseApp.Tests.Surveys
                 DateTime.UtcNow.AddDays(1),
                 false,
                 new FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter { IncludedUserIds = new List<Guid> { userId } },
-                new List<Guid>(),
-                false);
-            
+                new List<FormfleksBaseApp.Application.Features.Surveys.Campaigns.Commands.CreateCampaign.CampaignViewerDto>(),
+                false,
+                userId);
             var mockServiceProvider = new Moq.Mock<IServiceProvider>();
-            var createHandler = new CreateCampaignCommandHandler(_context, mockServiceProvider.Object);
+            
+            var mockQdmsUsers = new List<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> 
+            {
+                new FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim { LinkedUserId = userId, Email = "test@test.com" }
+            }.AsQueryable().BuildMockDbSet();
+
+            var dynamicFormsContextMock = new Mock<IDynamicFormsDbContext>();
+            dynamicFormsContextMock.Setup(d => d.QdmsPersoneller).Returns(mockQdmsUsers.Object);
+            
+            var mockAuditLogs = new List<FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity>().AsQueryable().BuildMockDbSet();
+            dynamicFormsContextMock.Setup(d => d.AuditLogs).Returns(mockAuditLogs.Object);
+
+            var mockAudienceDir = new Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAudienceDirectory>();
+            mockAudienceDir.Setup(x => x.GetTotalUsersCountAsync(It.IsAny<FormfleksBaseApp.Application.Features.Surveys.Common.AudienceFilter>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+
+            var createHandler = new CreateCampaignCommandHandler(_context, mockServiceProvider.Object, dynamicFormsContextMock.Object, mockAudienceDir.Object);
             var newCampaignId = await createHandler.Handle(createCmd, CancellationToken.None);
             _createdCampaignIds.Add(newCampaignId);
 
@@ -172,14 +189,6 @@ namespace FormfleksBaseApp.Tests.Surveys
                     new FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAudienceUser { UserId = userId, Email = "test@test.com", DisplayName = "Test User" }
                 });
             
-            var mockQdmsUsers = new List<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> 
-            {
-                new FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim { LinkedUserId = userId, Email = "test@test.com" }
-            }.AsQueryable().BuildMockDbSet();
-
-            var dynamicFormsContextMock = new Mock<IDynamicFormsDbContext>();
-            dynamicFormsContextMock.Setup(d => d.QdmsPersoneller).Returns(mockQdmsUsers.Object);
-
             var processHandler = new ProcessSurveyCampaignsCommandHandler(_context, dynamicFormsContextMock.Object, emailServiceMock.Object, audienceDirectoryMock.Object, new NullLogger<ProcessSurveyCampaignsCommandHandler>());
             
             // Run process handler to GENERATE assignments first
@@ -229,8 +238,12 @@ namespace FormfleksBaseApp.Tests.Surveys
             Assert.Contains("doldurdunuz", doubleSubmitResult.Message);
 
             // 5. Get Results
-            var getResultsHandler = new GetCampaignResultsQueryHandler(_context, audienceDirectoryMock.Object);
-            var results = await getResultsHandler.Handle(new GetCampaignResultsQuery(campaign.Id, userId, true), CancellationToken.None);
+            var authServiceMock = new Mock<FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService>();
+            authServiceMock.Setup(a => a.EnsureCampaignPermissionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<SurveyAction>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
+            authServiceMock.Setup(a => a.HasCampaignPermissionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<SurveyAction>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+            var getResultsHandler = new GetCampaignResultsQueryHandler(_context, new FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAnonymousSuppressionService(), authServiceMock.Object);
+            var results = await getResultsHandler.Handle(new GetCampaignResultsQuery(campaign.Id, userId), CancellationToken.None);
             
             Assert.Equal(1, results.TotalParticipants);
             Assert.Equal(1, results.TotalResponses);
@@ -241,8 +254,8 @@ namespace FormfleksBaseApp.Tests.Surveys
             Assert.Contains(qStats.OptionStats, o => o.Label.StartsWith("5") && o.Count == 1);
 
             // 6. Export Results
-            var exportHandler = new ExportCampaignResultsCsvQueryHandler(_context, audienceDirectoryMock.Object);
-            var csvBytes = await exportHandler.Handle(new ExportCampaignResultsCsvQuery(campaign.Id, userId, true, true), CancellationToken.None);
+            var exportHandler = new ExportCampaignResultsCsvQueryHandler(_context, audienceDirectoryMock.Object, new FormfleksBaseApp.Application.Features.Surveys.Common.SurveyAnonymousSuppressionService(), authServiceMock.Object, dynamicFormsContextMock.Object);
+            var csvBytes = await exportHandler.Handle(new ExportCampaignResultsCsvQuery(campaign.Id, userId), CancellationToken.None);
             var csvString = System.Text.Encoding.UTF8.GetString(csvBytes);
             
             Assert.Contains("Katılımcı", csvString);

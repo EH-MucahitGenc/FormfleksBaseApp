@@ -21,6 +21,8 @@ public class SurveyAudienceUser
 
 public class AudienceFilter
 {
+    // Null preserves saved audiences created before explicit selection modes existed.
+    public bool? SelectedUsersOnly { get; set; }
     public string? SearchTerm { get; set; }
     public List<string>? Companies { get; set; }
     public List<string>? Locations { get; set; }
@@ -45,6 +47,7 @@ public class AudienceFacets
 
 public interface ISurveyAudienceDirectory
 {
+    Task<List<Guid>> GetSelectedUserIdsAsync(AudienceFilter filter, IEnumerable<Guid> candidateIds, CancellationToken cancellationToken = default);
     Task<List<SurveyAudienceUser>> GetUsersAsync(AudienceFilter filter, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<int> GetTotalUsersCountAsync(AudienceFilter filter, CancellationToken cancellationToken = default);
     Task<List<SurveyAudienceUser>> GetUsersByIdsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);

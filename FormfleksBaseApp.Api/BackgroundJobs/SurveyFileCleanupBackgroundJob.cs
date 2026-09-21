@@ -44,6 +44,18 @@ public class SurveyFileCleanupBackgroundJob : CronJobService
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ISurveyDbContext>();
 
+            // 1. Clean up expired DB temp records
+            var expiredTempRecords = await context.SurveyTempFileUploads
+                .Where(t => t.ExpiresAt < DateTime.UtcNow)
+                .ToListAsync(cancellationToken);
+                
+            if (expiredTempRecords.Any())
+            {
+                context.SurveyTempFileUploads.RemoveRange(expiredTempRecords);
+                await context.SaveChangesAsync(cancellationToken);
+                Logger.LogInformation("Deleted {Count} expired temp file DB records.", expiredTempRecords.Count);
+            }
+
             var thresholdDate = DateTime.UtcNow.AddHours(-24);
             var allPhysicalFiles = Directory.GetFiles(uploadPath);
 

@@ -84,6 +84,8 @@ public class RolePermissionRepository : IRolePermissionRepository
             // 3. İsimleri gönderilen yetkilerin ID'lerini bul
             var getIdsSql = $"SELECT id FROM {permTable} WHERE name = ANY(@Names)";
             var permissionIds = (await connection.QueryAsync<Guid>(getIdsSql, new { Names = permissionNames.ToArray() }, transaction)).ToList();
+            if (permissionIds.Count != permissionNames.Distinct(StringComparer.Ordinal).Count())
+                throw new FormfleksBaseApp.Application.Common.BusinessException("Yetki listesi değişmiş veya geçersiz bir izin seçilmiş. Sayfayı yenileyip tekrar deneyin.");
 
             // 4. Yeni yetkileri role_permissions tablosuna ekle
             if (permissionIds.Any())

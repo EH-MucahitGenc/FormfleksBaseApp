@@ -1,4 +1,5 @@
 using FormfleksBaseApp.Application.Features.Surveys.Campaigns.Commands.CreateCampaign;
+using FormfleksBaseApp.Application.Features.Surveys.Campaigns.Access;
 using FormfleksBaseApp.Application.Features.Surveys.Participants.Queries.SearchParticipants;
 using FormfleksBaseApp.Domain.Constants;
 using MediatR;
@@ -45,6 +46,14 @@ public class CampaignsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("participants/browse")]
+    [Authorize(Policy = AppPermissions.PolicySurveysPublish)]
+    public async Task<IActionResult> BrowseParticipants([FromBody] BrowseParticipantsQuery query)
+    {
+        if (query.DirectoryFilter == null || query.AudienceDefinition == null) return BadRequest();
+        return Ok(await _mediator.Send(query));
+    }
+
     [HttpGet]
     [Authorize(Policy = AppPermissions.PolicySurveysManage)]
     public async Task<IActionResult> GetCampaigns()
@@ -62,11 +71,47 @@ public class CampaignsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("navigation-access")]
+    [Authorize]
+    public async Task<IActionResult> GetNavigationAccess()
+    {
+        if (!TryGetCurrentUserId(out var actor)) return Unauthorized();
+        return Ok(await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Common.GetSurveyNavigationQuery(actor)));
+    }
+
+    [HttpGet("{id:guid}/access")]
+    [Authorize(Policy = AppPermissions.PolicySurveysManage)]
+    public async Task<IActionResult> GetAccess(Guid id)
+    {
+        if (!TryGetCurrentUserId(out var actor)) return Unauthorized();
+        return Ok(await _mediator.Send(new GetCampaignAccessQuery(id, actor)));
+    }
+
+    [HttpPut("{id:guid}/access/{userId:guid}")]
+    [Authorize(Policy = AppPermissions.PolicySurveysManage)]
+    public async Task<IActionResult> SetAccess(Guid id, Guid userId, [FromBody] SetCampaignAccessCommand command)
+    {
+        if (!TryGetCurrentUserId(out var actor)) return Unauthorized();
+        await _mediator.Send(command with { CampaignId = id, UserId = userId, ActorUserId = actor });
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/access/candidates")]
+    [Authorize(Policy = AppPermissions.PolicySurveysManage)]
+    public async Task<IActionResult> GetAccessCandidates(Guid id, [FromQuery] string? search)
+    {
+        if (!TryGetCurrentUserId(out var actor)) return Unauthorized();
+        await _mediator.Send(new GetCampaignAccessQuery(id, actor));
+        return Ok(await _mediator.Send(new SearchParticipantsQuery(new() { SearchTerm = search }, 1, 25)));
+    }
+
     [HttpPost]
     [Authorize(Policy = AppPermissions.PolicySurveysPublish)]
     public async Task<IActionResult> CreateCampaign([FromBody] CreateCampaignCommand command)
     {
-        var id = await _mediator.Send(command);
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        var commandWithUser = command with { ActorUserId = userId };
+        var id = await _mediator.Send(commandWithUser);
         return CreatedAtAction(nameof(CreateCampaign), new { id }, new { id }); // Temp return URL for now
     }
 
@@ -80,13 +125,14 @@ public class CampaignsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/participants")]
-    [Authorize(Policy = AppPermissions.PolicySurveysManage)]
+    [Authorize]
     public async Task<IActionResult> GetCampaignParticipants(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 25,
         [FromQuery] string? search = null, [FromQuery] string? status = null,
         [FromQuery] string? department = null, [FromQuery] string? location = null)
     {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignParticipants.GetCampaignParticipantsQuery(
-            id, page, pageSize, search, status, department, location));
+            id, page, pageSize, search, status, department, location, userId));
         return Ok(result);
     }
 
@@ -103,8 +149,7 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> ExportCampaignResults(Guid id)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId, isGlobalAdmin));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.ExportCampaignResultsCsv.ExportCampaignResultsCsvQuery(id, userId));
         return File(result, "text/csv", $"Anket_Sonuclari_{id}.csv");
     }
 
@@ -113,8 +158,7 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetCampaignResults(System.Guid id)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId, isGlobalAdmin));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId));
         return Ok(result);
     }
 
@@ -123,8 +167,7 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetCampaignAnalyticsOverview(Guid id)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId, isGlobalAdmin));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults.GetCampaignResultsQuery(id, userId));
         return Ok(result);
     }
 
@@ -133,8 +176,7 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetCampaignSegments(Guid id, [FromQuery] string dimension = "department")
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
-        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignSegments.GetCampaignSegmentsQuery(id, dimension, userId, isGlobalAdmin));
+        var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignSegments.GetCampaignSegmentsQuery(id, dimension, userId));
         return Ok(result);
     }
 
@@ -143,9 +185,8 @@ public class CampaignsController : ControllerBase
     public async Task<IActionResult> GetCampaignCrosstab(Guid id, [FromQuery] Guid questionId, [FromQuery] string dimension = "department")
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignCrosstab.GetCampaignCrosstabQuery(
-            id, questionId, dimension, userId, isGlobalAdmin));
+            id, questionId, dimension, userId));
         return Ok(result);
     }
 
@@ -155,9 +196,8 @@ public class CampaignsController : ControllerBase
         [FromQuery] int pageSize = 25, [FromQuery] string? search = null)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetQuestionTextAnswers.GetQuestionTextAnswersQuery(
-            id, questionId, page, pageSize, search, userId, isGlobalAdmin));
+            id, questionId, page, pageSize, search, userId));
         return Ok(result);
     }
 
@@ -167,14 +207,11 @@ public class CampaignsController : ControllerBase
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
         if (!assignmentId.HasValue) return BadRequest(new { message = "Kimlikli yanıt için assignmentId gereklidir." });
-        var isGlobalAdmin = HasPermission(AppPermissions.SurveysResultsView);
         var result = await _mediator.Send(new FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetIdentifiedParticipantResponse.GetIdentifiedParticipantResponseQuery(
-            id, assignmentId.Value, userId, isGlobalAdmin));
+            id, assignmentId.Value, userId));
         return Ok(result);
     }
 
-    private bool HasPermission(string permission) =>
-        User.HasClaim(c => c.Type == "Permission" && c.Value == permission) || User.IsInRole("Global Admin");
 
     private bool TryGetCurrentUserId(out Guid userId)
     {

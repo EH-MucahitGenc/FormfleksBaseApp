@@ -9,6 +9,8 @@ import {
     campaignService, type CampaignParticipantDto, type IdentifiedParticipantResponse,
     type PaginatedCampaignParticipants
 } from '../services/campaign.service';
+import { apiClient } from '@/lib/axios';
+import { isAxiosError } from 'axios';
 
 const EMPTY_PAGE: PaginatedCampaignParticipants = { items: [], totalCount: 0, page: 1, pageSize: 25, totalPages: 0 };
 
@@ -24,8 +26,13 @@ const statusLabel = (status: string) => ({
     Failed: 'Başarısız', Expired: 'Süresi doldu', Revoked: 'İptal edildi'
 }[status] ?? status);
 
+import { useAuthStore } from '@/store/useAuthStore';
+
 export const SurveyCampaignParticipantsPage = () => {
     const { id } = useParams<{ id: string }>();
+    const { user } = useAuthStore();
+    const canManage = user?.permissions?.includes('Surveys.Manage');
+
     const [data, setData] = useState(EMPTY_PAGE);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
@@ -35,6 +42,7 @@ export const SurveyCampaignParticipantsPage = () => {
     const [department, setDepartment] = useState('');
     const [location, setLocation] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [resendingId, setResendingId] = useState<string | null>(null);
     const [selected, setSelected] = useState<IdentifiedParticipantResponse | null>(null);
@@ -44,14 +52,18 @@ export const SurveyCampaignParticipantsPage = () => {
         if (!id) return;
         let active = true;
         setLoading(true);
+        setLoadError(null);
+        setData(EMPTY_PAGE);
         campaignService.getCampaignParticipants(id, {
             page, pageSize, search: deferredSearch || undefined, status: status || undefined,
             department: department || undefined, location: location || undefined
         }).then(result => {
             if (active) setData(result);
         }).catch(error => {
+            if (!active) return;
             console.error(error);
-            toast.error('Katılımcılar yüklenirken bir hata oluştu. Anonim kampanyalarda bu liste kullanılamaz.');
+            const problem = isAxiosError<{ detail?: string; message?: string }>(error) ? error.response?.data : undefined;
+            setLoadError(problem?.detail || problem?.message || 'Katılımcı listesi yüklenemedi. Lütfen tekrar deneyin.');
         }).finally(() => {
             if (active) setLoading(false);
         });
@@ -120,9 +132,14 @@ export const SurveyCampaignParticipantsPage = () => {
                     <input value={location} onChange={event => setLocation(event.target.value)} placeholder="Lokasyon (tam eşleşme)" className="h-10 rounded-xl border border-surface-muted px-3 text-sm outline-none focus:border-brand-primary" />
                 </section>
 
-                <section className="overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-sm">
+                {loadError ? <section role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6">
+                    <h2 className="flex items-center gap-2 font-semibold text-red-800"><AlertCircle className="h-5 w-5" />Katılımcı listesi görüntülenemedi</h2>
+                    <p className="mt-2 text-sm text-red-700">{loadError}</p>
+                    <p className="mt-2 text-xs text-red-700">Bu hata, kampanyada katılımcı bulunmadığı anlamına gelmez.</p>
+                    <button onClick={() => setRefreshKey(value => value + 1)} className="mt-4 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-800">Tekrar dene</button>
+                </section> : <section className="overflow-hidden rounded-2xl border border-surface-muted bg-white shadow-sm">
                     <div className="flex items-center justify-between border-b border-surface-muted px-5 py-4">
-                        <div><p className="text-sm font-semibold text-brand-dark">{data.totalCount.toLocaleString('tr-TR')} katılımcı</p><p className="text-xs text-brand-gray">Veriler kampanya anındaki organizasyon snapshot’ından gösterilir.</p></div>
+                        <div><p className="text-sm font-semibold text-brand-dark">{loading ? 'Katılımcılar yükleniyor...' : `${data.totalCount.toLocaleString('tr-TR')} katılımcı`}</p><p className="text-xs text-brand-gray">Veriler kampanya anındaki organizasyon snapshot’ından gösterilir. Yanıtlar ayrıca yetkilendirilir.</p></div>
                         <select value={pageSize} onChange={event => setPageSize(Number(event.target.value))} className="rounded-lg border border-surface-muted px-2 py-1.5 text-xs"><option value={25}>25 satır</option><option value={50}>50 satır</option><option value={100}>100 satır</option></select>
                     </div>
                     <div className="overflow-x-auto">
@@ -138,17 +155,40 @@ export const SurveyCampaignParticipantsPage = () => {
                                         <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${participant.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' : participant.status === 'Started' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>{statusLabel(participant.status)}</span></td>
                                         <td className="px-5 py-4">{participant.emailDeliveryStatus === 'Delivered' ? <span className="flex items-center gap-1.5 text-emerald-700"><CheckCircle2 className="h-4 w-4" />İletildi</span> : participant.emailDeliveryStatus === 'Failed' ? <span className="flex items-center gap-1.5 text-red-700"><XCircle className="h-4 w-4" />Başarısız</span> : <span className="flex items-center gap-1.5 text-amber-700"><AlertCircle className="h-4 w-4" />{participant.emailDeliveryStatus}</span>}</td>
                                         <td className="px-5 py-4"><p className="flex items-center gap-1.5 font-medium text-brand-dark"><Clock3 className="h-4 w-4 text-brand-gray" />{formatDuration(participant.completionSeconds)}</p><p className="mt-1 text-xs text-brand-gray">{participant.completedAt ? new Date(participant.completedAt).toLocaleString('tr-TR') : '-'}</p></td>
-                                        <td className="px-5 py-4"><div className="flex justify-end gap-2">{participant.responseId && <button onClick={() => openResponse(participant)} disabled={detailLoading} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-dark px-3 py-2 text-xs font-semibold text-white"><Eye className="h-3.5 w-3.5" />Yanıtı aç</button>}<button onClick={() => handleResend(participant.id)} disabled={participant.status === 'Completed' || resendingId === participant.id} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-muted px-3 py-2 text-xs font-semibold text-brand-dark disabled:opacity-40"><RefreshCw className={`h-3.5 w-3.5 ${resendingId === participant.id ? 'animate-spin' : ''}`} />Tekrar gönder</button></div></td>
+                                        <td className="px-5 py-4"><div className="flex justify-end gap-2">{participant.responseId && <button onClick={() => openResponse(participant)} disabled={detailLoading} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-dark px-3 py-2 text-xs font-semibold text-white"><Eye className="h-3.5 w-3.5" />Yanıtı aç</button>}{canManage && <button onClick={() => handleResend(participant.id)} disabled={participant.status === 'Completed' || resendingId === participant.id} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-muted px-3 py-2 text-xs font-semibold text-brand-dark disabled:opacity-40"><RefreshCw className={`h-3.5 w-3.5 ${resendingId === participant.id ? 'animate-spin' : ''}`} />Tekrar gönder</button>}</div></td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                     <footer className="flex items-center justify-between border-t border-surface-muted px-5 py-4"><p className="text-xs text-brand-gray">Sayfa {data.page} / {Math.max(1, data.totalPages)}</p><div className="flex gap-2"><button onClick={() => setPage(value => Math.max(1, value - 1))} disabled={page <= 1} className="grid h-9 w-9 place-items-center rounded-lg border border-surface-muted disabled:opacity-40" aria-label="Önceki sayfa"><ChevronLeft className="h-4 w-4" /></button><button onClick={() => setPage(value => Math.min(data.totalPages, value + 1))} disabled={page >= data.totalPages} className="grid h-9 w-9 place-items-center rounded-lg border border-surface-muted disabled:opacity-40" aria-label="Sonraki sayfa"><ChevronRight className="h-4 w-4" /></button></div></footer>
-                </section>
+                </section>}
             </main>
 
-            {selected && <div className="fixed inset-0 z-50 flex justify-end bg-black/25" onMouseDown={() => setSelected(null)}><aside className="h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl" onMouseDown={event => event.stopPropagation()}><div className="sticky top-0 z-10 flex items-start justify-between border-b border-surface-muted bg-white px-6 py-5"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">Kimlikli yanıt</p><h2 className="mt-1 text-xl font-bold text-brand-dark">{selected.participantName}</h2><p className="text-sm text-brand-gray">{selected.participantEmail}</p></div><button onClick={() => setSelected(null)} className="grid h-9 w-9 place-items-center rounded-lg bg-surface-ground"><X className="h-4 w-4" /></button></div><div className="space-y-5 p-6"><div className="grid gap-3 rounded-2xl bg-surface-ground p-4 sm:grid-cols-2"><p className="text-sm"><span className="block text-xs text-brand-gray">Organizasyon</span><strong>{selected.department || '-'} · {selected.location || '-'}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Tamamlama süresi</span><strong>{formatDuration(selected.completionSeconds)}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Başlangıç</span><strong>{new Date(selected.startedAt).toLocaleString('tr-TR')}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Snapshot kaynağı</span><strong>{selected.snapshotSource}</strong></p></div>{selected.answers.map((answer, index) => <article key={answer.questionId} className="rounded-2xl border border-surface-muted p-4"><div className="flex gap-3"><span className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-orange-50 text-xs font-bold text-brand-primary">{index + 1}</span><div><h3 className="font-semibold text-brand-dark">{answer.questionTitle}</h3><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-brand-gray">{answer.textValue ?? answer.numericValue ?? answer.dateValue ?? answer.files?.join(', ') ?? answer.jsonValue ?? 'Yanıt verilmedi'}</p></div></div></article>)}</div></aside></div>}
+            {selected && <div className="fixed inset-0 z-50 flex justify-end bg-black/25" onMouseDown={() => setSelected(null)}><aside className="h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl" onMouseDown={event => event.stopPropagation()}><div className="sticky top-0 z-10 flex items-start justify-between border-b border-surface-muted bg-white px-6 py-5"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">Kimlikli yanıt</p><h2 className="mt-1 text-xl font-bold text-brand-dark">{selected.participantName}</h2><p className="text-sm text-brand-gray">{selected.participantEmail}</p></div><button onClick={() => setSelected(null)} className="grid h-9 w-9 place-items-center rounded-lg bg-surface-ground"><X className="h-4 w-4" /></button></div><div className="space-y-5 p-6"><div className="grid gap-3 rounded-2xl bg-surface-ground p-4 sm:grid-cols-2"><p className="text-sm"><span className="block text-xs text-brand-gray">Organizasyon</span><strong>{selected.department || '-'} · {selected.location || '-'}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Tamamlama süresi</span><strong>{formatDuration(selected.completionSeconds)}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Başlangıç</span><strong>{new Date(selected.startedAt).toLocaleString('tr-TR')}</strong></p><p className="text-sm"><span className="block text-xs text-brand-gray">Snapshot kaynağı</span><strong>{selected.snapshotSource}</strong></p></div>{selected.answers.map((answer, index) => <article key={answer.questionId} className="rounded-2xl border border-surface-muted p-4"><div className="flex gap-3"><span className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-orange-50 text-xs font-bold text-brand-primary">{index + 1}</span><div className="w-full"><h3 className="font-semibold text-brand-dark">{answer.questionTitle}</h3><div className="mt-2 text-sm leading-6 text-brand-gray">
+                {answer.files && answer.files.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                        {answer.files.map((file: any) => (
+                            <button key={file.fileId} onClick={() => {
+                                apiClient.get(`/api/SurveyFiles/${file.fileId}`, { responseType: 'blob' })
+                                    .then(response => {
+                                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', file.displayName);
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.parentNode?.removeChild(link);
+                                    }).catch(console.error);
+                            }} className="inline-flex max-w-fit items-center gap-2 rounded-lg border border-surface-muted px-3 py-1.5 text-brand-dark hover:bg-surface-ground">
+                                <span>{file.displayName}</span>
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="whitespace-pre-wrap">{answer.textValue ?? answer.numericValue ?? answer.dateValue ?? answer.jsonValue ?? 'Yanıt verilmedi'}</p>
+                )}
+            </div></div></div></article>)}</div></aside></div>}
         </div>
     );
 };

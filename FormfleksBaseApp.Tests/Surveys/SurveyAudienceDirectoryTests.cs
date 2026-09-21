@@ -148,6 +148,77 @@ namespace FormfleksBaseApp.Tests.Surveys
         }
 
         [Fact]
+        public async Task ManualAudience_EmptyListNeverSelectsEveryone()
+        {
+            await CreateUserAsync(true);
+            var filter = new AudienceFilter { SelectedUsersOnly = true };
+            Assert.Equal(0, await _directory.GetTotalUsersCountAsync(filter));
+            Assert.Empty(await _directory.GetUsersAsync(filter, 1, 25));
+        }
+
+        [Fact]
+        public async Task ManualAudience_OnlyExplicitActiveUsers_ExclusionWins()
+        {
+            var first = await CreateUserAsync(true);
+            var second = await CreateUserAsync(true);
+            var passive = await CreateUserAsync(false);
+            await CreateUserAsync(true);
+            var filter = new AudienceFilter
+            {
+                SelectedUsersOnly = true,
+                IncludedUserIds = new() { first.Id, second.Id, passive.Id, first.Id },
+                ExcludedUserIds = new() { second.Id },
+                SearchTerm = "does-not-match"
+            };
+            var users = await _directory.GetUsersAsync(filter, 1, 25);
+            Assert.Equal(first.Id, Assert.Single(users).UserId);
+            Assert.Equal(1, await _directory.GetTotalUsersCountAsync(filter));
+            Assert.Equal(first.Id, Assert.Single(await _directory.GetSelectedUserIdsAsync(filter, new[] { first.Id, second.Id, passive.Id })));
+        }
+
+        [Fact]
+        public async Task GroupAudience_IncludesManualAdditionAndExcludesGroupMember()
+        {
+            var company = Guid.NewGuid().ToString("N");
+            var member = await CreateUserAsync(true);
+            var excluded = await CreateUserAsync(true);
+            var extra = await CreateUserAsync(true);
+            await CreateQdmsRecordAsync(member.Id, true, company);
+            await CreateQdmsRecordAsync(excluded.Id, true, company);
+            var filter = new AudienceFilter
+            {
+                SelectedUsersOnly = false, Companies = new() { company },
+                IncludedUserIds = new() { extra.Id }, ExcludedUserIds = new() { excluded.Id }
+            };
+            var users = await _directory.GetUsersAsync(filter, 1, 25);
+            Assert.Equal(2, users.Count);
+            Assert.Contains(users, u => u.UserId == member.Id);
+            Assert.Contains(users, u => u.UserId == extra.Id);
+            Assert.Equal(2, await _directory.GetTotalUsersCountAsync(filter));
+        }
+
+        [Fact]
+        public async Task GroupAudience_NoFiltersRemainsAllActiveWhenPersonAdded()
+        {
+            var first = await CreateUserAsync(true);
+            var second = await CreateUserAsync(true);
+            var selected = await _directory.GetSelectedUserIdsAsync(new AudienceFilter
+            {
+                SelectedUsersOnly = false, IncludedUserIds = new() { first.Id }
+            }, new[] { first.Id, second.Id });
+            Assert.Equal(2, selected.Count);
+        }
+
+        [Fact]
+        public async Task LegacyAudience_ExplicitIdsStillRestrictSelection()
+        {
+            var first = await CreateUserAsync(true);
+            await CreateUserAsync(true);
+            var users = await _directory.GetUsersAsync(new AudienceFilter { IncludedUserIds = new() { first.Id } }, 1, 25);
+            Assert.Equal(first.Id, Assert.Single(users).UserId);
+        }
+
+        [Fact]
         public async Task ActiveUser_WithActiveQdms_ShouldBeSelectableAndHaveOrgData()
         {
             var user = await CreateUserAsync(true);

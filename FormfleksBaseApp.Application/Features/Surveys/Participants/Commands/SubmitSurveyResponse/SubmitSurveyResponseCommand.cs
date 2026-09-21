@@ -86,14 +86,15 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
                 receiptCode = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
             }
 
+            var isAnonymous = assignment.SurveyCampaign.IsAnonymous;
             var response = new SurveyResponse
             {
                 Id = Guid.NewGuid(),
                 SurveyCampaignId = assignment.SurveyCampaignId,
-                SurveyAssignmentId = assignment.SurveyCampaign.IsAnonymous ? null : assignment.Id,
-                UserId = assignment.SurveyCampaign.IsAnonymous ? null : assignment.UserId,
-                StartedAt = assignment.StartedAt.Value,
-                SubmittedAt = now,
+                SurveyAssignmentId = isAnonymous ? null : assignment.Id,
+                // Break time correlation for anonymous surveys by truncating to hour/day or fixed offset
+                StartedAt = isAnonymous ? assignment.StartedAt.Value.Date.AddHours(assignment.StartedAt.Value.Hour) : assignment.StartedAt.Value,
+                SubmittedAt = isAnonymous ? now.Date.AddHours(now.Hour) : now,
                 ReceiptCode = receiptCode,
                 CompanySnapshot = assignment.CompanySnapshot,
                 LocationSnapshot = assignment.LocationSnapshot,
@@ -389,11 +390,13 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
                             using var doc = JsonDocument.Parse(ans.TextValue);
                             var fileId = doc.RootElement.GetProperty("fileId").GetString() ?? "";
                             
-                            // Secure File Validation: Check if the fileId is formatted correctly indicating it was uploaded by THIS token for THIS question.
-                            var prefix = $"{assignment.Token:N}_{ans.QuestionId:N}_";
-                            if (!fileId.StartsWith(prefix))
+                            // Secure File Validation: Check if the fileId belongs to this Token and QuestionId
+                            var tempFile = await _context.SurveyTempFileUploads
+                                .FirstOrDefaultAsync(t => t.Token == assignment.Token && t.QuestionId == ans.QuestionId && t.StorageKey == fileId);
+                            
+                            if (tempFile == null || tempFile.ExpiresAt < DateTime.UtcNow)
                             {
-                                errors.Add($"Soru '{qEntity.Title}' için yetkisiz dosya gönderimi engellendi.");
+                                errors.Add($"Soru '{qEntity.Title}' için yetkisiz veya süresi dolmuş dosya gönderimi engellendi.");
                             }
                             else
                             {
@@ -401,15 +404,21 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
                                 {
                                     Id = Guid.NewGuid(),
                                     SurveyAnswerId = detail.Id,
-                                    FileName = doc.RootElement.GetProperty("fileName").GetString() ?? "file",
-                                    ContentType = doc.RootElement.GetProperty("contentType").GetString() ?? "application/octet-stream",
-                                    FileSize = doc.RootElement.GetProperty("fileSize").GetInt64(),
-                                    FilePath = fileId // Storing just the safe FileId
+                                    FileName = tempFile.OriginalFileName ?? "file",
+                                    ContentType = tempFile.ContentType ?? "application/octet-stream",
+                                    FileSize = tempFile.FileSize,
+                                    FilePath = tempFile.StorageKey // Storing just the safe FileId
                                 };
                                 answerFilesToAdd.Add(fileRec);
+                                
+                                // Submit başarılı olduğunda kullanılan temp kayıt silinmeli
+                                _context.SurveyTempFileUploads.Remove(tempFile);
                             }
                         }
-                        catch { /* skip invalid file payloads */ }
+                        catch (Exception ex)
+                        {
+                            errors.Add($"Soru '{qEntity.Title}' için geçersiz dosya verisi (Geçersiz JSON veya eksik alanlar).");
+                        }
                     }
                 }
             }
@@ -427,13 +436,13 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
             assignment.CompletedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction != null) await transaction.CommitAsync(cancellationToken);
 
             return new SubmitSurveyResult(true, receiptCode);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction != null) await transaction.RollbackAsync(cancellationToken);
             if (ex.InnerException != null && ex.InnerException.Message.Contains("PK_survey_participation_guards", StringComparison.OrdinalIgnoreCase))
             {
                 throw new FormfleksBaseApp.Application.Common.ConflictException("Bu anketi zaten doldurdunuz veya aynı anda başka bir gönderim yapıldı.");
@@ -442,7 +451,7 @@ public class SubmitSurveyResponseCommandHandler : IRequestHandler<SubmitSurveyRe
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction != null) await transaction.RollbackAsync(cancellationToken);
             throw;
         }
     }

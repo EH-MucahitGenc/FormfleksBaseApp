@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace FormfleksBaseApp.Application.Features.Surveys.Campaigns.Queries.GetCampaignResults;
 
-public record GetCampaignResultsQuery(Guid CampaignId, Guid ActorUserId, bool IsGlobalAdmin) : IRequest<CampaignResultsDto>;
+public record GetCampaignResultsQuery(Guid CampaignId, Guid ActorUserId) : IRequest<CampaignResultsDto>;
 
 public sealed class CampaignResultsDto
 {
@@ -20,7 +20,14 @@ public sealed class CampaignResultsDto
     public DateTime? EndDate { get; set; }
     public int TotalParticipants { get; set; }
     public int TotalResponses { get; set; }
-    public int CurrentUserAccessLevel { get; set; } = 1; // 1 = Aggregate, 2 = Detailed
+    public bool IsSuppressed { get; set; }
+    public string? SuppressionReason { get; set; }
+    public int MinimumGroupSize { get; set; }
+    public bool CanViewTextAnswers { get; set; }
+    public bool CanViewIdentifiedResponses { get; set; }
+    public bool CanViewResponseFiles { get; set; }
+    public bool CanExportAggregate { get; set; }
+    public bool CanExportIdentified { get; set; }
     public double ResponseRate => Percentage(TotalResponses, TotalParticipants);
     public ParticipationFunnelDto Funnel { get; set; } = new();
     public ResponseTimingDto Timing { get; set; } = new();
@@ -136,30 +143,43 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
 {
     private const int SpeedingThresholdSeconds = 30;
     private readonly ISurveyDbContext _context;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService _suppressionService;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public GetCampaignResultsQueryHandler(ISurveyDbContext context, ISurveyAudienceDirectory audienceDirectory)
+    public GetCampaignResultsQueryHandler(
+        ISurveyDbContext context, 
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAnonymousSuppressionService suppressionService,
+        FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService)
     {
         _context = context;
-        _ = audienceDirectory;
+        _suppressionService = suppressionService;
+        _authService = authService;
     }
 
     public async Task<CampaignResultsDto> Handle(GetCampaignResultsQuery request, CancellationToken cancellationToken)
     {
-        var campaign = await _context.SurveyCampaigns
-            .AsNoTracking()
+        var campaign = await _context.SurveyCampaigns.AsNoTracking()
             .Include(c => c.SurveyTemplateVersion)
                 .ThenInclude(v => v.Sections)
                     .ThenInclude(s => s.Questions)
                         .ThenInclude(q => q.Options)
-            .SingleOrDefaultAsync(c => c.Id == request.CampaignId, cancellationToken)
-            ?? throw new FormfleksBaseApp.Application.Common.BusinessException("Kampanya bulunamadı.");
+            .FirstOrDefaultAsync(c => c.Id == request.CampaignId, cancellationToken);
+            
+        if (campaign == null) throw new FormfleksBaseApp.Application.Common.NotFoundException("Kampanya bulunamadı.");
 
-        var currentAccessLevel = await GetAccessLevelAsync(request, cancellationToken);
+        // YETKİ KONTROLÜ
+        await _authService.EnsureCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewAggregateResults, cancellationToken);
+        var canViewTextAnswers = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewTextAnswers, cancellationToken);
+        var canViewIdentified = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewIdentifiedResponses, cancellationToken);
+        var canViewResponseFiles = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewResponseFiles, cancellationToken);
+        var canExportAggregate = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ExportAggregateResults, cancellationToken);
+        var canExportIdentified = await _authService.HasCampaignPermissionAsync(request.ActorUserId, request.CampaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ExportIdentifiedResponses, cancellationToken);
 
-        var assignments = _context.SurveyAssignments.AsNoTracking()
-            .Where(a => a.SurveyCampaignId == request.CampaignId);
         var responses = _context.SurveyResponses.AsNoTracking()
             .Where(r => r.SurveyCampaignId == request.CampaignId);
+        
+        var assignments = _context.SurveyAssignments.AsNoTracking()
+            .Where(a => a.SurveyCampaignId == request.CampaignId);
 
         var statusCounts = await assignments.GroupBy(a => a.Status)
             .Select(g => new { Status = g.Key, Count = g.Count() })
@@ -191,7 +211,11 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             EndDate = campaign.EndDate,
             TotalParticipants = totalParticipants,
             TotalResponses = totalResponses,
-            CurrentUserAccessLevel = currentAccessLevel,
+            CanViewTextAnswers = canViewTextAnswers,
+            CanViewIdentifiedResponses = canViewIdentified,
+            CanViewResponseFiles = canViewResponseFiles,
+            CanExportAggregate = canExportAggregate,
+            CanExportIdentified = canExportIdentified,
             Funnel = new ParticipationFunnelDto
             {
                 Targeted = totalParticipants,
@@ -232,7 +256,7 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             dto.Questions.Add(await BuildQuestionStatsAsync(
                 question.Id, question.Title, question.QuestionType, question.IsRequired,
                 question.Options.OrderBy(o => o.SortOrder).Select(o => (o.Id, o.Label)).ToList(),
-                totalResponses, request.CampaignId, cancellationToken));
+                totalResponses, request.CampaignId, canViewTextAnswers, cancellationToken));
         }
 
         var expectedQuestionsPerResponse = dto.Questions.Count(q => q.Type != SurveyQuestionType.Info);
@@ -241,16 +265,33 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             ? 0
             : responseAnswerCounts.Count(count => count < expectedQuestionsPerResponse * 0.5);
         dto.DataQuality.FlaggedResponses = Math.Min(totalResponses, dto.DataQuality.SpeedingResponses + dto.DataQuality.HighMissingResponses);
+        
+        dto.Methodology.AnonymousMinimumGroupSize = _suppressionService.MinimumGroupSize;
+        dto.MinimumGroupSize = _suppressionService.MinimumGroupSize;
+        
+        if (_suppressionService.ShouldSuppress(totalResponses, campaign.IsAnonymous))
+        {
+            dto.IsSuppressed = true;
+            dto.SuppressionReason = "Anonimlik eşiğinin altında";
+            _suppressionService.SuppressTiming(dto.Timing);
+            _suppressionService.SuppressDataQuality(dto.DataQuality);
+            _suppressionService.SuppressTrend(dto.ResponseTrend);
+            _suppressionService.SuppressQuestions(dto.Questions);
+        }
+
         return dto;
     }
 
     private async Task<QuestionStatsDto> BuildQuestionStatsAsync(Guid questionId, string title, SurveyQuestionType type,
         bool isRequired, List<(Guid Id, string Label)> options, int totalResponses, Guid campaignId,
-        CancellationToken cancellationToken)
+        bool canViewTextAnswers, CancellationToken cancellationToken)
     {
         var query = _context.SurveyAnswers.AsNoTracking()
             .Where(a => a.SurveyVersionQuestionId == questionId && a.SurveyResponse.SurveyCampaignId == campaignId);
         var answerCount = type == SurveyQuestionType.Info ? 0 : await query.CountAsync(cancellationToken);
+        
+        var isTextQuestion = type is SurveyQuestionType.ShortText or SurveyQuestionType.LongText;
+        
         var result = new QuestionStatsDto
         {
             QuestionId = questionId,
@@ -260,8 +301,10 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
             EligibleResponses = type == SurveyQuestionType.Info ? 0 : totalResponses,
             TotalAnswers = answerCount,
             MissingAnswers = type == SurveyQuestionType.Info ? 0 : Math.Max(0, totalResponses - answerCount),
-            TextAnswerCount = type is SurveyQuestionType.ShortText or SurveyQuestionType.LongText
-                ? await query.CountAsync(a => !string.IsNullOrWhiteSpace(a.ValueText), cancellationToken) : 0
+            TextAnswerCount = isTextQuestion ? await query.CountAsync(a => !string.IsNullOrWhiteSpace(a.ValueText), cancellationToken) : 0,
+            TextAnswers = (isTextQuestion && canViewTextAnswers) 
+                ? await query.Where(a => !string.IsNullOrWhiteSpace(a.ValueText)).Select(a => a.ValueText!).ToListAsync(cancellationToken)
+                : new List<string>()
         };
 
         if (type is SurveyQuestionType.SingleChoice or SurveyQuestionType.MultipleChoice)
@@ -379,16 +422,5 @@ public sealed class GetCampaignResultsQueryHandler : IRequestHandler<GetCampaign
     private static int GetCount<T>(IReadOnlyDictionary<T, int> counts, T key) where T : notnull =>
         counts.TryGetValue(key, out var count) ? count : 0;
 
-    private async Task<int> GetAccessLevelAsync(GetCampaignResultsQuery request, CancellationToken cancellationToken)
-    {
-        if (request.IsGlobalAdmin) return (int)FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.Detailed;
-        
-        var viewer = await _context.SurveyResultViewers.AsNoTracking()
-            .FirstOrDefaultAsync(v => v.SurveyCampaignId == request.CampaignId && v.UserId == request.ActorUserId, cancellationToken);
-            
-        if (viewer == null)
-            throw new FormfleksBaseApp.Application.Common.BusinessException("Bu anketin sonuçlarını görüntüleme yetkiniz yok.");
-            
-        return (int)viewer.AccessLevel;
-    }
+
 }

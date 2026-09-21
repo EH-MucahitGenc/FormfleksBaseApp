@@ -24,11 +24,24 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
     public DbSet<SurveyAnswerFile> SurveyAnswerFiles => Set<SurveyAnswerFile>();
     public DbSet<SurveyParticipationGuard> SurveyParticipationGuards => Set<SurveyParticipationGuard>();
     public DbSet<SavedAudience> SavedAudiences => Set<SavedAudience>();
+    public DbSet<SurveyTempFileUpload> SurveyTempFileUploads => Set<SurveyTempFileUpload>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         ApplyAuditRules();
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public virtual async Task SaveAccessChangesAsync(FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity audit, CancellationToken cancellationToken = default)
+    {
+        // Reuse the shared audit table in the same transaction as the access change.
+        await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+        await SaveChangesAsync(cancellationToken);
+        await Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO public.audit_logs (id, entity_type, entity_id, action_type, actor_user_id, detail_json, created_at)
+            VALUES ({audit.Id}, {audit.EntityType}, {audit.EntityId}, {audit.ActionType}, {audit.ActorUserId},
+                    CAST({audit.DetailJson} AS jsonb), {audit.CreatedAt})", cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -141,6 +154,9 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.EmailSubject).HasColumnName("email_subject").HasMaxLength(250);
             e.Property(x => x.EmailBodyTemplate).HasColumnName("email_body_template");
             e.Property(x => x.TargetAudienceJson).HasColumnName("target_audience_json").HasColumnType("jsonb");
+            e.Property(x => x.OwnerUserId).HasColumnName("owner_user_id");
+            e.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id");
+            e.Property(x => x.BusinessOwnerUserId).HasColumnName("business_owner_user_id");
 
             e.HasOne(x => x.SurveyTemplateVersion)
              .WithMany(x => x.Campaigns)
@@ -191,7 +207,6 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             
             e.Property(x => x.SurveyCampaignId).HasColumnName("survey_campaign_id");
             e.Property(x => x.SurveyAssignmentId).HasColumnName("survey_assignment_id");
-            e.Property(x => x.UserId).HasColumnName("user_id");
             e.Property(x => x.StartedAt).HasColumnName("started_at");
             e.Property(x => x.SubmittedAt).HasColumnName("submitted_at");
             e.Property(x => x.CompanySnapshot).HasColumnName("company_snapshot").HasMaxLength(250);
@@ -211,7 +226,6 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
              .OnDelete(DeleteBehavior.SetNull); // Keeping response if assignment is deleted? Better SetNull
 
             e.HasIndex(x => new { x.SurveyCampaignId, x.SubmittedAt });
-            e.HasIndex(x => new { x.SurveyCampaignId, x.UserId });
             e.HasIndex(x => new { x.SurveyCampaignId, x.DepartmentSnapshot });
             e.HasIndex(x => new { x.SurveyCampaignId, x.LocationSnapshot });
         });
@@ -251,6 +265,12 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.SurveyCampaignId).HasColumnName("survey_campaign_id");
             e.Property(x => x.UserId).HasColumnName("user_id");
             e.Property(x => x.AccessLevel).HasColumnName("access_level").HasDefaultValue(FormfleksBaseApp.Domain.Enums.Surveys.SurveyViewerAccessLevel.AggregateOnly);
+            e.Property(x => x.GrantedByUserId).HasColumnName("granted_by_user_id");
+            e.Property(x => x.GrantedAt).HasColumnName("granted_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.ValidFrom).HasColumnName("valid_from").HasColumnType("timestamp with time zone");
+            e.Property(x => x.ValidUntil).HasColumnName("valid_until").HasColumnType("timestamp with time zone");
+            e.Property(x => x.RevokedAt).HasColumnName("revoked_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.RevokedByUserId).HasColumnName("revoked_by_user_id");
 
             e.HasOne(x => x.SurveyCampaign)
              .WithMany(x => x.ResultViewers)
@@ -296,6 +316,23 @@ public class SurveyDbContext : DbContext, ISurveyDbContext
             e.Property(x => x.Description).HasColumnName("description").HasMaxLength(1000);
             e.Property(x => x.AudienceDefinitionJson).HasColumnName("audience_definition_json").HasColumnType("jsonb").IsRequired();
             e.Property(x => x.OwnerUserId).HasColumnName("owner_user_id");
+        });
+
+        modelBuilder.Entity<SurveyTempFileUpload>(e =>
+        {
+            e.ToTable("survey_temp_file_uploads");
+            e.HasKey(x => x.Id);
+            ConfigureBaseEntity(e);
+            
+            e.Property(x => x.Token).HasColumnName("token");
+            e.Property(x => x.QuestionId).HasColumnName("question_id");
+            e.Property(x => x.StorageKey).HasColumnName("storage_key").IsRequired().HasMaxLength(255);
+            e.Property(x => x.OriginalFileName).HasColumnName("original_file_name").HasMaxLength(255);
+            e.Property(x => x.ContentType).HasColumnName("content_type").HasMaxLength(100);
+            e.Property(x => x.FileSize).HasColumnName("file_size");
+            e.Property(x => x.ExpiresAt).HasColumnName("expires_at").HasColumnType("timestamp with time zone");
+
+            e.HasIndex(x => new { x.Token, x.QuestionId, x.StorageKey });
         });
     }
 

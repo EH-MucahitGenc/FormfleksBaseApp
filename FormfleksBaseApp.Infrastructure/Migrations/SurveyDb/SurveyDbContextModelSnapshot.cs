@@ -317,11 +317,19 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasDefaultValue(true)
                         .HasColumnName("active");
 
+                    b.Property<Guid?>("BusinessOwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_owner_user_id");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<string>("Description")
                         .HasColumnType("text")
@@ -343,6 +351,10 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean")
                         .HasColumnName("is_anonymous");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("timestamp with time zone")
@@ -511,10 +523,6 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SurveyAssignmentId");
@@ -524,8 +532,6 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                     b.HasIndex("SurveyCampaignId", "LocationSnapshot");
 
                     b.HasIndex("SurveyCampaignId", "SubmittedAt");
-
-                    b.HasIndex("SurveyCampaignId", "UserId");
 
                     b.ToTable("survey_responses", (string)null);
                 });
@@ -554,6 +560,22 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<DateTime?>("GrantedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("granted_at");
+
+                    b.Property<Guid?>("GrantedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("granted_by_user_id");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid?>("RevokedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revoked_by_user_id");
+
                     b.Property<Guid>("SurveyCampaignId")
                         .HasColumnType("uuid")
                         .HasColumnName("survey_campaign_id");
@@ -566,12 +588,83 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.SurveyDb
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<DateTime?>("ValidFrom")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_until");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SurveyCampaignId", "UserId")
                         .IsUnique();
 
                     b.ToTable("survey_result_viewers", (string)null);
+                });
+
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Surveys.SurveyTempFileUpload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("active");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("question_id");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("Token")
+                        .HasColumnType("uuid")
+                        .HasColumnName("token");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token", "QuestionId", "StorageKey");
+
+                    b.ToTable("survey_temp_file_uploads", (string)null);
                 });
 
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.Surveys.SurveyTemplate", b =>

@@ -21,12 +21,17 @@ public class SurveyFilesController : ControllerBase
     private readonly IHostEnvironment _env;
     private readonly ISystemSettingsService _systemSettingsService;
     private readonly ISurveyDbContext _surveyContext;
+    private readonly FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService _authService;
 
-    public SurveyFilesController(IHostEnvironment env, ISystemSettingsService systemSettingsService, ISurveyDbContext surveyContext)
+    private readonly FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext _dynamicFormsDb;
+
+    public SurveyFilesController(IHostEnvironment env, ISystemSettingsService systemSettingsService, ISurveyDbContext surveyContext, FormfleksBaseApp.Application.Features.Surveys.Common.ISurveyAuthorizationService authService, FormfleksBaseApp.Application.Common.Interfaces.IDynamicFormsDbContext dynamicFormsDb)
     {
         _env = env;
         _systemSettingsService = systemSettingsService;
         _surveyContext = surveyContext;
+        _authService = authService;
+        _dynamicFormsDb = dynamicFormsDb;
     }
 
     [HttpPost("upload")]
@@ -83,14 +88,29 @@ public class SurveyFilesController : ControllerBase
         
         var fileId = Guid.NewGuid();
         var ext = Path.GetExtension(file.FileName);
-        // Format: {Token}_{QuestionId}_{FileId}{ext}
-        var newFileName = $"{parsedToken:N}_{questionId:N}_{fileId:N}{ext}";
+        // Secure Storage Key: only random guid, NO token in file name!
+        var newFileName = $"{fileId:N}{ext}";
         var filePath = Path.Combine(uploadPath, newFileName);
 
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
         }
+
+        // Create temp upload record
+        var tempRecord = new FormfleksBaseApp.Domain.Entities.Surveys.SurveyTempFileUpload
+        {
+            Id = Guid.NewGuid(),
+            Token = parsedToken,
+            QuestionId = questionId,
+            StorageKey = newFileName,
+            OriginalFileName = file.FileName,
+            ContentType = file.ContentType,
+            FileSize = file.Length,
+            ExpiresAt = DateTime.UtcNow.AddHours(24) // Expire after 24h if not submitted
+        };
+        _surveyContext.SurveyTempFileUploads.Add(tempRecord);
+        await _surveyContext.SaveChangesAsync();
 
         return Ok(new
         {
@@ -105,65 +125,86 @@ public class SurveyFilesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Download(string fileName, [FromQuery] string? token = null)
     {
+        // 1. Path traversal / Normalize filename check
+        var safeFileName = Path.GetFileName(fileName);
+        if (fileName != safeFileName)
+            return BadRequest("Geçersiz dosya adı.");
+
         var uploadPath = Path.Combine(_env.ContentRootPath, "App_Data", "survey-uploads");
-        var filePath = Path.Combine(uploadPath, fileName);
-        if (!System.IO.File.Exists(filePath))
-            return NotFound("Dosya bulunamadı.");
+        var filePath = Path.Combine(uploadPath, safeFileName);
             
         // Authorization check
-        // Check if user is authenticated and is admin or survey viewer
         var isAuthenticated = User.Identity?.IsAuthenticated == true;
-        var hasManageSurveys = User.HasClaim("Permission", "Surveys.Manage");
-        
         bool isAuthorized = false;
 
         // Find which campaign this file belongs to via SurveyAnswerFiles (if it was submitted)
+        // FilePath.Contains yerine tam eşitlik kullan. (File path sadece dosya adını tutuyor kabul ederek)
         var fileRecord = await _surveyContext.SurveyAnswerFiles
             .Include(f => f.SurveyAnswer.SurveyResponse)
-            .FirstOrDefaultAsync(f => f.FilePath.Contains(fileName));
+            .FirstOrDefaultAsync(f => f.FilePath == safeFileName);
 
         // 1. Participant check via Token
         if (!string.IsNullOrEmpty(token) && Guid.TryParse(token, out var parsedToken))
         {
             var assignment = await _surveyContext.SurveyAssignments.FirstOrDefaultAsync(a => a.Token == parsedToken);
-            // Must have a valid assignment, AND the file must be uploaded by this token (checked via prefix)
-            if (assignment != null && fileName.StartsWith($"{assignment.Token:N}_"))
+            if (assignment != null)
             {
-                isAuthorized = true;
+                // Is this a temp file they just uploaded?
+                var isTempFile = await _surveyContext.SurveyTempFileUploads
+                    .AnyAsync(t => t.Token == parsedToken && t.StorageKey == safeFileName);
+                if (isTempFile) isAuthorized = true;
             }
         }
         
         // 2. Admin/Viewer check
-        if (!isAuthorized && isAuthenticated)
+        if (!isAuthorized && isAuthenticated && fileRecord != null)
         {
-            if (hasManageSurveys) 
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdStr, out var uid))
             {
-                isAuthorized = true;
-            }
-            else if (fileRecord != null)
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (Guid.TryParse(userId, out var uid))
-                {
-                    var campaignId = fileRecord.SurveyAnswer.SurveyResponse.SurveyCampaignId;
-                    var isViewer = await _surveyContext.SurveyResultViewers
-                        .AnyAsync(v => v.SurveyCampaignId == campaignId && v.UserId == uid);
-                        
-                    if (isViewer)
-                        isAuthorized = true;
-                }
+                var campaignId = fileRecord.SurveyAnswer.SurveyResponse.SurveyCampaignId;
+                
+                isAuthorized = await _authService.HasCampaignPermissionAsync(uid, campaignId, FormfleksBaseApp.Domain.Enums.Surveys.SurveyAction.ViewResponseFiles);
             }
         }
 
         if (!isAuthorized)
+        {
+            // Do not leak file existence
             return Unauthorized("Bu dosyayı görüntüleme yetkiniz yok.");
+        }
+
+        // Only after authorization, check physical existence
+        if (!System.IO.File.Exists(filePath))
+            return NotFound("Dosya bulunamadı.");
 
         var mimeType = "application/octet-stream";
-        var extension = Path.GetExtension(fileName).ToLower();
+        var extension = Path.GetExtension(safeFileName).ToLower();
         if (extension == ".pdf") mimeType = "application/pdf";
         else if (extension == ".png") mimeType = "image/png";
         else if (extension == ".jpg" || extension == ".jpeg") mimeType = "image/jpeg";
 
-        return PhysicalFile(filePath, mimeType);
+        if (isAuthenticated && fileRecord != null && string.IsNullOrEmpty(token))
+        {
+            if (Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid))
+            {
+                _dynamicFormsDb.AuditLogs.Add(new FormfleksBaseApp.Domain.Entities.DynamicForms.AuditLogEntity
+                {
+                    Id = Guid.NewGuid(),
+                    EntityType = "SurveyCampaign",
+                    EntityId = fileRecord.SurveyAnswer.SurveyResponse.SurveyCampaignId,
+                    ActionType = "ResponseFileDownloaded",
+                    ActorUserId = uid,
+                    DetailJson = System.Text.Json.JsonSerializer.Serialize(new { 
+                        FileName = safeFileName,
+                        ResponseId = fileRecord.SurveyAnswer.SurveyResponseId
+                    }),
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _dynamicFormsDb.SaveChangesAsync(default);
+            }
+        }
+
+        return PhysicalFile(filePath, mimeType, fileRecord?.FileName ?? safeFileName);
     }
 }

@@ -15,7 +15,11 @@ public class SurveyCampaign : BaseEntity
     public string? EmailSubject { get; set; }
     public string? EmailBodyTemplate { get; set; }
     public string? TargetAudienceJson { get; set; } // Stores AudienceFilter serialized as JSON
-
+    // Legacy campaigns predate ownership tracking; do not invent an owner for them.
+    public Guid? OwnerUserId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+    public Guid? BusinessOwnerUserId { get; set; }
+    
     // Navigation properties
     public SurveyTemplateVersion SurveyTemplateVersion { get; set; } = null!;
     public ICollection<SurveyAssignment> Assignments { get; set; } = new List<SurveyAssignment>();

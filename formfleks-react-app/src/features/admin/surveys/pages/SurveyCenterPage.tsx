@@ -3,13 +3,16 @@ import { PageContainer } from '@/components/ui/PageContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Send, BarChart2, PlusCircle } from 'lucide-react';
+import { useSurveyNavigation } from '../hooks/useSurveyNavigation';
 
 export const SurveyCenterPage = () => {
     const navigate = useNavigate();
+    const { access } = useSurveyNavigation();
 
     const modules = [
         {
             title: 'Anket Şablonları',
+            visible: access?.canDesign,
             description: 'Kurumsal anket sorularınızı, tasarımlarınızı ve şablonlarınızı yönetin.',
             icon: <FileText className="h-8 w-8 text-brand-primary" />,
             onClick: () => navigate('/admin/surveys/templates'),
@@ -18,6 +21,7 @@ export const SurveyCenterPage = () => {
         },
         {
             title: 'Kampanya Yönetimi',
+            visible: access?.canManage,
             description: 'Anketleri çalışanlara veya dış kullanıcılara atayın, kampanya süreçlerini yönetin.',
             icon: <Send className="h-8 w-8 text-green-500" />,
             onClick: () => navigate('/admin/surveys/campaigns'),
@@ -26,6 +30,7 @@ export const SurveyCenterPage = () => {
         },
         {
             title: 'Yeni Kampanya Başlat',
+            visible: access?.canPublish,
             description: 'Hızlıca yeni bir anket kampanyası oluşturup hedef kitleye gönderin.',
             icon: <PlusCircle className="h-8 w-8 text-orange-500" />,
             onClick: () => navigate('/admin/surveys/campaigns/new'),
@@ -43,7 +48,7 @@ export const SurveyCenterPage = () => {
             
             <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {modules.map((mod, idx) => (
+                    {modules.filter(mod => mod.visible).map((mod, idx) => (
                         <div 
                             key={idx} 
                             onClick={mod.onClick}

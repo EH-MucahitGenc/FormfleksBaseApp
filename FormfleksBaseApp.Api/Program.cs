@@ -256,6 +256,8 @@ builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.PersonnelS
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.ProbationTrackingCronJob>();
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.SurveyFileCleanupBackgroundJob>();
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.SurveyEmailBackgroundJob>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<FormfleksBaseApp.Application.Common.Interfaces.ICurrentUserService, FormfleksBaseApp.Api.Services.CurrentUserService>();
 
 var app = builder.Build();
 
