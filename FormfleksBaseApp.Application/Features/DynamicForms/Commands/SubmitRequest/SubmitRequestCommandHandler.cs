@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common.Models;
+using FormfleksBaseApp.Domain.Constants;
 
 using Microsoft.Extensions.Logging;
 
@@ -67,7 +68,13 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         {
             var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == dto.ActorUserId && lr.IsActive && lr.IsGlobalManager, ct);
             var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == req.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
-            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk && req.Status == (short)FormRequestStatus.Draft))
+            var hasDraftEvaluatorPool = await _db.FormRequestAssignments.AnyAsync(
+                a => a.RequestId == req.Id &&
+                     a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator,
+                ct);
+            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk &&
+                  req.Status == (short)FormRequestStatus.Draft &&
+                  !hasDraftEvaluatorPool))
             {
                 throw new BusinessException("Bu talebi onaya sunma yetkiniz yok.");
             }
@@ -181,7 +188,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             }
             // --- END SIMULATION ---
 
-            var (firstStep, assignedUser, assignedRole, skippedSteps) = await _engine.ResolveNextValidStepAsync(
+            var (firstStep, assignedUser, assignedRole, candidateUserIds, skippedSteps) = await _engine.ResolveNextValidStepAsync(
                 wfDef.Id, 
                 0, 
                 req.RequestorUserId, 
@@ -224,6 +231,19 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                     AssigneeRoleId = assignedRole,
                     AssigneeUserId = assignedUser
                 });
+
+                foreach (var candidateUserId in candidateUserIds)
+                {
+                    _db.FormRequestAssignments.Add(new FormRequestAssignmentEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        RequestId = req.Id,
+                        ApprovalId = approvalId,
+                        UserId = candidateUserId,
+                        AssignmentType = (short)FormRequestAssignmentType.ApprovalCandidate,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
                 _db.AuditLogs.Add(new AuditLogEntity
                 {
                     EntityType = "FormRequest",
@@ -237,7 +257,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 await _db.SaveChangesAsync(ct);
 
                 // Email Bildirimi (Background Queue'ya atılır)
-                await NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, firstStep.IsGlobalManagerInfoOnly, ct);
+                await NotifyNextAssigneeAsync(approvalId, req.Id, assignedUser, assignedRole, candidateUserIds, req.RequestorUserId, req.RequestNo, req.FormTypeId, firstStep.AssigneeType, firstStep.TargetLocationRoleId, firstStep.IsGlobalManagerInfoOnly, ct);
 
                 return new FormRequestResultDto
                 {
@@ -270,11 +290,34 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         };
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, IReadOnlyCollection<Guid> candidateUserIds, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name, Guid UserId)>();
 
-        if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
+        if (candidateUserIds.Count > 0)
+        {
+            foreach (var candidateUserId in candidateUserIds)
+            {
+                var baseUser = await _userRepository.GetByIdAsync(candidateUserId, ct, false);
+                string? targetEmail = baseUser?.Email;
+                string candidateName = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName)
+                    ? baseUser.DisplayName
+                    : "Bilinmeyen Sistem Kullanıcısı";
+
+                if (string.IsNullOrWhiteSpace(targetEmail))
+                {
+                    var candidatePerson = await _db.QdmsPersoneller.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.LinkedUserId == candidateUserId && p.IsActive, ct);
+                    targetEmail = candidatePerson?.Email;
+                    if (candidatePerson != null)
+                        candidateName = $"{candidatePerson.Adi} {candidatePerson.Soyadi}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(targetEmail))
+                    targetList.Add((targetEmail, candidateName, candidateUserId));
+            }
+        }
+        else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
             var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
@@ -373,6 +416,18 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
             }
         }
 
+        var notificationTargetUserIds = targetList.Select(x => x.UserId).Distinct().ToList();
+        var targetPersonnelGroups = await _db.QdmsPersoneller
+            .AsNoTracking()
+            .Where(p => p.IsActive && p.LinkedUserId.HasValue && notificationTargetUserIds.Contains(p.LinkedUserId.Value))
+            .Select(p => new { UserId = p.LinkedUserId!.Value, p.Grup_Kodu_Aciklama })
+            .ToListAsync(ct);
+        var grayTargetUserIds = targetPersonnelGroups
+            .Where(x => ProbationFormConstants.IsGrayCollar(x.Grup_Kodu_Aciklama))
+            .Select(x => x.UserId)
+            .ToHashSet();
+        targetList.RemoveAll(x => grayTargetUserIds.Contains(x.UserId));
+
         if (!targetList.Any()) 
         {
             _logger.LogWarning("SubmitRequest: No valid email targets found for assigning step to User: {UserId} or Role: {RoleId}", assignedUserId, assignedRoleId);
@@ -409,7 +464,7 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
                 _logger.LogError(ex, "Failed to generate attachments for RequestId: {RequestId}", requestId);
             }
 
-            foreach (var target in targetList.DistinctBy(x => x.Email))
+            foreach (var target in targetList.DistinctBy(x => x.UserId))
             {
                 // [MAGIC LINK] Her alıcı için onay adımının ID'sini (approvalId) ve alıcının kendi UserId'sini
                 // içeren eşsiz bir JWT üretilir. Bu sayede sadece bu mailin gittiği kişi formu onaylayabilir.

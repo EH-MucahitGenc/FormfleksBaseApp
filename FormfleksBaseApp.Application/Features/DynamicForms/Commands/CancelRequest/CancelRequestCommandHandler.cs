@@ -53,6 +53,7 @@ public sealed class CancelRequestCommandHandler : IRequestHandler<CancelRequestC
         foreach (var approval in pendingApprovals)
         {
             approval.Status = (short)ApprovalStatus.Cancelled;
+            approval.ConcurrencyToken++;
             approval.ActionAt = DateTime.UtcNow;
             approval.ActionComment = "Form sahibi tarafından iptal edildi.";
             
@@ -75,7 +76,14 @@ public sealed class CancelRequestCommandHandler : IRequestHandler<CancelRequestC
             DetailJson = System.Text.Json.JsonSerializer.Serialize(detailObject)
         });
 
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessException("Talep iptal edilirken onay adımı başka bir kullanıcı tarafından tamamlandı. Lütfen ekranı yenileyin.");
+        }
 
         // Fetch form type and requester info to send a proper formatted email
         var formType = await _db.FormTypes.FirstOrDefaultAsync(f => f.Id == formReq.FormTypeId, cancellationToken);
@@ -85,6 +93,35 @@ public sealed class CancelRequestCommandHandler : IRequestHandler<CancelRequestC
         string requesterName = requesterUser?.DisplayName ?? formReq.RequestorUserId.ToString();
 
         var targetList = new System.Collections.Generic.HashSet<(string Email, string Name)>();
+
+        var pendingApprovalIds = pendingApprovals.Select(a => a.Id).ToList();
+        var candidateUserIds = await _db.FormRequestAssignments
+            .AsNoTracking()
+            .Where(c => c.ApprovalId.HasValue &&
+                        pendingApprovalIds.Contains(c.ApprovalId.Value) &&
+                        c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate)
+            .Select(c => c.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        foreach (var candidateUserId in candidateUserIds)
+        {
+            var baseUser = await _userRepository.GetByIdAsync(candidateUserId, cancellationToken, false);
+            string? email = baseUser?.Email;
+            string name = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName) ? baseUser.DisplayName : "";
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                var candidatePerson = await _db.QdmsPersoneller.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.LinkedUserId == candidateUserId && p.IsActive, cancellationToken);
+                email = candidatePerson?.Email;
+                if (candidatePerson != null)
+                    name = $"{candidatePerson.Adi} {candidatePerson.Soyadi}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+                targetList.Add((email, string.IsNullOrWhiteSpace(name) ? email : name));
+        }
 
         foreach (var approval in pendingApprovals)
         {

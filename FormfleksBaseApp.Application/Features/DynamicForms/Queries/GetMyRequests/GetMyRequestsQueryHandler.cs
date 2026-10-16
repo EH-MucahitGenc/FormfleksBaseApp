@@ -1,6 +1,8 @@
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
+using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,8 +33,17 @@ public sealed class GetMyRequestsQueryHandler : IRequestHandler<GetMyRequestsQue
 
         var query = from r in _db.FormRequests.AsNoTracking()
                     join t in _db.FormTypes.AsNoTracking() on r.FormTypeId equals t.Id
-                    where r.RequestorUserId == request.RequestorUserId ||
-                          (isCurrentUserGlobalIk && globalIkUserIds.Contains(r.RequestorUserId) && r.Status == (short)FormRequestStatus.Draft)
+                    let canClaimDraft = r.Status == (short)FormRequestStatus.Draft &&
+                                        r.RequestorUserId == ProbationFormConstants.SystemUserId &&
+                                        _db.FormRequestAssignments.Any(a => a.RequestId == r.Id &&
+                                                                            a.UserId == request.RequestorUserId &&
+                                                                            a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator)
+                    where r.RequestorUserId == request.RequestorUserId || canClaimDraft ||
+                          (isCurrentUserGlobalIk &&
+                           globalIkUserIds.Contains(r.RequestorUserId) &&
+                           r.Status == (short)FormRequestStatus.Draft &&
+                           !_db.FormRequestAssignments.Any(a => a.RequestId == r.Id &&
+                                                                a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator))
                     orderby r.CreatedAt descending
                     select new MyFormRequestListItemDto
                     {
@@ -42,7 +53,8 @@ public sealed class GetMyRequestsQueryHandler : IRequestHandler<GetMyRequestsQue
                         FormTypeName = t.Name,
                         Status = (FormRequestStatus)r.Status,
                         CurrentStepNo = r.CurrentStepNo,
-                        CreatedAt = r.CreatedAt
+                        CreatedAt = r.CreatedAt,
+                        CanClaimDraft = canClaimDraft
                     };
 
         var result = await query.ToListAsync(ct);

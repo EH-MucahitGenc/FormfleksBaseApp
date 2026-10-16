@@ -2,6 +2,7 @@ using FormfleksBaseApp.Application.Common;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Application.Features.AdminUsers.Interfaces;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -15,12 +16,18 @@ public sealed class ReassignRequestCommandHandler : IRequestHandler<ReassignRequ
     private readonly IDynamicFormsDbContext _db;
     private readonly IAdminUserRepository _userRepository;
     private readonly IEmailService _emailService;
+    private readonly IOrganizationAssigneeResolver _organizationResolver;
 
-    public ReassignRequestCommandHandler(IDynamicFormsDbContext db, IAdminUserRepository userRepository, IEmailService emailService)
+    public ReassignRequestCommandHandler(
+        IDynamicFormsDbContext db,
+        IAdminUserRepository userRepository,
+        IEmailService emailService,
+        IOrganizationAssigneeResolver organizationResolver)
     {
         _db = db;
         _userRepository = userRepository;
         _emailService = emailService;
+        _organizationResolver = organizationResolver;
     }
 
     public async Task<Unit> Handle(ReassignRequestCommand request, CancellationToken ct)
@@ -33,12 +40,19 @@ public sealed class ReassignRequestCommandHandler : IRequestHandler<ReassignRequ
         if (formRequest.Status != (short)FormRequestStatus.Draft)
             throw new BusinessException("Sadece taslak statüsündeki formlar devredilebilir.");
 
+        if (!await _organizationResolver.IsEligibleAssigneeAsync(request.NewOwnerUserId, ct))
+            throw new BusinessException("Gri yaka personel taslak sahibi olarak atanamaz.");
+
         // Yetki Kontrolü (Form sahibi veya Admin devredebilir, ya da iki taraf da Global İK ise devredebilir)
         if (!request.IsAdmin && formRequest.RequestorUserId != request.CurrentUserId)
         {
             var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == request.CurrentUserId && lr.IsActive && lr.IsGlobalManager, ct);
             var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == formRequest.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
-            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk))
+            var hasDraftEvaluatorPool = await _db.FormRequestAssignments.AnyAsync(
+                a => a.RequestId == formRequest.Id &&
+                     a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator,
+                ct);
+            if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk && !hasDraftEvaluatorPool))
             {
                 throw new BusinessException("Bu formu devretme yetkiniz bulunmuyor.");
             }

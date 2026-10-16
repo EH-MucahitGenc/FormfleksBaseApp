@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import SelectBox from 'devextreme-react/select-box';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { dynamicFormService } from '@/services/dynamic-form.service';
-import { PageHeader, PageContainer, GlassCard, cn, FfButton } from '@/components/ui/index';
-import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer, FastForward, ShieldCheck } from 'lucide-react';
+import { PageHeader, PageContainer, GlassCard, cn, FfButton, FfConfirmDialog } from '@/components/ui/index';
+import { ArrowLeft, CheckCircle, Clock, FileText, Edit, XCircle, CornerUpLeft, Check, X, Info, Printer, FastForward, ShieldCheck, UserCheck } from 'lucide-react';
 import { PrintableFormDetail } from './components/PrintableFormDetail';
 import { useFormDetail, usePendingApprovals, useApprovalAction, useCancelRequest } from './hooks/useForms';
 import { useAuthStore } from '@/store/useAuthStore';
 import { FfEmptyState } from '@/components/shared/FfEmptyState';
 import { adminService } from '@/services/admin.service';
 import { formService } from '@/services/form.service';
+import { queryKeys } from '@/lib/query-keys';
+import { notify } from '@/lib/notifications';
 
 const formatFieldValue = (val: any): string => {
   if (!val) return '';
@@ -94,10 +96,25 @@ export const FormDetail: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const [isClaimConfirmOpen, setIsClaimConfirmOpen] = useState(false);
 
   const { data, isLoading, isError } = useFormDetail(id || '');
   const { data: pendingApprovals } = usePendingApprovals();
   const approvalMutation = useApprovalAction();
+  const claimDraftMutation = useMutation({
+    mutationFn: () => formService.claimDraft(id!),
+    onSuccess: () => {
+      setIsClaimConfirmOpen(false);
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.myRequests });
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.detail(id!) });
+      notify.success('Değerlendirme formu üzerinize atandı.');
+      navigate(`/forms/d/${data!.formTypeCode}?draftId=${data!.requestId}`);
+    },
+    onError: (error: any) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.forms.detail(id!) });
+      notify.error(error?.response?.data?.detail || error?.response?.data?.message || 'Taslak üstlenilemedi.');
+    },
+  });
 
   const { data: template } = useQuery({
     queryKey: ['dynamic-form-schema', data?.formTypeCode],
@@ -500,7 +517,18 @@ export const FormDetail: React.FC = () => {
               PDF İndir / Yazdır
             </FfButton>
           )}
-          {(data.status === 1 || data.status === 7) && data.formTypeCode && (
+          {data.canClaimDraft && (
+            <FfButton
+              variant="primary"
+              leftIcon={<UserCheck className="h-4 w-4" />}
+              onClick={() => setIsClaimConfirmOpen(true)}
+              disabled={claimDraftMutation.isPending}
+              isLoading={claimDraftMutation.isPending}
+            >
+              Değerlendirmeyi Üstlen
+            </FfButton>
+          )}
+          {(data.status === 1 || data.status === 7) && data.formTypeCode && !data.canClaimDraft && (
             <>
               <FfButton 
                 variant="outline" 
@@ -912,6 +940,18 @@ export const FormDetail: React.FC = () => {
         </div>,
         document.body
       )}
+
+      <FfConfirmDialog
+        isOpen={isClaimConfirmOpen}
+        onClose={() => setIsClaimConfirmOpen(false)}
+        onConfirm={() => claimDraftMutation.mutate()}
+        title="Değerlendirmeyi Üstlen"
+        message="Bu taslağı üstlendiğinizde form yalnızca sizin üzerinizde görünecek ve diğer yetkililer artık işlem yapamayacaktır. Devam etmek istiyor musunuz?"
+        confirmLabel="Evet, Üstlen"
+        cancelLabel="Vazgeç"
+        variant="warning"
+        isLoading={claimDraftMutation.isPending}
+      />
 
       {/* Hidden Print Container */}
       <div className="hidden">

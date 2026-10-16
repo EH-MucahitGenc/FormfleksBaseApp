@@ -3,8 +3,13 @@
 **/bin
 **/obj
 **/TestResults
+**/node_modules
 **/.idea
 **/.vscode
+formfleks-react-app
+FormfleksBaseApp.Tests
+scratch
+artifacts
 build.diag.log
 README.md
 .env

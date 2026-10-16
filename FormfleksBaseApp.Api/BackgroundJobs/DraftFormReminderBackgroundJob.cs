@@ -1,5 +1,6 @@
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Domain.Entities.DynamicForms;
+using FormfleksBaseApp.Domain.Constants;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -86,14 +87,21 @@ public class DraftFormReminderBackgroundJob : CronJobService
 
         foreach (var draft in draftForms)
         {
-            var user = await userRepository.GetByIdAsync(draft.RequestorUserId, cancellationToken, false);
-            if (user == null || string.IsNullOrEmpty(user.Email)) continue;
-
             var formType = await db.FormTypes.FirstOrDefaultAsync(f => f.Id == draft.FormTypeId, cancellationToken);
             string formTypeName = formType?.Name ?? draft.FormTypeId.ToString();
-            string requesterName = user.DisplayName ?? user.Email;
-            
-            bool isProbationForm = formType != null && (formType.SystemUsageType == "2_AY_DENEME" || formType.SystemUsageType == "6_AY_DENEME");
+            bool isProbationForm = ProbationFormConstants.IsProbationForm(formType?.SystemUsageType);
+
+            var recipientIds = new List<Guid> { draft.RequestorUserId };
+            if (draft.RequestorUserId == ProbationFormConstants.SystemUserId)
+            {
+                recipientIds = await db.FormRequestAssignments
+                    .AsNoTracking()
+                    .Where(a => a.RequestId == draft.Id &&
+                                a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator)
+                    .Select(a => a.UserId)
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
+            }
 
             if (draft.CreatedAt <= autoDeleteThresholdDate && !isProbationForm)
             {
@@ -108,14 +116,20 @@ public class DraftFormReminderBackgroundJob : CronJobService
                 db.FormRequests.Remove(draft);
                 await db.SaveChangesAsync(cancellationToken);
 
-                await emailService.SendDraftDeletedEmailAsync(
-                    toEmail: user.Email,
-                    requesterName: requesterName,
-                    formRequestNo: draft.RequestNo,
-                    formTypeName: formTypeName,
-                    autoDeleteDays: autoDeleteThresholdDays,
-                    cancellationToken: cancellationToken
-                );
+                foreach (var recipientId in recipientIds)
+                {
+                    var user = await userRepository.GetByIdAsync(recipientId, cancellationToken, false);
+                    if (user == null || string.IsNullOrWhiteSpace(user.Email)) continue;
+
+                    await emailService.SendDraftDeletedEmailAsync(
+                        toEmail: user.Email,
+                        requesterName: user.DisplayName ?? user.Email,
+                        formRequestNo: draft.RequestNo,
+                        formTypeName: formTypeName,
+                        autoDeleteDays: autoDeleteThresholdDays,
+                        cancellationToken: cancellationToken
+                    );
+                }
             }
             else
             {
@@ -124,15 +138,21 @@ public class DraftFormReminderBackgroundJob : CronJobService
                 
                 Logger.LogInformation($"Sending reminder for draft {draft.RequestNo}. Waiting {waitingDays} days.");
 
-                await emailService.SendDraftReminderEmailAsync(
-                    toEmail: user.Email,
-                    requesterName: requesterName,
-                    formRequestNo: draft.RequestNo,
-                    formRequestId: draft.Id,
-                    formTypeName: formTypeName,
-                    waitingDays: waitingDays,
-                    cancellationToken: cancellationToken
-                );
+                foreach (var recipientId in recipientIds)
+                {
+                    var user = await userRepository.GetByIdAsync(recipientId, cancellationToken, false);
+                    if (user == null || string.IsNullOrWhiteSpace(user.Email)) continue;
+
+                    await emailService.SendDraftReminderEmailAsync(
+                        toEmail: user.Email,
+                        requesterName: user.DisplayName ?? user.Email,
+                        formRequestNo: draft.RequestNo,
+                        formRequestId: draft.Id,
+                        formTypeName: formTypeName,
+                        waitingDays: waitingDays,
+                        cancellationToken: cancellationToken
+                    );
+                }
             }
         }
     }

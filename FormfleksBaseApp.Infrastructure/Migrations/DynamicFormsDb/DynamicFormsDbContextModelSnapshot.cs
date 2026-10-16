@@ -17,7 +17,7 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.29")
+                .HasAnnotation("ProductVersion", "8.0.31")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -245,6 +245,157 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.ToTable("audit_logs", "public");
                 });
 
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.EmailOutboxEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AttachmentManifestJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attachment_manifest_json");
+
+                    b.Property<string>("AttachmentPayloadJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attachment_payload_json");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<string>("BccAddressesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("bcc_addresses_json");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("body_html");
+
+                    b.Property<string>("BodySha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("body_sha256");
+
+                    b.Property<string>("BodyText")
+                        .HasColumnType("text")
+                        .HasColumnName("body_text");
+
+                    b.Property<string>("CcAddressesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cc_addresses_json");
+
+                    b.Property<string>("DeduplicationKey")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("deduplication_key");
+
+                    b.Property<DateTime?>("FirstAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_attempt_at");
+
+                    b.Property<string>("FromAddress")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("from_address");
+
+                    b.Property<string>("HeadersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("headers_json");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_attempt_at");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_at");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_attempts");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("message_type");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<DateTime>("QueuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("queued_at");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("reference_id");
+
+                    b.Property<string>("ReferenceType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference_type");
+
+                    b.Property<string>("ReplyToAddress")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("reply_to_address");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("SmtpMessageId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("smtp_message_id");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject");
+
+                    b.Property<string>("ToAddressesJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("to_addresses_json");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeduplicationKey")
+                        .IsUnique()
+                        .HasFilter("deduplication_key IS NOT NULL");
+
+                    b.HasIndex("QueuedAt");
+
+                    b.HasIndex("ReferenceType", "ReferenceId", "QueuedAt");
+
+                    b.HasIndex("Status", "NextAttemptAt", "QueuedAt");
+
+                    b.ToTable("email_outbox", "public");
+                });
+
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.FormFieldEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -360,6 +511,7 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasColumnName("assignee_user_id");
 
                     b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint")
                         .HasColumnName("concurrency_token");
 
@@ -388,6 +540,51 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.ToTable("form_request_approvals", "public");
                 });
 
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.FormRequestAssignmentEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ApprovalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approval_id");
+
+                    b.Property<short>("AssignmentType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("assignment_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalId", "UserId")
+                        .IsUnique()
+                        .HasFilter("approval_id IS NOT NULL AND assignment_type = 2");
+
+                    b.HasIndex("RequestId", "UserId")
+                        .IsUnique()
+                        .HasFilter("approval_id IS NULL AND assignment_type = 1");
+
+                    b.HasIndex("UserId", "AssignmentType", "RequestId");
+
+                    b.ToTable("form_request_assignments", "public", t =>
+                        {
+                            t.HasCheckConstraint("ck_form_request_assignments_shape", "(assignment_type = 1 AND approval_id IS NULL) OR (assignment_type = 2 AND approval_id IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.FormRequestEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -400,6 +597,7 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                         .HasColumnName("completed_at");
 
                     b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint")
                         .HasColumnName("concurrency_token");
 
@@ -943,6 +1141,20 @@ namespace FormfleksBaseApp.Infrastructure.Migrations.DynamicFormsDb
                     b.HasKey("Id");
 
                     b.ToTable("system_settings", "public");
+                });
+
+            modelBuilder.Entity("FormfleksBaseApp.Domain.Entities.DynamicForms.FormRequestAssignmentEntity", b =>
+                {
+                    b.HasOne("FormfleksBaseApp.Domain.Entities.DynamicForms.FormRequestApprovalEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovalId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("FormfleksBaseApp.Domain.Entities.DynamicForms.FormRequestEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

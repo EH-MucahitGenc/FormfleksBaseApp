@@ -5,7 +5,7 @@ import { FfButton, PageContainer, GlassCard, cn } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { formService, type MyFormRequestListItemDto } from '@/services/form.service';
 import { queryKeys } from '@/lib/query-keys';
-import { CheckCircle, Clock, Edit2, FileText, ListFilter, Plus, RotateCcw } from 'lucide-react';
+import { CheckCircle, Clock, Edit2, Eye, FileText, ListFilter, Plus, RotateCcw } from 'lucide-react';
 
 const statusConfig = {
   1: {
@@ -101,6 +101,18 @@ export const MyForms: React.FC = () => {
   const requestNoRenderer = (cell: { data: MyFormRequestListItemDto }) => {
     const data = cell.data;
     const isDraft = data.status === 1;
+    if (data.canClaimDraft) {
+      return (
+        <Link
+          to={`/forms/${data.requestId}`}
+          className="inline-flex items-center gap-2 rounded-lg px-2 py-1 font-semibold text-brand-primary transition-colors hover:bg-orange-50 hover:text-brand-accent"
+          title="Değerlendirme taslağının detayını görüntüle"
+        >
+          <span>{data.requestNo}</span>
+          <Eye className="h-3.5 w-3.5" />
+        </Link>
+      );
+    }
     return (
       <Link
         to={`/forms/${data.requestId}`}

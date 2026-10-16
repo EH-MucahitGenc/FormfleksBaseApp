@@ -13,18 +13,31 @@ using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SubmitRequest;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using System.Collections.Generic;
 using FormfleksBaseApp.Domain.Entities.Admin;
+using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Domain.Entities;
+using FormfleksBaseApp.Application.Auth.Interfaces;
 
 namespace FormfleksBaseApp.Api.BackgroundJobs;
 
 public class ProbationTrackingCronJob : CronJobService
 {
     private readonly IServiceProvider _serviceProvider;
-    private static readonly Guid SystemUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
     public ProbationTrackingCronJob(IServiceProvider serviceProvider, ILogger<ProbationTrackingCronJob> logger)
-        : base("0 8 * * *", TimeZoneInfo.Local, logger)
+        : base("0 8 * * *", ResolveTurkeyTimeZone(), logger)
     {
         _serviceProvider = serviceProvider;
+    }
+
+    private static TimeZoneInfo ResolveTurkeyTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        }
     }
 
     protected override async Task DoWork(CancellationToken cancellationToken)
@@ -52,37 +65,47 @@ public class ProbationTrackingCronJob : CronJobService
             .Where(p => p.IsActive && p.Baslama_Tarihi != null)
             .ToListAsync(cancellationToken);
 
-        var today = DateTime.UtcNow.Date;
+        var today = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, ResolveTurkeyTimeZone()).Date;
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<ProbationTrackingCronJob>>();
 
         foreach (var p in personnelList)
         {
-            if (!p.Baslama_Tarihi.HasValue)
-                continue;
-            
-            var baslamaTarihi = p.Baslama_Tarihi.Value;
-            
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ProbationTrackingCronJob>>();
-
-            if (twoMonthTemplate != null && p.Deneme2Ay_Trh == null)
+            try
             {
-                var targetDate = baslamaTarihi.AddMonths(2);
-                var daysLeft = (targetDate - today).TotalDays;
-                
-                if (daysLeft <= 15 && daysLeft >= -15)
+                if (!p.Baslama_Tarihi.HasValue)
+                    continue;
+
+                var baslamaTarihi = p.Baslama_Tarihi.Value;
+
+                if (twoMonthTemplate != null && p.Deneme2Ay_Trh == null)
                 {
-                    await TriggerFormAsync(p, twoMonthTemplate, dynamicFormsDb, mediator, logger, scope.ServiceProvider, 2, cancellationToken);
+                    var targetDate = baslamaTarihi.AddMonths(2);
+                    var daysLeft = (targetDate - today).TotalDays;
+
+                    if (daysLeft <= 15 && daysLeft >= -15)
+                    {
+                        await TriggerFormAsync(p, twoMonthTemplate, dynamicFormsDb, mediator, logger, scope.ServiceProvider, 2, cancellationToken);
+                    }
+                }
+
+                if (sixMonthTemplate != null && p.Deneme6Ay_Trh == null)
+                {
+                    var targetDate = baslamaTarihi.AddMonths(6);
+                    var daysLeft = (targetDate - today).TotalDays;
+
+                    if (daysLeft <= 20 && daysLeft >= -20)
+                    {
+                        await TriggerFormAsync(p, sixMonthTemplate, dynamicFormsDb, mediator, logger, scope.ServiceProvider, 6, cancellationToken);
+                    }
                 }
             }
-
-            if (sixMonthTemplate != null && p.Deneme6Ay_Trh == null)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                var targetDate = baslamaTarihi.AddMonths(6);
-                var daysLeft = (targetDate - today).TotalDays;
-                
-                if (daysLeft <= 20 && daysLeft >= -20)
-                {
-                    await TriggerFormAsync(p, sixMonthTemplate, dynamicFormsDb, mediator, logger, scope.ServiceProvider, 6, cancellationToken);
-                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error creating probation form for personnel {SicilNo}. Processing will continue with the next personnel.", p.Sicil_No);
             }
         }
     }
@@ -99,8 +122,8 @@ public class ProbationTrackingCronJob : CronJobService
     {
         // Try to get Global IK Users
         List<string> globalIkEmails = new List<string>();
-        Guid? fallbackIkUserId = null;
-        List<FormfleksBaseApp.Domain.Entities.AppUser> allUsers = null;
+        var globalIkUserIds = new List<Guid>();
+        List<AppUser> allUsers = [];
         try 
         {
             var adminUserRepo = serviceProvider.GetRequiredService<FormfleksBaseApp.Application.Features.AdminUsers.Interfaces.IAdminUserRepository>();
@@ -109,122 +132,121 @@ public class ProbationTrackingCronJob : CronJobService
             var ikRole = await dynamicFormsDb.Roles.FirstOrDefaultAsync(r => r.Code == "IK", cancellationToken);
             if (ikRole != null)
             {
-                var globalIkUserIds = await dynamicFormsDb.UserLocationRoles
+                globalIkUserIds = await dynamicFormsDb.UserLocationRoles
                     .Where(ulr => ulr.RoleId == ikRole.Id && ulr.IsGlobalManager && ulr.IsActive)
                     .Select(ulr => ulr.UserId)
                     .Distinct()
                     .ToListAsync(cancellationToken);
-
-                var ikUsers = allUsers.Where(u => globalIkUserIds.Contains(u.Id)).ToList();
-                if (ikUsers.Any())
-                {
-                    fallbackIkUserId = ikUsers.First().Id;
-                    globalIkEmails = ikUsers.Where(u => !string.IsNullOrEmpty(u.Email)).Select(u => u.Email!).ToList();
-                }
-            }
-
-            if (fallbackIkUserId == null && allUsers.Any()) 
-            {
-                var firstAdmin = allUsers.First();
-                fallbackIkUserId = firstAdmin.Id;
-                if (!string.IsNullOrEmpty(firstAdmin.Email)) globalIkEmails.Add(firstAdmin.Email);
             }
         } 
         catch { /* Fallback */ }
 
-        var adminUserId = fallbackIkUserId ?? SystemUserId;
-
-        // Find Manager
-        Guid? managerUserId = null;
-        string? managerEmail = null;
-        string? managerName = null;
-        bool managerNotFound = true;
-        
-        if (!string.IsNullOrEmpty(p.Ust_Pozisyon_Kodu))
+        var organizationResolver = serviceProvider.GetRequiredService<IOrganizationAssigneeResolver>();
+        var userRepository = serviceProvider.GetRequiredService<IUserRepository>();
+        var eligibleGlobalIkUserIds = new List<Guid>();
+        foreach (var globalIkUserId in globalIkUserIds)
         {
-            var manager = await dynamicFormsDb.QdmsPersoneller.FirstOrDefaultAsync(m => m.Pozisyon_Kodu == p.Ust_Pozisyon_Kodu, cancellationToken);
-            if (manager != null) 
+            if (await organizationResolver.IsEligibleAssigneeAsync(globalIkUserId, cancellationToken))
+                eligibleGlobalIkUserIds.Add(globalIkUserId);
+        }
+
+        Guid adminUserId = ProbationFormConstants.SystemUserId;
+        foreach (var fallbackUser in allUsers)
+        {
+            if (await organizationResolver.IsEligibleAssigneeAsync(fallbackUser.Id, cancellationToken))
             {
-                managerNotFound = false;
-                managerUserId = manager.LinkedUserId;
-                managerName = $"{manager.Adi} {manager.Soyadi}";
-                
-                // Öncelikli olarak Sistemdeki Users (AppUser) tablosundan e-postayı almaya çalışıyoruz
-                if (managerUserId.HasValue && allUsers != null)
-                {
-                    var userAcc = allUsers.FirstOrDefault(u => u.Id == managerUserId.Value);
-                    if (userAcc != null && !string.IsNullOrWhiteSpace(userAcc.Email))
-                    {
-                        managerEmail = userAcc.Email;
-                    }
-                }
-
-                // Eğer Users tablosunda e-posta yoksa veya henüz linklenmemişse QDMS verisine (yedek) bakıyoruz
-                if (string.IsNullOrWhiteSpace(managerEmail))
-                {
-                    managerEmail = manager.Email;
-                }
-
-                // If we still don't have a managerUserId but we have an email, create a placeholder AppUser!
-                if (managerUserId == null && !string.IsNullOrWhiteSpace(managerEmail))
-                {
-                    var existingUser = allUsers?.FirstOrDefault(u => !string.IsNullOrWhiteSpace(u.Email) && u.Email.Equals(managerEmail, StringComparison.OrdinalIgnoreCase));
-                    if (existingUser != null)
-                    {
-                        managerUserId = existingUser.Id;
-                        manager.LinkedUserId = existingUser.Id;
-                    }
-                    else
-                    {
-                        var newUserId = Guid.NewGuid();
-                        var config = serviceProvider.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
-                        var connStr = config.GetConnectionString("DefaultConnection");
-                    
-                    using (var conn = new Npgsql.NpgsqlConnection(connStr))
-                    {
-                        await conn.OpenAsync(cancellationToken);
-                        using var cmd = new Npgsql.NpgsqlCommand(@"
-                            INSERT INTO public.users (""Id"", ""Email"", ""AuthProvider"", ""DisplayName"", ""CreatedAt"", ""IsDeleted"") 
-                            VALUES (@Id, @Email, 'ActiveDirectory', @Name, @CreatedAt, false)", conn);
-                        
-                        cmd.Parameters.AddWithValue("Id", newUserId);
-                        cmd.Parameters.AddWithValue("Email", managerEmail);
-                        cmd.Parameters.AddWithValue("Name", managerName ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("CreatedAt", DateTime.UtcNow);
-                        
-                        await cmd.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                    
-                    managerUserId = newUserId;
-                    manager.LinkedUserId = newUserId;
-                    }
-                }
+                adminUserId = fallbackUser.Id;
+                break;
             }
         }
 
-        // Determine ownership and email recipients
-        bool managerHasNoEmail = !managerNotFound && string.IsNullOrWhiteSpace(managerEmail);
+        globalIkEmails = allUsers
+            .Where(u => eligibleGlobalIkUserIds.Contains(u.Id) && !string.IsNullOrWhiteSpace(u.Email))
+            .Select(u => u.Email)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        var requestorId = managerUserId ?? adminUserId;
-        
-        var emailsToNotify = new List<string>();
-        if (!managerNotFound && !managerHasNoEmail) 
+        var resolution = await organizationResolver.ResolveManagerLevelAsync(p, 1, cancellationToken);
+        var resolvedCandidates = new List<(Guid UserId, string Name, string? Email)>();
+
+        foreach (var candidate in resolution.Candidates)
         {
-            emailsToNotify.Add(managerEmail);
+            var userId = candidate.UserId;
+            var applicationEmail = allUsers.FirstOrDefault(u => u.Id == userId)?.Email;
+            var email = string.IsNullOrWhiteSpace(applicationEmail) ? candidate.Email : applicationEmail;
+
+            if (!userId.HasValue && !string.IsNullOrWhiteSpace(email))
+            {
+                var existingUser = allUsers.FirstOrDefault(u =>
+                    string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase));
+
+                if (existingUser == null)
+                {
+                    existingUser = new AppUser
+                    {
+                        Id = Guid.NewGuid(),
+                        Email = email,
+                        AuthProvider = "ActiveDirectory",
+                        DisplayName = candidate.Name,
+                        CreatedAt = DateTime.UtcNow,
+                        Active = true
+                    };
+                    await userRepository.AddAsync(existingUser, cancellationToken);
+                    await userRepository.SaveChangesAsync(cancellationToken);
+                    allUsers.Add(existingUser);
+                }
+
+                userId = existingUser.Id;
+                var trackedPersonnel = await dynamicFormsDb.QdmsPersoneller
+                    .FirstOrDefaultAsync(x => x.Id == candidate.PersonnelId, cancellationToken);
+                if (trackedPersonnel != null)
+                    trackedPersonnel.LinkedUserId = userId;
+            }
+
+            if (userId.HasValue && userId.Value != p.LinkedUserId)
+                resolvedCandidates.Add((userId.Value, candidate.Name, email));
         }
-        else 
-        {
-            emailsToNotify.AddRange(globalIkEmails);
-        }
+
+        if (resolvedCandidates.Count > 0)
+            await dynamicFormsDb.SaveChangesAsync(cancellationToken);
+
+        resolvedCandidates = resolvedCandidates
+            .GroupBy(x => x.UserId)
+            .Select(g => g.First())
+            .ToList();
+
+        var managerNotFound = !resolution.IsSuccess || resolvedCandidates.Count == 0;
+        var candidateUserIds = managerNotFound
+            ? (eligibleGlobalIkUserIds.Count > 0 ? eligibleGlobalIkUserIds : [adminUserId])
+            : resolvedCandidates.Select(x => x.UserId).ToList();
+        candidateUserIds = candidateUserIds.Distinct().ToList();
+
+        var managerName = resolvedCandidates.Count == 1
+            ? resolvedCandidates[0].Name
+            : "Yetkili yöneticiler";
+        var managerEmails = resolvedCandidates
+            .Where(x => !string.IsNullOrWhiteSpace(x.Email))
+            .Select(x => x.Email!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var managerHasNoEmail = !managerNotFound && managerEmails.Count == 0;
+        var requestorId = candidateUserIds.Count == 1
+            ? candidateUserIds[0]
+            : ProbationFormConstants.SystemUserId;
+
+        var emailsToNotify = managerNotFound || managerHasNoEmail
+            ? globalIkEmails.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : managerEmails;
 
         if (!emailsToNotify.Any()) emailsToNotify.Add("admin@erkurtholding.com");
         
         var sicilNo = p.Sicil_No;
         
-        // Güvenilir mükerrer kontrolü: RequestNo sonuna eklediğimiz Sicil No'ya göre arıyoruz.
+        // Aynı çalışma dönemi için aynı formun günlük job veya manuel tetikleme ile tekrar oluşmasını engeller.
+        var employmentStartUtc = DateTime.SpecifyKind(p.Baslama_Tarihi!.Value.Date, DateTimeKind.Utc);
         bool existingReqForPerson = await dynamicFormsDb.FormRequests
-            .AnyAsync(r => r.FormTypeId == template.Id 
-                        && r.CreatedAt > DateTime.UtcNow.AddMonths(-1)
+            .AnyAsync(r => r.FormTypeId == template.Id
+                        && r.CreatedAt >= employmentStartUtc
                         && r.RequestNo.EndsWith($"-{sicilNo}"), cancellationToken);
         if (existingReqForPerson) return;
 
@@ -239,6 +261,20 @@ public class ProbationTrackingCronJob : CronJobService
         };
         
         dynamicFormsDb.FormRequests.Add(req);
+
+        foreach (var candidateUserId in candidateUserIds)
+        {
+            dynamicFormsDb.FormRequestAssignments.Add(new FormRequestAssignmentEntity
+            {
+                Id = Guid.NewGuid(),
+                RequestId = req.Id,
+                ApprovalId = null,
+                UserId = candidateUserId,
+                AssignmentType = (short)FormRequestAssignmentType.DraftEvaluator,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         await dynamicFormsDb.SaveChangesAsync(cancellationToken);
 
         var fields = await dynamicFormsDb.FormFields.Where(f => f.FormTypeId == template.Id && f.Active).ToListAsync(cancellationToken);
@@ -292,6 +328,18 @@ public class ProbationTrackingCronJob : CronJobService
             else
             {
                 await emailService.SendProbationDraftEmailAsync(emails, managerName, personelName, monthType, req.Id, req.RequestNo, reqCompany, cancellationToken);
+            }
+
+            var notificationService = serviceProvider.GetRequiredService<IAppNotificationService>();
+            foreach (var candidateUserId in candidateUserIds)
+            {
+                await notificationService.SendNotificationAsync(
+                    candidateUserId,
+                    "Yeni Deneme Süresi Değerlendirmesi",
+                    $"{personelName} için {monthType} aylık değerlendirme formu bekliyor.",
+                    $"/forms/{req.Id}",
+                    req.Id,
+                    cancellationToken);
             }
 
             logger.LogInformation($"Successfully drafted {monthType} month probation form for {personelName} and notified {string.Join(", ", emailsToNotify)}. RequestNo: {req.RequestNo}");

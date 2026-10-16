@@ -20,8 +20,10 @@ public interface IDynamicFormsDbContext
     DbSet<FormRequestEntity> FormRequests { get; }
     DbSet<FormRequestValueEntity> FormRequestValues { get; }
     DbSet<FormRequestApprovalEntity> FormRequestApprovals { get; }
+    DbSet<FormRequestAssignmentEntity> FormRequestAssignments { get; }
     DbSet<FormRequestManualAssignmentEntity> FormRequestManualAssignments { get; }
     DbSet<AuditLogEntity> AuditLogs { get; }
+    DbSet<EmailOutboxEntity> EmailOutbox { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications { get; }
     DbSet<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity> SystemSettings { get; }
     

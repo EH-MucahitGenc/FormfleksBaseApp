@@ -156,6 +156,7 @@ public sealed class GetHrFormDetailsQueryHandler : IRequestHandler<GetHrFormDeta
             var formTypeName = formType != null ? formType.Name : "Bilinmeyen Form";
 
             item.RequestorName = fullName;
+            item.Location = user?.Isyeri_Tanimi ?? "-";
             item.FormTypeName = formTypeName;
 
             if (groupedValues.TryGetValue(item.FormRequestId, out var values))

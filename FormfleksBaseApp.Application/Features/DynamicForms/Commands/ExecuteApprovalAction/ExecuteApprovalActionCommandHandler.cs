@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FormfleksBaseApp.Application.Auth.Interfaces;
+using FormfleksBaseApp.Domain.Constants;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
 
@@ -32,6 +33,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
     private readonly FormfleksBaseApp.Application.Auth.Interfaces.ITokenService _tokens;
     private readonly IAppNotificationService _notificationService;
     private readonly IIfsIntegrationService _ifsIntegrationService;
+    private readonly IOrganizationAssigneeResolver _organizationResolver;
 
     public ExecuteApprovalActionCommandHandler(
         IDynamicFormsDbContext db, 
@@ -42,7 +44,8 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         IFormAttachmentCollectorService attachmentCollector,
         FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokens,
         IAppNotificationService notificationService,
-        IIfsIntegrationService ifsIntegrationService)
+        IIfsIntegrationService ifsIntegrationService,
+        IOrganizationAssigneeResolver organizationResolver)
     {
         _db = db;
         _engine = engine;
@@ -53,6 +56,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         _tokens = tokens;
         _notificationService = notificationService;
         _ifsIntegrationService = ifsIntegrationService;
+        _organizationResolver = organizationResolver;
     }
 
     public async Task<ApprovalActionResponseDto> Handle(ExecuteApprovalActionCommand request, CancellationToken ct)
@@ -64,6 +68,9 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (req.Status != (short)FormRequestStatus.InApproval)
             throw new BusinessException("Bu kayıt şu an onay bekleyen statüde değil.");
+
+        if (!await _organizationResolver.IsEligibleAssigneeAsync(reqDto.ActorUserId, ct))
+            throw new BusinessException("Gri yaka personel onaycı olarak işlem yapamaz.");
 
         // Workflow tanımını bul
         var wfDef = await _db.WorkflowDefinitions
@@ -78,8 +85,11 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         // Kademeye ait aktif Onay kaydını al
         var approval = await _db.FormRequestApprovals
-            .FirstOrDefaultAsync(a => a.RequestId == req.Id && a.StepNo == req.CurrentStepNo && a.Status == (short)ApprovalStatus.Pending, ct)
+            .FirstOrDefaultAsync(a => a.Id == reqDto.ApprovalId && a.RequestId == req.Id && a.StepNo == req.CurrentStepNo && a.Status == (short)ApprovalStatus.Pending, ct)
             ?? throw new BusinessException("Bu adım için aktif bir onay talebi bulunamadı.");
+
+        if (approval.ConcurrencyToken != reqDto.ApprovalConcurrencyToken)
+            throw new BusinessException("Bu onay adımı başka bir kullanıcı tarafından güncellendi. Lütfen ekranı yenileyin.");
 
         // Yetki kontrolü (Onay kaydı üzerinden yapılır, şablon üzerinden değil)
         var userRoleIds = await _db.UserRoles
@@ -90,6 +100,11 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         bool hasUserAuth = approval.AssigneeUserId == reqDto.ActorUserId;
         bool hasRoleAuth = approval.AssigneeRoleId.HasValue && userRoleIds.Contains(approval.AssigneeRoleId.Value);
+        bool hasCandidateAuth = await _db.FormRequestAssignments
+            .AsNoTracking()
+            .AnyAsync(c => c.ApprovalId == approval.Id &&
+                           c.UserId == reqDto.ActorUserId &&
+                           c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate, ct);
         
         bool hasBranchHrAuth = false;
         if (currentStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && currentStep.TargetLocationRoleId.HasValue)
@@ -113,7 +128,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 .AnyAsync(x => x.UserId == reqDto.ActorUserId && x.RoleId == currentStep.TargetLocationRoleId.Value && x.IsActive && x.IsGlobalManager, ct);
         }
 
-        if (!hasUserAuth && !hasRoleAuth && !hasBranchHrAuth && !hasGlobalRoleAuth)
+        if (!hasUserAuth && !hasRoleAuth && !hasCandidateAuth && !hasBranchHrAuth && !hasGlobalRoleAuth)
             throw new BusinessException("Bu dokümanı şu anki kademede onaylama/reddetme yetkiniz bulunmuyor.");
 
         if (reqDto.ActionType == ApprovalActionType.Reassign)
@@ -121,7 +136,14 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (!reqDto.NewAssigneeUserId.HasValue)
                 throw new BusinessException("Devredilecek kullanıcı seçilmelidir.");
 
+            var existingCandidates = await _db.FormRequestAssignments
+                .Where(c => c.ApprovalId == approval.Id &&
+                            c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate)
+                .ToListAsync(ct);
+            _db.FormRequestAssignments.RemoveRange(existingCandidates);
+
             approval.AssigneeUserId = reqDto.NewAssigneeUserId;
+            approval.ConcurrencyToken++;
             // approval.AssigneeRoleId = null; // Explicitly removing role assignment since it's now specifically assigned to a person
             
             _db.AuditLogs.Add(new AuditLogEntity
@@ -134,7 +156,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 CreatedAt = DateTime.UtcNow
             });
             
-            await _db.SaveChangesAsync(ct);
+            await SaveChangesWithConcurrencyHandlingAsync(ct);
             
             // Reassigned user notification
             var reassignAttachments = await GenerateAttachmentsSafeAsync(req.Id, ct);
@@ -150,11 +172,13 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                 null, 
                 false, 
                 reassignAttachments, 
+                [],
                 ct);
             
             return new ApprovalActionResponseDto { Success = true };
         }
 
+        approval.ConcurrencyToken++;
         approval.ActionByUserId = reqDto.ActorUserId;
         approval.ActionComment = reqDto.Comment;
         approval.ActionAt = DateTime.UtcNow;
@@ -195,7 +219,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.Approved; //
 
-            (FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, System.Collections.Generic.List<(FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity Step, string Reason)> SkippedSteps) simResult;
+            (FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, System.Collections.Generic.List<Guid> CandidateUserIds, System.Collections.Generic.List<(FormfleksBaseApp.Domain.Entities.DynamicForms.WorkflowStepEntity Step, string Reason)> SkippedSteps) simResult;
             try
             {
                 // Sonraki adımı bul (Auto-skip özelliği ile hiyerarşiyi atlar)
@@ -311,13 +335,26 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
                     AssigneeRoleId = simResult.AssigneeRoleId,
                     AssigneeUserId = simResult.AssigneeUserId
                 });
+
+                foreach (var candidateUserId in simResult.CandidateUserIds)
+                {
+                    _db.FormRequestAssignments.Add(new FormRequestAssignmentEntity
+                    {
+                        Id = Guid.NewGuid(),
+                        RequestId = req.Id,
+                        ApprovalId = approvalId,
+                        UserId = candidateUserId,
+                        AssignmentType = (short)FormRequestAssignmentType.ApprovalCandidate,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
                 
-                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, simResult.AssigneeUserId, simResult.AssigneeRoleId, req.RequestorUserId, req.RequestNo, req.FormTypeId, simResult.Step.AssigneeType, simResult.Step.TargetLocationRoleId, simResult.Step.IsGlobalManagerInfoOnly, atts, ct);
+                sendNotificationTask = (atts) => NotifyNextAssigneeAsync(approvalId, req.Id, simResult.AssigneeUserId, simResult.AssigneeRoleId, req.RequestorUserId, req.RequestNo, req.FormTypeId, simResult.Step.AssigneeType, simResult.Step.TargetLocationRoleId, simResult.Step.IsGlobalManagerInfoOnly, atts, simResult.CandidateUserIds, ct);
             }
         }
 
         // 1. Önce veri tabanına işlemleri kaydediyoruz ki PDF motoru yepyeni güncel onay ve statü bilgilerini okuyabilsin.
-        await _db.SaveChangesAsync(ct);
+        await SaveChangesWithConcurrencyHandlingAsync(ct);
 
         // 2. Şimdi en güncel verilerle PDF üretiyoruz.
         var attachments = await GenerateAttachmentsSafeAsync(req.Id, ct);
@@ -329,6 +366,18 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         }
 
         return new ApprovalActionResponseDto { Success = true };
+    }
+
+    private async Task SaveChangesWithConcurrencyHandlingAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new BusinessException("Bu onay adımı başka bir kullanıcı tarafından tamamlandı. Lütfen ekranı yenileyin.");
+        }
     }
     
     private async Task<List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>> GenerateAttachmentsSafeAsync(Guid requestId, CancellationToken ct)
@@ -349,11 +398,34 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         return attachments;
     }
 
-    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, CancellationToken ct)
+    private async Task NotifyNextAssigneeAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, List<FormfleksBaseApp.Application.Common.Models.EmailAttachment> attachments, IReadOnlyCollection<Guid> candidateUserIds, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name, Guid UserId)>();
 
-        if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
+        if (candidateUserIds.Count > 0)
+        {
+            foreach (var candidateUserId in candidateUserIds)
+            {
+                var baseUser = await _userRepository.GetByIdAsync(candidateUserId, ct, false);
+                string? targetEmail = baseUser?.Email;
+                string candidateName = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName)
+                    ? baseUser.DisplayName
+                    : "Bilinmeyen Sistem Kullanıcısı";
+
+                if (string.IsNullOrWhiteSpace(targetEmail))
+                {
+                    var candidatePerson = await _db.QdmsPersoneller.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.LinkedUserId == candidateUserId && p.IsActive, ct);
+                    targetEmail = candidatePerson?.Email;
+                    if (candidatePerson != null)
+                        candidateName = $"{candidatePerson.Adi} {candidatePerson.Soyadi}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(targetEmail))
+                    targetList.Add((targetEmail, candidateName, candidateUserId));
+            }
+        }
+        else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
             var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
@@ -452,6 +524,18 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
             }
         }
 
+        var notificationTargetUserIds = targetList.Select(x => x.UserId).Distinct().ToList();
+        var targetPersonnelGroups = await _db.QdmsPersoneller
+            .AsNoTracking()
+            .Where(p => p.IsActive && p.LinkedUserId.HasValue && notificationTargetUserIds.Contains(p.LinkedUserId.Value))
+            .Select(p => new { UserId = p.LinkedUserId!.Value, p.Grup_Kodu_Aciklama })
+            .ToListAsync(ct);
+        var grayTargetUserIds = targetPersonnelGroups
+            .Where(x => ProbationFormConstants.IsGrayCollar(x.Grup_Kodu_Aciklama))
+            .Select(x => x.UserId)
+            .ToHashSet();
+        targetList.RemoveAll(x => grayTargetUserIds.Contains(x.UserId));
+
         if (!targetList.Any()) return;
 
         var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
@@ -469,7 +553,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (formType != null)
         {
-            foreach (var target in targetList.DistinctBy(x => x.Email))
+            foreach (var target in targetList.DistinctBy(x => x.UserId))
             {
                 var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
                 await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);

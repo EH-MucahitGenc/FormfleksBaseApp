@@ -1,178 +1,69 @@
-using System.Net;
-using System.Net.Mail;
+using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Application.Common.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Polly;
-using Polly.CircuitBreaker;
-using Polly.Retry;
-using Polly.Wrap;
 
 namespace FormfleksBaseApp.Infrastructure.Services;
 
-public class EmailSenderBackgroundWorker : BackgroundService
+public sealed class EmailSenderBackgroundWorker : BackgroundService
 {
     private readonly IEmailBackgroundQueue _emailQueue;
+    private readonly IEmailSmtpSender _smtpSender;
     private readonly ILogger<EmailSenderBackgroundWorker> _logger;
     private readonly IOptionsMonitor<EmailSettings> _emailOptions;
-    private readonly FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService _systemSettingsService;
-    private AsyncPolicyWrap _resiliencePolicy = default!;
+    private readonly ISystemSettingsService _systemSettingsService;
 
-    public EmailSenderBackgroundWorker(IEmailBackgroundQueue emailQueue, ILogger<EmailSenderBackgroundWorker> logger, IOptionsMonitor<EmailSettings> emailOptions, FormfleksBaseApp.Application.Common.Interfaces.ISystemSettingsService systemSettingsService)
+    public EmailSenderBackgroundWorker(IEmailBackgroundQueue emailQueue, IEmailSmtpSender smtpSender,
+        ILogger<EmailSenderBackgroundWorker> logger, IOptionsMonitor<EmailSettings> emailOptions,
+        ISystemSettingsService systemSettingsService)
     {
         _emailQueue = emailQueue;
+        _smtpSender = smtpSender;
         _logger = logger;
         _emailOptions = emailOptions;
         _systemSettingsService = systemSettingsService;
-
-        var currentSettings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
-        ConfigurePolicies(currentSettings);
-    }
-
-    private void ConfigurePolicies(EmailSettings settings)
-    {
-        var smtpSettings = settings.Smtp;
-
-        var retryPolicy = Policy
-            .Handle<SmtpException>()
-            .Or<IOException>()
-            .WaitAndRetryAsync(
-                smtpSettings.RetryCount,
-                retryAttempt => TimeSpan.FromMilliseconds(smtpSettings.RetryDelayMs * Math.Pow(2, retryAttempt - 1)),
-                onRetry: (exception, timespan, retryCount, context) =>
-                {
-                    _logger.LogWarning(exception, "SMTP Error. Retrying {RetryCount}/{MaxRetries} after {Delay}ms.", retryCount, smtpSettings.RetryCount, timespan.TotalMilliseconds);
-                });
-
-        var circuitBreakerPolicy = Policy
-            .Handle<SmtpException>()
-            .Or<IOException>()
-            .CircuitBreakerAsync(
-                exceptionsAllowedBeforeBreaking: smtpSettings.ExceptionsAllowedBeforeBreaking,
-                durationOfBreak: TimeSpan.FromSeconds(smtpSettings.DurationOfBreakSeconds),
-                onBreak: (exception, duration) =>
-                {
-                    _logger.LogError(exception, "SMTP Circuit Breaker OPEN! Breaking logic for {DurationSeconds} seconds.", duration.TotalSeconds);
-                },
-                onReset: () =>
-                {
-                    _logger.LogInformation("SMTP Circuit Breaker CLOSED. Normal operation resumed.");
-                },
-                onHalfOpen: () =>
-                {
-                    _logger.LogInformation("SMTP Circuit Breaker HALF-OPEN. Testing SMTP connection...");
-                });
-
-        _resiliencePolicy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Email Background Worker Service is starting. Initial [Enabled] state: {Enabled}", _emailOptions.CurrentValue.Enabled);
-
+        _logger.LogInformation("Email outbox worker is starting.");
         while (!stoppingToken.IsCancellationRequested)
         {
-            EmailMessage emailMessage = null;
+            QueuedEmail? queuedEmail = null;
             try
             {
-                emailMessage = await _emailQueue.DequeueEmailAsync(stoppingToken);
-                var currentSettings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
-                
-                // Poliçeyi her seferinde güncel ayarlara göre kurmak (performans etkisi çok düşüktür)
-                ConfigurePolicies(currentSettings);
+                queuedEmail = await _emailQueue.DequeueEmailAsync(stoppingToken);
+                var settings = _systemSettingsService.GetSetting("EmailSettings", _emailOptions.CurrentValue) ?? new EmailSettings();
+                if (!settings.Enabled)
+                {
+                    await _emailQueue.MarkSuppressedAsync(queuedEmail.Id,
+                        "EmailSettings.Enabled is false; message was not transmitted.", stoppingToken);
+                    continue;
+                }
 
-                if (currentSettings.Enabled)
-                {
-                    _logger.LogInformation("Email Worker: Transmitting email to {To}. SMTP Server: {Host}:{Port}, AuthUser: {User}", 
-                        string.Join(", ", emailMessage.ToAddresses), currentSettings.Smtp.Host, currentSettings.Smtp.Port, currentSettings.Smtp.Username);
-                        
-                    // Execute SMTP transmission wrapped with Retry and Circuit Breaker
-                    await _resiliencePolicy.ExecuteAsync(async (ct) =>
-                    {
-                        await SendEmailViaSmtpAsync(emailMessage, currentSettings, ct);
-                    }, stoppingToken);
-                }
-                else
-                {
-                    _logger.LogWarning("Discarding dynamically queued email to {To} as global EmailSettings.Enabled is false.", string.Join(", ", emailMessage.ToAddresses));
-                }
+                var envelope = _smtpSender.CreateEnvelope(queuedEmail, settings);
+                await _emailQueue.RecordEnvelopeAsync(queuedEmail.Id, envelope, stoppingToken);
+                await _smtpSender.SendAsync(queuedEmail, envelope, settings, stoppingToken);
+                await _emailQueue.MarkSentAsync(queuedEmail.Id, DateTime.UtcNow, stoppingToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Triggered strictly during shutdown. Ignoring.
-            }
-            catch (BrokenCircuitException bce)
-            {
-                _logger.LogError(bce, "Email transmission skipped. SMTP Circuit is currently broken. Re-queuing mail...");
-                if (emailMessage != null)
-                {
-                    await _emailQueue.QueueEmailAsync(emailMessage, stoppingToken);
-                    await Task.Delay(5000, stoppingToken);
-                }
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "A fatal error occurred in the resilient Email Worker execution loop. Re-queuing mail...");
-                if (emailMessage != null)
+                _logger.LogError(ex, "Email delivery failed for outbox item {OutboxId}.", queuedEmail?.Id);
+                if (queuedEmail is not null)
                 {
-                    await _emailQueue.QueueEmailAsync(emailMessage, stoppingToken);
-                    await Task.Delay(5000, stoppingToken);
+                    try { await _emailQueue.MarkFailedAsync(queuedEmail.Id, ex.ToString(), CancellationToken.None); }
+                    catch (Exception persistException)
+                    {
+                        _logger.LogCritical(persistException, "Could not persist email failure for outbox item {OutboxId}.", queuedEmail.Id);
+                    }
                 }
             }
         }
-
-        _logger.LogInformation("Email Background Worker Service is stopping.");
-    }
-
-    private async Task SendEmailViaSmtpAsync(EmailMessage message, EmailSettings settings, CancellationToken cancellationToken)
-    {
-        var smtpSettings = settings.Smtp;
-
-        if (string.IsNullOrWhiteSpace(smtpSettings.Host))
-        {
-            _logger.LogWarning("SMTP Server Host is not properly configured. Email sending bypassed.");
-            return;
-        }
-
-        using var client = new SmtpClient(smtpSettings.Host, smtpSettings.Port);
-        
-        // Setup internal timeout
-        client.Timeout = smtpSettings.TimeoutSeconds * 1000;
-        
-        client.EnableSsl = smtpSettings.EnableSsl;
-        if (!string.IsNullOrWhiteSpace(smtpSettings.Username) && !string.IsNullOrWhiteSpace(smtpSettings.Password))
-        {
-            client.UseDefaultCredentials = false;
-            client.Credentials = new NetworkCredential(smtpSettings.Username, smtpSettings.Password);
-        }
-
-        using var mailMessage = new MailMessage
-        {
-            From = new MailAddress(string.IsNullOrWhiteSpace(smtpSettings.DefaultFrom) ? smtpSettings.Username : smtpSettings.DefaultFrom, "Erkurt Holding-Formfleks Kurumsal Form ve Onay Platformu"),
-            Subject = message.Subject,
-            Body = message.HtmlBody,
-            IsBodyHtml = true
-        };
-
-        if (message.Attachments != null && message.Attachments.Any())
-        {
-            foreach (var attachment in message.Attachments)
-            {
-                var ms = new MemoryStream(attachment.Content);
-                mailMessage.Attachments.Add(new Attachment(ms, attachment.FileName, attachment.ContentType));
-            }
-        }
-
-        foreach (var to in message.ToAddresses)
-        {
-            mailMessage.To.Add(to);
-        }
-
-        // Send mail gracefully
-        using var ctRegistration = cancellationToken.Register(() => client.SendAsyncCancel());
-        
-        await client.SendMailAsync(mailMessage, cancellationToken);
-        _logger.LogInformation("Successfully sent email to {Count} recipients. Subject: '{Subject}'.", message.ToAddresses.Count, message.Subject);
+        _logger.LogInformation("Email outbox worker is stopping.");
     }
 }

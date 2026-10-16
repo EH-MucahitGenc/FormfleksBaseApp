@@ -13,6 +13,36 @@ export interface AuditLogItemDto {
   createdAt: string;
 }
 
+export interface EmailLogListItemDto {
+  id: string;
+  messageType: string;
+  referenceType?: string;
+  referenceId?: string;
+  fromAddress?: string;
+  toAddresses: string[];
+  subject: string;
+  statusCode: number;
+  status: string;
+  attemptCount: number;
+  lastError?: string;
+  queuedAt: string;
+  sentAt?: string;
+}
+
+export interface EmailLogDetailDto extends EmailLogListItemDto {
+  ccAddresses: string[];
+  bccAddresses: string[];
+  replyToAddress?: string;
+  bodyHtml: string;
+  bodyText?: string;
+  bodySha256: string;
+  headersJson: string;
+  attachmentManifestJson: string;
+  smtpMessageId?: string;
+  firstAttemptAt?: string;
+  lastAttemptAt?: string;
+}
+
 // --- FORM DESIGNER DTOs ---
 export interface FormTemplateSummaryDto {
   formTypeId: string;
@@ -81,6 +111,16 @@ export const systemAdminService = {
   // --------- 1. AUDIT LOGS ---------
   getAuditLogs: async (): Promise<AuditLogItemDto[]> => {
     const { data } = await apiClient.get<AuditLogItemDto[]>('/dynamic-forms/admin/audit-logs');
+    return data;
+  },
+
+  getEmailLogs: async (): Promise<EmailLogListItemDto[]> => {
+    const { data } = await apiClient.get<EmailLogListItemDto[]>('/dynamic-forms/admin/email-logs');
+    return data;
+  },
+
+  getEmailLog: async (id: string): Promise<EmailLogDetailDto> => {
+    const { data } = await apiClient.get<EmailLogDetailDto>(`/dynamic-forms/admin/email-logs/${id}`);
     return data;
   },
 

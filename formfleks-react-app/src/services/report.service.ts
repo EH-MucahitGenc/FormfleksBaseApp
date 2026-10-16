@@ -18,6 +18,7 @@ export interface HrFormDetailItemDto {
   formRequestNo: string;
   formTypeName: string;
   requestorName: string;
+  location: string;
   createdAt: string;
   status: number;
   completedAt?: string;

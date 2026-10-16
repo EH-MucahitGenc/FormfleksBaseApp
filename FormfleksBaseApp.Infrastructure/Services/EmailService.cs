@@ -11,6 +11,7 @@ namespace FormfleksBaseApp.Infrastructure.Services;
 public class EmailService : IEmailService
 {
     private readonly IEmailBackgroundQueue _emailQueue;
+    private readonly IEmailSmtpSender _smtpSender;
     private readonly IConfiguration _config;
     private readonly ISystemSettingsService _systemSettingsService;
 
@@ -183,9 +184,10 @@ public class EmailService : IEmailService
     }
 
 
-    public EmailService(IEmailBackgroundQueue emailQueue, IConfiguration config, ISystemSettingsService systemSettingsService)
+    public EmailService(IEmailBackgroundQueue emailQueue, IEmailSmtpSender smtpSender, IConfiguration config, ISystemSettingsService systemSettingsService)
     {
         _emailQueue = emailQueue;
+        _smtpSender = smtpSender;
         _config = config;
         _systemSettingsService = systemSettingsService;
     }
@@ -277,6 +279,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ApprovalRequest",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"⏳ Onay İsteği: {formRequestNo} — {formTypeName}",
             HtmlBody = html,
@@ -354,6 +359,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = isApproved ? "ApprovalCompleted" : "ApprovalRejected",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = emailSubject,
             HtmlBody = html,
@@ -403,6 +411,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ApprovalReturned",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"🔄 Revizyon Talebi: {formRequestNo} — {formTypeName}",
             HtmlBody = html,
@@ -450,6 +461,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "GlobalManagerInfo",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"ℹ️ Bilgilendirme: {formTypeName} Onaylandı ({formRequestNo})",
             HtmlBody = html,
@@ -498,6 +512,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "FormCancelled",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"🚫 İptal Bildirimi: {formRequestNo} — {formTypeName}",
             HtmlBody = html,
@@ -544,6 +561,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "DraftReassigned",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"📤 Taslak Atandı: {formRequestNo} — {formTypeName}",
             HtmlBody = html,
@@ -618,6 +638,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ApprovalReminder",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"⏰ Hatırlatma: {formRequestNo} — {formTypeName}",
             HtmlBody = html
@@ -664,6 +687,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "DraftReminder",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = new List<string> { toEmail },
             Subject = $"📝 Taslak Hatırlatması: {formTypeName} ({formRequestNo})",
             HtmlBody = html
@@ -711,6 +737,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "DraftDeleted",
+            ReferenceType = "FormRequestNumber",
+            ReferenceId = formRequestNo,
             ToAddresses = new List<string> { toEmail },
             Subject = $"🗑️ Taslağınız Silindi: {formTypeName} ({formRequestNo})",
             HtmlBody = html
@@ -760,6 +789,9 @@ public class EmailService : IEmailService
 
         var message = new EmailMessage
         {
+            MessageType = "IntegrationError",
+            ReferenceType = "Integration",
+            ReferenceId = integrationName,
             ToAddresses = toEmailList,
             Subject = subject,
             HtmlBody = htmlContent
@@ -812,6 +844,9 @@ public class EmailService : IEmailService
 
         var message = new EmailMessage
         {
+            MessageType = "WorkflowFailure",
+            ReferenceType = "WorkflowStep",
+            ReferenceId = stepName,
             ToAddresses = toEmailList,
             Subject = subject,
             HtmlBody = htmlContent
@@ -860,6 +895,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ProbationDraft",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = toEmails,
             Subject = $"{monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
             HtmlBody = html
@@ -907,6 +945,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ProbationManagerMissing",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = toEmails,
             Subject = $"DİKKAT: Yönetici Bulunamadı - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
             HtmlBody = html
@@ -956,6 +997,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "ProbationManagerEmailMissing",
+            ReferenceType = "FormRequest",
+            ReferenceId = formRequestId.ToString(),
             ToAddresses = toEmails,
             Subject = $"DİKKAT: Yöneticinin E-Postası Yok - {monthType} Aylık Deneme Süresi Değerlendirmesi: {personelName}",
             HtmlBody = html
@@ -996,6 +1040,9 @@ public class EmailService : IEmailService
 
         await QueueEmailAsync(new EmailMessage
         {
+            MessageType = "SurveyAssignment",
+            ReferenceType = "SurveyAssignment",
+            ReferenceId = token,
             ToAddresses = new List<string> { toEmail },
             Subject = $"Yeni Anket Katılım Daveti: {campaignName}",
             HtmlBody = html
@@ -1034,42 +1081,36 @@ public class EmailService : IEmailService
             baseUrl: GetBaseUrl(),
             requesterCompany: "Formfleks");
 
-        var settings = await _systemSettingsService.GetSettingAsync<EmailSettings>("EmailSettings", new EmailSettings(), cancellationToken);
-        var smtpSettings = settings?.Smtp;
-
-        if (smtpSettings == null || string.IsNullOrWhiteSpace(smtpSettings.Host))
+        var queuedEmail = await _emailQueue.QueueForImmediateDeliveryAsync(new EmailMessage
         {
+            MessageType = "SurveyAssignment",
+            ReferenceType = "SurveyAssignment",
+            ReferenceId = token,
+            DeduplicationKey = $"SurveyAssignment:{token}",
+            ToAddresses = new List<string> { toEmail },
+            Subject = $"Yeni Anket Katılım Daveti: {campaignName}",
+            HtmlBody = html
+        }, cancellationToken);
+        if (queuedEmail.AlreadySent) return true;
+
+        var settings = await _systemSettingsService.GetSettingAsync<EmailSettings>("EmailSettings", new EmailSettings(), cancellationToken) ?? new EmailSettings();
+        if (!settings.Enabled)
+        {
+            await _emailQueue.MarkSuppressedAsync(queuedEmail.Id, "EmailSettings.Enabled is false; message was not transmitted.", cancellationToken);
             return false;
         }
-
-        using var client = new System.Net.Mail.SmtpClient(smtpSettings.Host, smtpSettings.Port);
-        client.Timeout = smtpSettings.TimeoutSeconds * 1000;
-        client.EnableSsl = smtpSettings.EnableSsl;
-        if (!string.IsNullOrWhiteSpace(smtpSettings.Username) && !string.IsNullOrWhiteSpace(smtpSettings.Password))
-        {
-            client.UseDefaultCredentials = false;
-            client.Credentials = new System.Net.NetworkCredential(smtpSettings.Username, smtpSettings.Password);
-        }
-
-        using var mailMessage = new System.Net.Mail.MailMessage
-        {
-            From = new System.Net.Mail.MailAddress(string.IsNullOrWhiteSpace(smtpSettings.DefaultFrom) ? smtpSettings.Username : smtpSettings.DefaultFrom, "Erkurt Holding-Formfleks Kurumsal Form ve Onay Platformu"),
-            Subject = $"Yeni Anket Katılım Daveti: {campaignName}",
-            Body = html,
-            IsBodyHtml = true
-        };
-
-        mailMessage.To.Add(toEmail);
-
         try
         {
-            await client.SendMailAsync(mailMessage, cancellationToken);
+            var envelope = _smtpSender.CreateEnvelope(queuedEmail, settings);
+            await _emailQueue.RecordEnvelopeAsync(queuedEmail.Id, envelope, cancellationToken);
+            await _smtpSender.SendAsync(queuedEmail, envelope, settings, cancellationToken);
+            await _emailQueue.MarkSentAsync(queuedEmail.Id, DateTime.UtcNow, cancellationToken);
             return true;
         }
         catch (Exception ex)
         {
-            // Throw so ProcessSurveyCampaignsCommand can log the error and mark as Failed/Retry
-            throw new InvalidOperationException($"SMTP GÃ¶nderim HatasÄ±: {ex.Message}", ex);
+            await _emailQueue.MarkFailedAsync(queuedEmail.Id, ex.ToString(), cancellationToken);
+            throw new InvalidOperationException($"SMTP gönderim hatası: {ex.Message}", ex);
         }
     }
 

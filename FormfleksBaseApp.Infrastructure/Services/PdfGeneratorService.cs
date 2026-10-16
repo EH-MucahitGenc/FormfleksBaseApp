@@ -28,6 +28,39 @@ public class PdfGeneratorService : IPdfGeneratorService
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
+    private static bool TryGetBooleanValue(JsonNode? valueNode, out bool value)
+    {
+        value = false;
+        if (valueNode == null)
+            return false;
+
+        var valueKind = valueNode.GetValueKind();
+        if (valueKind == JsonValueKind.True || valueKind == JsonValueKind.False)
+        {
+            value = valueKind == JsonValueKind.True;
+            return true;
+        }
+
+        return valueKind == JsonValueKind.String && bool.TryParse(valueNode.ToString(), out value);
+    }
+
+    private static void ComposeCheckbox(IContainer container, bool isChecked)
+    {
+        container
+            .AlignLeft()
+            .AlignMiddle()
+            .Width(10)
+            .Height(10)
+            .Border(1)
+            .BorderColor(Colors.Black)
+            .AlignCenter()
+            .AlignMiddle()
+            .Text(isChecked ? "X" : string.Empty)
+            .FontFamily(Fonts.Arial)
+            .FontSize(7)
+            .Bold();
+    }
+
     public async Task<EmailAttachment> GenerateFormPdfAsync(Guid formRequestId, CancellationToken cancellationToken = default)
     {
         var request = await _db.FormRequests
@@ -332,30 +365,30 @@ public class PdfGeneratorService : IPdfGeneratorService
                                                                 {
                                                                     var valNode = obj?[key];
                                                                     string val = "-";
-                                                                    if (valNode != null)
+                                                                    bool isBoolean = TryGetBooleanValue(valNode, out bool booleanValue);
+                                                                    if (valNode != null && !isBoolean)
                                                                     {
-                                                                        if (valNode.GetValueKind() == JsonValueKind.True || (valNode.GetValueKind() == JsonValueKind.String && valNode.ToString().Equals("true", StringComparison.OrdinalIgnoreCase))) val = "☑";
-                                                                        else if (valNode.GetValueKind() == JsonValueKind.False || (valNode.GetValueKind() == JsonValueKind.String && valNode.ToString().Equals("false", StringComparison.OrdinalIgnoreCase))) val = "☐";
-                                                                        else 
+                                                                        string rawStr = valNode.ToString().Trim('\"');
+                                                                        if (rawStr.Length >= 10 && rawStr.Length <= 35 && rawStr.Contains("T") && DateTimeOffset.TryParse(rawStr, out var dtoff))
                                                                         {
-                                                                            string rawStr = valNode.ToString().Trim('\"');
-                                                                            if (rawStr.Length >= 10 && rawStr.Length <= 35 && rawStr.Contains("T") && DateTimeOffset.TryParse(rawStr, out var dtoff))
+                                                                            if (!rawStr.EndsWith("Z") && !rawStr.Contains("+") && !rawStr.Contains("-"))
                                                                             {
-                                                                                if (!rawStr.EndsWith("Z") && !rawStr.Contains("+") && !rawStr.Contains("-"))
-                                                                                {
-                                                                                    dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
-                                                                                }
-                                                                                var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
-                                                                                val = turkeyTime.ToString("dd.MM.yyyy");
+                                                                                dtoff = new DateTimeOffset(dtoff.DateTime, TimeSpan.Zero);
                                                                             }
-                                                                            else
-                                                                            {
-                                                                                val = rawStr;
-                                                                            }
+                                                                            var turkeyTime = TimeZoneInfo.ConvertTime(dtoff, turkeyZone);
+                                                                            val = turkeyTime.ToString("dd.MM.yyyy");
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            val = rawStr;
                                                                         }
                                                                     }
-                                                                    
-                                                                    innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2).Text(val).FontSize(8);
+
+                                                                    var valueCell = innerTable.Cell().BorderBottom(1).BorderRight(1).BorderColor(Colors.Black).Padding(2);
+                                                                    if (isBoolean)
+                                                                        valueCell.Element(cell => ComposeCheckbox(cell, booleanValue));
+                                                                    else
+                                                                        valueCell.Text(val).FontSize(8);
                                                                 }
                                                                 rowIndex++;
                                                             }
@@ -400,10 +433,11 @@ public class PdfGeneratorService : IPdfGeneratorService
                                         table.Cell().Border(1).BorderColor(Colors.Black).Background(Colors.Grey.Lighten4).Padding(4).Text(field.Label).Bold();
                                         
                                         string displayVal = string.IsNullOrWhiteSpace(field.ValueText) ? "-" : field.ValueText;
-                                        if (displayVal.Equals("true", StringComparison.OrdinalIgnoreCase)) displayVal = "☑";
-                                        if (displayVal.Equals("false", StringComparison.OrdinalIgnoreCase)) displayVal = "☐";
-                                        
-                                        table.Cell().Border(1).BorderColor(Colors.Black).Padding(4).Text(displayVal);
+                                        var valueCell = table.Cell().Border(1).BorderColor(Colors.Black).Padding(4);
+                                        if (bool.TryParse(displayVal, out bool booleanValue))
+                                            valueCell.Element(cell => ComposeCheckbox(cell, booleanValue));
+                                        else
+                                            valueCell.Text(displayVal);
                                     }
                                 }
                             });

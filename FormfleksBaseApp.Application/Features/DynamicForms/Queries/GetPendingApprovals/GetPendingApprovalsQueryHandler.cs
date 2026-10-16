@@ -2,6 +2,8 @@ using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.DynamicForms.Business.Contracts;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
+using FormfleksBaseApp.Domain.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,6 +28,14 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
 
     public async Task<IReadOnlyList<PendingApprovalListItemDto>> Handle(GetPendingApprovalsQuery request, CancellationToken ct)
     {
+        var actorGroups = await _db.QdmsPersoneller
+            .AsNoTracking()
+            .Where(p => p.IsActive && p.LinkedUserId == request.ActorUserId)
+            .Select(p => p.Grup_Kodu_Aciklama)
+            .ToListAsync(ct);
+        if (actorGroups.Any(ProbationFormConstants.IsGrayCollar))
+            return [];
+
         var userRoleIds = await _db.UserRoles
             .AsNoTracking()
             .Where(ur => ur.UserId == request.ActorUserId)
@@ -57,6 +67,9 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                       where app.Status == (short)ApprovalStatus.Pending
                       && (
                           app.AssigneeUserId == request.ActorUserId 
+                          || _db.FormRequestAssignments.Any(c => c.ApprovalId == app.Id &&
+                                                                 c.UserId == request.ActorUserId &&
+                                                                 c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate)
                           || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value))
                           || (ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (person != null && lr.LocationName == person.Isyeri_Tanimi))))
                           || (ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))

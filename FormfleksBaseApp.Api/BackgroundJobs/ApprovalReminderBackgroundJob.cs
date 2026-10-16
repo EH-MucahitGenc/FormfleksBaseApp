@@ -1,5 +1,6 @@
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Domain.Entities.DynamicForms;
+using FormfleksBaseApp.Domain.Constants;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -169,8 +170,38 @@ public class ApprovalReminderBackgroundJob : CronJobService
     private async Task SendReminderEmailsAsync(Guid approvalId, Guid requestId, Guid? assignedUserId, Guid? assignedRoleId, Guid requestorUserId, string requestNo, Guid formTypeId, short assigneeType, Guid? targetLocationRoleId, bool isGlobalManagerInfoOnly, IDynamicFormsDbContext db, FormfleksBaseApp.Application.Auth.Interfaces.IUserRepository userRepository, FormfleksBaseApp.Application.Common.Interfaces.IEmailService emailService, FormfleksBaseApp.Application.Auth.Interfaces.ITokenService tokenService, CancellationToken ct)
     {
         var targetList = new List<(string Email, string Name, Guid UserId)>();
+        var candidateUserIds = await db.FormRequestAssignments
+            .AsNoTracking()
+            .Where(c => c.ApprovalId == approvalId &&
+                        c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate)
+            .Select(c => c.UserId)
+            .Distinct()
+            .ToListAsync(ct);
 
-        if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
+        if (candidateUserIds.Count > 0)
+        {
+            foreach (var candidateUserId in candidateUserIds)
+            {
+                var baseUser = await userRepository.GetByIdAsync(candidateUserId, ct, false);
+                string? targetEmail = baseUser?.Email;
+                string candidateName = baseUser != null && !string.IsNullOrWhiteSpace(baseUser.DisplayName)
+                    ? baseUser.DisplayName
+                    : "Bilinmeyen Sistem Kullanıcısı";
+
+                if (string.IsNullOrWhiteSpace(targetEmail))
+                {
+                    var candidatePerson = await db.QdmsPersoneller.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.LinkedUserId == candidateUserId && p.IsActive, ct);
+                    targetEmail = candidatePerson?.Email;
+                    if (candidatePerson != null)
+                        candidateName = $"{candidatePerson.Adi} {candidatePerson.Soyadi}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(targetEmail))
+                    targetList.Add((targetEmail, candidateName, candidateUserId));
+            }
+        }
+        else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
             var authReqPers = await db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
             var reqLocation = authReqPers?.Isyeri_Tanimi;
@@ -266,6 +297,18 @@ public class ApprovalReminderBackgroundJob : CronJobService
             }
         }
 
+        var notificationTargetUserIds = targetList.Select(x => x.UserId).Distinct().ToList();
+        var targetPersonnelGroups = await db.QdmsPersoneller
+            .AsNoTracking()
+            .Where(p => p.IsActive && p.LinkedUserId.HasValue && notificationTargetUserIds.Contains(p.LinkedUserId.Value))
+            .Select(p => new { UserId = p.LinkedUserId!.Value, p.Grup_Kodu_Aciklama })
+            .ToListAsync(ct);
+        var grayTargetUserIds = targetPersonnelGroups
+            .Where(x => ProbationFormConstants.IsGrayCollar(x.Grup_Kodu_Aciklama))
+            .Select(x => x.UserId)
+            .ToHashSet();
+        targetList.RemoveAll(x => grayTargetUserIds.Contains(x.UserId));
+
         if (!targetList.Any()) return;
 
         var formType = await db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == formTypeId, ct);
@@ -283,7 +326,7 @@ public class ApprovalReminderBackgroundJob : CronJobService
         
         string formTypeName = formType?.Name ?? formTypeId.ToString();
 
-        foreach (var target in targetList.DistinctBy(x => x.Email))
+        foreach (var target in targetList.DistinctBy(x => x.UserId))
         {
             var token = tokenService.CreateQuickActionToken(approvalId, target.UserId);
             

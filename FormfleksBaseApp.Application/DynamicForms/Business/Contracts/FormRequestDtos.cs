@@ -65,6 +65,7 @@ public sealed class MyFormRequestListItemDto
     public int? CurrentStepNo { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? SubjectPersonName { get; set; }
+    public bool CanClaimDraft { get; set; }
 }
 
 public sealed class PendingApprovalListItemDto
@@ -106,6 +107,7 @@ public sealed class FormRequestDetailedDto
     public string RequesterCompany { get; set; } = string.Empty;
     public FormRequestStatus Status { get; set; }
     public long ConcurrencyToken { get; set; }
+    public bool CanClaimDraft { get; set; }
     public IReadOnlyList<FormRequestValueDto> Values { get; set; } = [];
     public IReadOnlyList<FormRequestWorkflowStepDto> Workflow { get; set; } = [];
 }

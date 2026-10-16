@@ -1,4 +1,5 @@
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
+using FormfleksBaseApp.Application.Features.DynamicForms.Commands.ClaimDraft;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SaveDraft;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SetTemplateStatus;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.SubmitRequest;
@@ -11,6 +12,7 @@ using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetRoles;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplates;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetTemplateWorkflow;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetAuditLogs;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.GetEmailLogs;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.VerifyQuickAction;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.CreateUserDelegation;
 using FormfleksBaseApp.Application.Features.DynamicForms.Commands.TerminateUserDelegation;
@@ -139,6 +141,18 @@ public sealed class DynamicFormsController : ControllerBase
 
         request.ActorUserId = userId;
         return Ok(await _mediator.Send(new SubmitRequestCommand(request), ct));
+    }
+
+    /// <summary>
+    /// Ortak değerlendirici havuzundaki bir taslağı ilk işlem yapan kullanıcıya atomik olarak atar.
+    /// </summary>
+    [HttpPost("requests/{requestId:guid}/claim")]
+    public async Task<ActionResult<FormRequestResultDto>> ClaimDraft(Guid requestId, CancellationToken ct)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new ClaimDraftCommand(requestId, userId), ct));
     }
 
     /// <summary>
@@ -348,6 +362,19 @@ public sealed class DynamicFormsController : ControllerBase
     [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicySystemAuditLogs)]
     public async Task<ActionResult<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.AuditLogs.AuditLogItemDto>>> GetAuditLogs(CancellationToken ct)
         => Ok(await _mediator.Send(new GetAuditLogsQuery(), ct));
+
+    [HttpGet("admin/email-logs")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicySystemAuditLogs)]
+    public async Task<ActionResult<IReadOnlyList<FormfleksBaseApp.Contracts.DynamicForms.EmailLogs.EmailLogListItemDto>>> GetEmailLogs(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetEmailLogsQuery(), ct));
+
+    [HttpGet("admin/email-logs/{id:guid}")]
+    [Authorize(Policy = FormfleksBaseApp.Domain.Constants.AppPermissions.PolicySystemAuditLogs)]
+    public async Task<ActionResult<FormfleksBaseApp.Contracts.DynamicForms.EmailLogs.EmailLogDetailDto>> GetEmailLog(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetEmailLogDetailQuery(id), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
 
     /// <summary>
     /// Yeni bir form şablonu oluşturur veya var olan şablonu günceller.

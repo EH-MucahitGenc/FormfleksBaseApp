@@ -9,6 +9,8 @@ export type MyFormRequestListItemDto = {
   status: RequestStatus;
   currentStepNo: number | null;
   createdAt: string;
+  subjectPersonName?: string;
+  canClaimDraft: boolean;
 };
 
 export type PendingApprovalListItemDto = {
@@ -70,6 +72,7 @@ export type FormRequestDetailedDto = {
   requesterCompany: string;
   status: RequestStatus;
   concurrencyToken: number;
+  canClaimDraft: boolean;
   values: FormRequestValueDto[];
   workflow: FormRequestWorkflowStepDto[];
 };
@@ -131,6 +134,11 @@ class FormService {
       }
     });
     return { success: true };
+  }
+
+  async claimDraft(requestId: string): Promise<{ requestId: string; concurrencyToken: number }> {
+    const { data } = await apiClient.post(`/dynamic-forms/requests/${requestId}/claim`);
+    return data;
   }
 }
 

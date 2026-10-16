@@ -3,6 +3,8 @@ using FormfleksBaseApp.DynamicForms.Business.Queries.GetRequestDetailed;
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
+using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,14 +38,32 @@ public sealed class GetRequestDetailedQueryHandler
             return null;
 
         bool isAuthorized = request.RequestorUserId == query.RequestorUserId;
+        var canClaimDraft = false;
+
+        if (!isAuthorized &&
+            request.Status == (short)FormRequestStatus.Draft &&
+            request.RequestorUserId == ProbationFormConstants.SystemUserId)
+        {
+            canClaimDraft = await _db.FormRequestAssignments
+                .AsNoTracking()
+                .AnyAsync(a => a.RequestId == request.Id &&
+                               a.UserId == query.RequestorUserId &&
+                               a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator,
+                    ct);
+            isAuthorized = canClaimDraft;
+        }
 
         if (!isAuthorized)
         {
             var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
             if (isCurrentUserGlobalIk && request.Status == (short)FormRequestStatus.Draft)
             {
+                var hasDraftEvaluatorPool = await _db.FormRequestAssignments.AnyAsync(
+                    a => a.RequestId == request.Id &&
+                         a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator,
+                    ct);
                 var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == request.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
-                if (isFormRequestorGlobalIk)
+                if (isFormRequestorGlobalIk && !hasDraftEvaluatorPool)
                 {
                     isAuthorized = true;
                 }
@@ -57,6 +77,14 @@ public sealed class GetRequestDetailedQueryHandler
         // If not the creator, check if they are an assigned approver
         if (!isAuthorized)
         {
+            var viewerGroups = await _db.QdmsPersoneller
+                .AsNoTracking()
+                .Where(p => p.IsActive && p.LinkedUserId == query.RequestorUserId)
+                .Select(p => p.Grup_Kodu_Aciklama)
+                .ToListAsync(ct);
+            if (viewerGroups.Any(ProbationFormConstants.IsGrayCollar))
+                return null;
+
             var userRoleIds = await _db.UserRoles
                 .AsNoTracking()
                 .Where(ur => ur.UserId == query.RequestorUserId)
@@ -70,6 +98,9 @@ public sealed class GetRequestDetailedQueryHandler
                                      && (
                                          a.AssigneeUserId == query.RequestorUserId || 
                                          a.ActionByUserId == query.RequestorUserId ||
+                                         _db.FormRequestAssignments.Any(c => c.ApprovalId == a.Id &&
+                                                                            c.UserId == query.RequestorUserId &&
+                                                                            c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate) ||
                                          (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value)) ||
                                          (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (formCreatorPerson != null && lr.LocationName == formCreatorPerson.Isyeri_Tanimi)))) ||
                                          (ws != null && ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))
@@ -291,6 +322,7 @@ public sealed class GetRequestDetailedQueryHandler
             RequesterCompany = formCreatorPerson?.Isyeri_Tanimi ?? "",
             Status = (FormRequestStatus)request.Status,
             ConcurrencyToken = request.ConcurrencyToken,
+            CanClaimDraft = canClaimDraft,
             Values = formFields
                 .OrderBy(f => formSections.FirstOrDefault(s => s.Id == f.SectionId)?.SortOrder ?? 9999)
                 .ThenBy(f => f.SortOrder)

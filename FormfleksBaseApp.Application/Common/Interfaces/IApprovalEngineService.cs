@@ -14,7 +14,7 @@ public interface IApprovalEngineService
     /// veya atanacak bir yönetici/rol bulunamayan adımları otomatik olarak atlar.
     /// Atlanan adımları ve atlanma nedenlerini loglanabilmesi için liste halinde döndürür.
     /// </summary>
-    Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, List<(WorkflowStepEntity Step, string Reason)> SkippedSteps)> ResolveNextValidStepAsync(
+    Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, List<Guid> CandidateUserIds, List<(WorkflowStepEntity Step, string Reason)> SkippedSteps)> ResolveNextValidStepAsync(
         Guid workflowDefinitionId, 
         int currentStepNo, 
         Guid requestorUserId, 

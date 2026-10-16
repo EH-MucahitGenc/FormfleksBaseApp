@@ -15,15 +15,20 @@ namespace FormfleksBaseApp.Application.DynamicForms.Business.Services;
 public class ApprovalEngineService : IApprovalEngineService
 {
     private readonly IDynamicFormsDbContext _db;
+    private readonly IOrganizationAssigneeResolver _organizationResolver;
     private readonly Microsoft.Extensions.Logging.ILogger<ApprovalEngineService> _logger;
 
-    public ApprovalEngineService(IDynamicFormsDbContext db, Microsoft.Extensions.Logging.ILogger<ApprovalEngineService> logger)
+    public ApprovalEngineService(
+        IDynamicFormsDbContext db,
+        IOrganizationAssigneeResolver organizationResolver,
+        Microsoft.Extensions.Logging.ILogger<ApprovalEngineService> logger)
     {
         _db = db;
+        _organizationResolver = organizationResolver;
         _logger = logger;
     }
 
-    public async Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, List<(WorkflowStepEntity Step, string Reason)> SkippedSteps)> ResolveNextValidStepAsync(
+    public async Task<(WorkflowStepEntity? Step, Guid? AssigneeUserId, Guid? AssigneeRoleId, List<Guid> CandidateUserIds, List<(WorkflowStepEntity Step, string Reason)> SkippedSteps)> ResolveNextValidStepAsync(
         Guid workflowDefinitionId, 
         int currentStepNo, 
         Guid requestorUserId, 
@@ -46,7 +51,7 @@ public class ApprovalEngineService : IApprovalEngineService
             if (nextStep == null)
             {
                 // No more steps -> Fully Approved
-                return (null, null, null, skippedSteps);
+                return (null, null, null, [], skippedSteps);
             }
 
             // 0) CHECK FOR MANUAL ASSIGNMENTS FIRST
@@ -81,7 +86,9 @@ public class ApprovalEngineService : IApprovalEngineService
                 {
                     // User manually selected someone
                     var finalUserId = await ResolveDelegationAsync(manualUserId.Value, ct);
-                    return (nextStep, finalUserId, null, skippedSteps);
+                    if (!await _organizationResolver.IsEligibleAssigneeAsync(finalUserId, ct))
+                        throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Gri yaka personel onaycı olarak atanamaz.");
+                    return (nextStep, finalUserId, null, [], skippedSteps);
                 }
                 else
                 {
@@ -106,8 +113,16 @@ public class ApprovalEngineService : IApprovalEngineService
                 if (finalUserId.HasValue)
                 {
                     finalUserId = await ResolveDelegationAsync(finalUserId.Value, ct);
+                    if (!await _organizationResolver.IsEligibleAssigneeAsync(finalUserId.Value, ct))
+                    {
+                        var fallback = await HandleFallbackActionAsync(nextStep, ct);
+                        if (fallback.ShouldSkip)
+                            throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Gri yaka personel onaycı olarak atanamaz.");
+
+                        return (nextStep, fallback.FallbackUserId, fallback.FallbackRoleId, [], skippedSteps);
+                    }
                 }
-                return (nextStep, finalUserId, nextStep.AssigneeRoleId, skippedSteps);
+                return (nextStep, finalUserId, nextStep.AssigneeRoleId, [], skippedSteps);
             }
 
             // 2) Is it an ENTERPRISE OGRANIZATIONAL ROLE?
@@ -119,7 +134,7 @@ public class ApprovalEngineService : IApprovalEngineService
                     // GetPendingApprovalsQuery içerisinde filtrelenir.
                     // Bu nedenle tek bir statik AssigneeUserId veya RoleId'ye bağlanmaz.
                     // Adımı olduğu gibi (null, null) olarak döndürüp, formun bu adımda beklemesini sağlıyoruz.
-                    return (nextStep, null, null, skippedSteps);
+                    return (nextStep, null, null, [], skippedSteps);
                 }
 
                 var requestorPersonnel = await _db.QdmsPersoneller
@@ -129,46 +144,46 @@ public class ApprovalEngineService : IApprovalEngineService
                 if (requestorPersonnel == null) 
                 {
                     _logger.LogWarning("DIAGNOSTICS: Engine cannot find QdmsPersonel record for RequestorUserId: {RequestorId}. Fallbacking.", requestorUserId);
-                    var fallbackRes = await HandleFallbackActionAsync(nextStep);
+                    var fallbackRes = await HandleFallbackActionAsync(nextStep, ct);
                     if (fallbackRes.ShouldSkip)
                     {
                         throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Talep sahibinin organizasyon kaydı (QDMS Personel) bulunamadı.");
                     }
                     else
                     {
-                        return (nextStep, fallbackRes.FallbackUserId, fallbackRes.FallbackRoleId, skippedSteps);
+                        return (nextStep, fallbackRes.FallbackUserId, fallbackRes.FallbackRoleId, [], skippedSteps);
                     }
                 }
 
                 _logger.LogWarning("DIAGNOSTICS: Found QdmsPersonel for Requestor {RequestorId}. Pozisyon_Kodu: {Pozisyon}, Ust_Pozisyon_Kodu: {UstPozisyon}", requestorUserId, requestorPersonnel.Pozisyon_Kodu, requestorPersonnel.Ust_Pozisyon_Kodu);
 
-                Guid? resolvedUserId = null;
+                List<Guid> resolvedUserIds = [];
 
                 if (nextStep.AssigneeType == (short)WorkflowAssigneeType.DirectManager)
                 {
-                    resolvedUserId = await ResolveDirectManagerAsync(requestorPersonnel, ct);
-                    _logger.LogWarning("DIAGNOSTICS: DirectManager resolved to UserId: {ResolvedId}", resolvedUserId);
+                    resolvedUserIds = await ResolveManagerLevelAsync(requestorPersonnel, requestorUserId, 1, ct);
+                    _logger.LogInformation("DirectManager resolved to {CandidateCount} candidate(s).", resolvedUserIds.Count);
                 }
                 else if (nextStep.AssigneeType == (short)WorkflowAssigneeType.UpperManager)
                 {
-                    resolvedUserId = await ResolveUpperManagerAsync(requestorPersonnel, ct);
+                    resolvedUserIds = await ResolveManagerLevelAsync(requestorPersonnel, requestorUserId, 2, ct);
                 }
 
-                if (resolvedUserId.HasValue && resolvedUserId.Value != requestorUserId)
+                if (resolvedUserIds.Count > 0)
                 {
-                    var finalDelegatedUserId = await ResolveDelegationAsync(resolvedUserId.Value, ct);
-                    return (nextStep, finalDelegatedUserId, null, skippedSteps);
+                    var backwardsCompatibleAssignee = resolvedUserIds.Count == 1 ? resolvedUserIds[0] : (Guid?)null;
+                    return (nextStep, backwardsCompatibleAssignee, null, resolvedUserIds, skippedSteps);
                 }
 
                 // If not resolved, execute fallback!
-                var finalFallback = await HandleFallbackActionAsync(nextStep);
+                var finalFallback = await HandleFallbackActionAsync(nextStep, ct);
                 if (finalFallback.ShouldSkip)
                 {
                     throw new WorkflowManualAssignmentRequiredException(nextStep.StepNo, nextStep.Name, "Organizasyon yapısında geçerli bir yönetici/sorumlu bulunamadı.");
                 }
                 else
                 {
-                    return (nextStep, finalFallback.FallbackUserId, finalFallback.FallbackRoleId, skippedSteps);
+                    return (nextStep, finalFallback.FallbackUserId, finalFallback.FallbackRoleId, [], skippedSteps);
                 }
             }
 
@@ -185,7 +200,9 @@ public class ApprovalEngineService : IApprovalEngineService
         }
     }
 
-    private async Task<(bool ShouldSkip, Guid? FallbackUserId, Guid? FallbackRoleId)> HandleFallbackActionAsync(WorkflowStepEntity failedStep)
+    private async Task<(bool ShouldSkip, Guid? FallbackUserId, Guid? FallbackRoleId)> HandleFallbackActionAsync(
+        WorkflowStepEntity failedStep,
+        CancellationToken ct)
     {
         if (failedStep.FallbackAction == (short)WorkflowFallbackAction.Skip)
         {
@@ -193,7 +210,9 @@ public class ApprovalEngineService : IApprovalEngineService
         }
         else if (failedStep.FallbackAction == (short)WorkflowFallbackAction.FallToFixedUser && failedStep.FallbackUserId.HasValue)
         {
-            var finalFallbackId = await ResolveDelegationAsync(failedStep.FallbackUserId.Value, CancellationToken.None);
+            var finalFallbackId = await ResolveDelegationAsync(failedStep.FallbackUserId.Value, ct);
+            if (!await _organizationResolver.IsEligibleAssigneeAsync(finalFallbackId, ct))
+                return (true, null, null);
             return (false, finalFallbackId, null);
         }
         else if (failedStep.FallbackAction == (short)WorkflowFallbackAction.FallToRoleGroup && failedStep.FallbackUserId.HasValue)
@@ -206,40 +225,35 @@ public class ApprovalEngineService : IApprovalEngineService
         return (true, null, null);
     }
 
-    private async Task<Guid?> ResolveDirectManagerAsync(FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim requestor, CancellationToken ct)
+    private async Task<List<Guid>> ResolveManagerLevelAsync(
+        FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim requestor,
+        Guid requestorUserId,
+        int eligibleManagerLevel,
+        CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(requestor.Ust_Pozisyon_Kodu) || requestor.Pozisyon_Kodu == requestor.Ust_Pozisyon_Kodu)
-        {
-            _logger.LogWarning("DIAGNOSTICS: DirectManager search failed. Ust_Pozisyon_Kodu is empty or matches requestor's own code.");
-            return null;
-        }
+        var resolution = await _organizationResolver.ResolveManagerLevelAsync(requestor, eligibleManagerLevel, ct);
+        if (!resolution.IsSuccess)
+            return [];
 
-        var manager = await _db.QdmsPersoneller
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Pozisyon_Kodu == requestor.Ust_Pozisyon_Kodu && p.IsActive, ct);
+        var linkedUserIds = resolution.Candidates
+            .Where(x => x.UserId.HasValue)
+            .Select(x => x.UserId!.Value);
 
-        if (manager == null) 
-        {
-            _logger.LogWarning("DIAGNOSTICS: DirectManager search failed. No active QdmsPersonel with Pozisyon_Kodu {UstPozisyon} found.", requestor.Ust_Pozisyon_Kodu);
-        }
-        else 
-        {
-            _logger.LogWarning("DIAGNOSTICS: DirectManager found! Qdms Adi: {Adi} {Soyadi}, LinkedUserId: {LinkedUser}", manager.Adi, manager.Soyadi, manager.LinkedUserId);
-        }
-
-        return manager?.LinkedUserId;
+        return await ResolveDelegatedCandidatesAsync(linkedUserIds, requestorUserId, ct);
     }
 
-    private async Task<Guid?> ResolveUpperManagerAsync(FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim requestor, CancellationToken ct)
+    private async Task<List<Guid>> ResolveDelegatedCandidatesAsync(IEnumerable<Guid> userIds, Guid requestorUserId, CancellationToken ct)
     {
-        // 2 Kademe tırmanış (UpperManager)
-        var m1Id = await ResolveDirectManagerAsync(requestor, ct);
-        if (m1Id == null) return null;
+        var candidates = new HashSet<Guid>();
+        foreach (var userId in userIds.Where(x => x != requestorUserId))
+        {
+            var effectiveUserId = await ResolveDelegationAsync(userId, ct);
+            if (effectiveUserId != requestorUserId &&
+                await _organizationResolver.IsEligibleAssigneeAsync(effectiveUserId, ct))
+                candidates.Add(effectiveUserId);
+        }
 
-        var manager1 = await _db.QdmsPersoneller.FirstOrDefaultAsync(p => p.LinkedUserId == m1Id && p.IsActive, ct);
-        if (manager1 == null) return null;
-
-        return await ResolveDirectManagerAsync(manager1, ct);
+        return candidates.ToList();
     }
 
     private string? ParseDynamicRule(string? json)

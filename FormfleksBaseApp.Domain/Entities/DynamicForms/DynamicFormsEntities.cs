@@ -204,6 +204,26 @@ public sealed class FormRequestApprovalEntity
     public long ConcurrencyToken { get; set; }
 }
 
+/// <summary>
+/// Bir form talebindeki taslak değerlendirici ve onay adayı atamalarını tutar.
+/// </summary>
+[Table("form_request_assignments", Schema = "public")]
+public sealed class FormRequestAssignmentEntity
+{
+    public Guid Id { get; set; }
+    public Guid RequestId { get; set; }
+    public Guid? ApprovalId { get; set; }
+    public Guid UserId { get; set; }
+    public short AssignmentType { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public enum FormRequestAssignmentType : short
+{
+    DraftEvaluator = 1,
+    ApprovalCandidate = 2
+}
+
 
 /// <summary>
 /// Sistem tarafından otomatik bulunamayan adımlar için kullanıcının manuel olarak yaptığı atamaları tutan varlık.
@@ -230,6 +250,53 @@ public sealed class AuditLogEntity
     public Guid? ActorUserId { get; set; }
     public string? DetailJson { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+public enum EmailDeliveryStatus : short
+{
+    Pending = 1,
+    Processing = 2,
+    Sent = 3,
+    Failed = 4,
+    DeadLetter = 5,
+    Suppressed = 6
+}
+
+/// <summary>
+/// E-posta gonderim kuyrugunu ve degistirilemez denetim izini ayni kayitta tutar.
+/// </summary>
+[Table("email_outbox", Schema = "public")]
+public sealed class EmailOutboxEntity
+{
+    public Guid Id { get; set; }
+    public string MessageType { get; set; } = "General";
+    public string? ReferenceType { get; set; }
+    public string? ReferenceId { get; set; }
+    public string? DeduplicationKey { get; set; }
+    public string? FromAddress { get; set; }
+    public string ToAddressesJson { get; set; } = "[]";
+    public string CcAddressesJson { get; set; } = "[]";
+    public string BccAddressesJson { get; set; } = "[]";
+    public string? ReplyToAddress { get; set; }
+    public string Subject { get; set; } = string.Empty;
+    public string BodyHtml { get; set; } = string.Empty;
+    public string? BodyText { get; set; }
+    public string BodySha256 { get; set; } = string.Empty;
+    public string HeadersJson { get; set; } = "{}";
+    public string AttachmentManifestJson { get; set; } = "[]";
+    public string? AttachmentPayloadJson { get; set; }
+    public EmailDeliveryStatus Status { get; set; } = EmailDeliveryStatus.Pending;
+    public int AttemptCount { get; set; }
+    public int MaxAttempts { get; set; } = 5;
+    public string? LastError { get; set; }
+    public string? SmtpMessageId { get; set; }
+    public DateTime QueuedAt { get; set; }
+    public DateTime? FirstAttemptAt { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+    public DateTime? SentAt { get; set; }
+    public DateTime NextAttemptAt { get; set; }
+    public DateTime? LockedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 /// <summary>

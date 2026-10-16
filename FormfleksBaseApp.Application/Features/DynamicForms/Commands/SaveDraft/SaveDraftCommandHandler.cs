@@ -38,7 +38,13 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
             {
                 var isCurrentUserGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == dto.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
                 var isFormRequestorGlobalIk = await _db.UserLocationRoles.AnyAsync(lr => lr.UserId == req.RequestorUserId && lr.IsActive && lr.IsGlobalManager, ct);
-                if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk && req.Status == (short)FormRequestStatus.Draft))
+                var hasDraftEvaluatorPool = await _db.FormRequestAssignments.AnyAsync(
+                    a => a.RequestId == req.Id &&
+                         a.AssignmentType == (short)FormRequestAssignmentType.DraftEvaluator,
+                    ct);
+                if (!(isCurrentUserGlobalIk && isFormRequestorGlobalIk &&
+                      req.Status == (short)FormRequestStatus.Draft &&
+                      !hasDraftEvaluatorPool))
                 {
                     throw new BusinessException("Bu talebi güncelleme yetkiniz yok.");
                 }

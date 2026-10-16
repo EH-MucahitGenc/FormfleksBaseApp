@@ -1,11 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { ShieldCheck, Code, Settings2 } from 'lucide-react';
+import { ShieldCheck, Code, Settings2, Mail, Eye, X } from 'lucide-react';
 import { PageHeader, FfButton, PageContainer, GlassCard } from '@/components/ui/index';
 import { FfDataGrid } from '@/components/dev-extreme/FfDataGrid';
 import { systemAdminService } from '@/services/system-admin.service';
+import type { EmailLogDetailDto } from '@/services/system-admin.service';
 
 export const AuditLogs: React.FC = () => {
   const [modalContent, setModalContent] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'audit' | 'email'>('audit');
+  const [emailDetail, setEmailDetail] = useState<EmailLogDetailDto | null>(null);
+  const [emailDetailLoading, setEmailDetailLoading] = useState(false);
 
   const handleShowDetails = useCallback((jsonStr: string) => {
     try {
@@ -17,6 +21,15 @@ export const AuditLogs: React.FC = () => {
   }, []);
 
   const closeModal = () => setModalContent(null);
+
+  const handleShowEmail = useCallback(async (id: string) => {
+    setEmailDetailLoading(true);
+    try {
+      setEmailDetail(await systemAdminService.getEmailLog(id));
+    } finally {
+      setEmailDetailLoading(false);
+    }
+  }, []);
 
   // --- Grid Renderers ---
   const idRender = useCallback((cellData: any) => (
@@ -126,17 +139,61 @@ export const AuditLogs: React.FC = () => {
     { dataField: 'createdAt', caption: 'Tarih', width: 140, dataType: 'datetime', sortOrder: 'desc', cellRender: dateRender, alignment: 'right' }
   ];
 
+  const emailStatusRender = useCallback((cellData: any) => {
+    const status = String(cellData.value);
+    const classes: Record<string, string> = {
+      Sent: 'bg-status-success/10 text-status-success border-status-success/20',
+      Pending: 'bg-status-info/10 text-status-info border-status-info/20',
+      Processing: 'bg-brand-primary/10 text-brand-primary border-brand-primary/20',
+      Failed: 'bg-status-warning/10 text-status-warning border-status-warning/20',
+      DeadLetter: 'bg-status-danger/10 text-status-danger border-status-danger/20',
+      Suppressed: 'bg-surface-muted text-brand-gray border-surface-muted'
+    };
+    const labels: Record<string, string> = {
+      Sent: 'Gönderildi', Pending: 'Bekliyor', Processing: 'Gönderiliyor', Failed: 'Tekrar Denenecek',
+      DeadLetter: 'Başarısız', Suppressed: 'Gönderim Kapalı'
+    };
+    return <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold border ${classes[status] ?? classes.Suppressed}`}>{labels[status] ?? status}</span>;
+  }, []);
+
+  const emailRecipientsRender = useCallback((cellData: any) => (
+    <div className="text-sm text-brand-dark truncate" title={(cellData.value ?? []).join(', ')}>
+      {(cellData.value ?? []).join(', ')}
+    </div>
+  ), []);
+
+  const emailDetailRender = useCallback((cellData: any) => (
+    <button
+      onClick={() => handleShowEmail(cellData.data.id)}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-brand-gray bg-surface-muted border border-surface-muted rounded-md hover:bg-surface-base hover:text-brand-primary hover:border-brand-primary/30 transition-all"
+      title="E-posta ayrıntısını aç"
+    >
+      <Eye className="h-3.5 w-3.5" />
+      İncele
+    </button>
+  ), [handleShowEmail]);
+
+  const emailColumns = [
+    { dataField: 'status', caption: 'Durum', width: 145, cellRender: emailStatusRender },
+    { dataField: 'messageType', caption: 'E-posta Türü', width: 180 },
+    { dataField: 'toAddresses', caption: 'Alıcılar', minWidth: 220, cellRender: emailRecipientsRender },
+    { dataField: 'subject', caption: 'Konu', minWidth: 260 },
+    { dataField: 'attemptCount', caption: 'Deneme', width: 90, alignment: 'center' },
+    { dataField: 'queuedAt', caption: 'Kuyruğa Alındı', width: 165, dataType: 'datetime', sortOrder: 'desc', cellRender: dateRender },
+    { caption: 'İçerik', width: 105, cellRender: emailDetailRender, alignment: 'center' }
+  ];
+
   return (
     <PageContainer>
       <div className="flex flex-col h-[calc(100vh-8rem)]">
         <PageHeader 
-          title="Sistem Logları (Audit)" 
-        description="Sistem içerisindeki tüm kritik işlemlerin, form onay süreçlerinin ve yetki değişimlerinin detaylı log kayıtları." 
+          title="Sistem Logları"
+        description="Kritik sistem işlemlerini ve e-posta gönderimlerini ayrıntılı olarak izleyin."
         className="shrink-0 mb-4"
         breadcrumbs={[
           { label: 'Anasayfa', href: '/' },
           { label: 'Sistem & Araçlar', href: '/admin/audit-logs' },
-          { label: 'Sistem Logları (Audit)' }
+          { label: 'Sistem Logları' }
         ]}
         actions={
           <FfButton variant="outline" leftIcon={<Settings2 className="h-4 w-4" />}>
@@ -147,18 +204,21 @@ export const AuditLogs: React.FC = () => {
 
       <GlassCard noPadding className="flex-1 min-h-0 flex flex-col">
         <div className="px-5 py-3 border-b border-surface-muted bg-surface-hover flex items-center justify-between">
-            <div className="flex items-center gap-2 text-brand-primary font-bold">
-                <ShieldCheck className="h-5 w-5" />
-                İşlem Kayıtları
+            <div className="flex items-center gap-1 p-1 bg-surface-muted rounded-md">
+              <button onClick={() => setActiveView('audit')} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-semibold ${activeView === 'audit' ? 'bg-surface-base text-brand-primary shadow-sm' : 'text-brand-gray'}`}>
+                <ShieldCheck className="h-4 w-4" /> İşlem Kayıtları
+              </button>
+              <button onClick={() => setActiveView('email')} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-semibold ${activeView === 'email' ? 'bg-surface-base text-brand-primary shadow-sm' : 'text-brand-gray'}`}>
+                <Mail className="h-4 w-4" /> E-posta Kayıtları
+              </button>
             </div>
-            <div className="text-xs text-brand-gray font-medium">Son 30 Gün</div>
+            <div className="text-xs text-brand-gray font-medium">Son 500 kayıt</div>
         </div>
-        <FfDataGrid 
-          queryKey={['adminAuditLogs']}
-          fetchFn={systemAdminService.getAuditLogs}
-          columns={columns}
-          pageSize={20}
-        />
+        {activeView === 'audit' ? (
+          <FfDataGrid queryKey={['adminAuditLogs']} fetchFn={systemAdminService.getAuditLogs} columns={columns} pageSize={20} />
+        ) : (
+          <FfDataGrid queryKey={['adminEmailLogs']} fetchFn={systemAdminService.getEmailLogs} columns={emailColumns} pageSize={20} />
+        )}
       </GlassCard>
 
       {/* JSON Viewer Modal Overlay */}
@@ -187,6 +247,44 @@ export const AuditLogs: React.FC = () => {
                 Kapat
               </FfButton>
             </div>
+          </div>
+        </div>
+      )}
+
+      {(emailDetail || emailDetailLoading) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0f172a]/40 backdrop-blur-sm">
+          <div className="bg-surface-base rounded-lg shadow-xl border border-surface-muted w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-surface-muted flex items-center justify-between bg-surface-hover">
+              <div>
+                <h3 className="font-bold text-brand-dark flex items-center gap-2"><Mail className="h-5 w-5 text-brand-primary" /> E-posta Gönderim Detayı</h3>
+                {emailDetail && <p className="text-xs text-brand-gray mt-1">{emailDetail.subject}</p>}
+              </div>
+              <button onClick={() => setEmailDetail(null)} className="p-1 text-brand-gray hover:text-brand-dark" title="Kapat"><X className="h-5 w-5" /></button>
+            </div>
+            {emailDetailLoading ? (
+              <div className="p-10 text-center text-brand-gray">E-posta kaydı yükleniyor...</div>
+            ) : emailDetail && (
+              <div className="overflow-auto p-5 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                  <div><span className="block text-xs text-brand-gray">Kimden</span><span className="font-medium text-brand-dark break-all">{emailDetail.fromAddress || '-'}</span></div>
+                  <div><span className="block text-xs text-brand-gray">Kime</span><span className="font-medium text-brand-dark break-all">{emailDetail.toAddresses.join(', ')}</span></div>
+                  <div><span className="block text-xs text-brand-gray">Durum / Deneme</span><span className="font-medium text-brand-dark">{emailDetail.status} / {emailDetail.attemptCount}</span></div>
+                  <div><span className="block text-xs text-brand-gray">Kuyruk zamanı</span><span className="font-medium text-brand-dark">{new Date(emailDetail.queuedAt).toLocaleString('tr-TR')}</span></div>
+                  <div><span className="block text-xs text-brand-gray">Gönderim zamanı</span><span className="font-medium text-brand-dark">{emailDetail.sentAt ? new Date(emailDetail.sentAt).toLocaleString('tr-TR') : '-'}</span></div>
+                  <div><span className="block text-xs text-brand-gray">Referans</span><span className="font-mono text-xs text-brand-dark break-all">{emailDetail.referenceType || '-'} / {emailDetail.referenceId || '-'}</span></div>
+                </div>
+                {emailDetail.lastError && <div className="p-3 border border-status-danger/20 bg-status-danger/5 text-status-danger text-sm rounded-md whitespace-pre-wrap">{emailDetail.lastError}</div>}
+                <div>
+                  <h4 className="font-semibold text-sm text-brand-dark mb-2">E-posta Gövdesi</h4>
+                  <iframe title="E-posta gövdesi" sandbox="" srcDoc={emailDetail.bodyHtml} className="w-full h-[430px] border border-surface-muted rounded-md bg-white" />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div><h4 className="font-semibold text-sm text-brand-dark mb-2">Gönderim Başlıkları</h4><pre className="text-xs font-mono bg-surface-muted border border-surface-hover rounded-md p-3 overflow-auto max-h-64 whitespace-pre-wrap">{JSON.stringify(JSON.parse(emailDetail.headersJson || '{}'), null, 2)}</pre></div>
+                  <div><h4 className="font-semibold text-sm text-brand-dark mb-2">Ek Dosya İzleri</h4><pre className="text-xs font-mono bg-surface-muted border border-surface-hover rounded-md p-3 overflow-auto max-h-64 whitespace-pre-wrap">{JSON.stringify(JSON.parse(emailDetail.attachmentManifestJson || '[]'), null, 2)}</pre></div>
+                </div>
+                <div className="text-xs text-brand-gray font-mono break-all">Body SHA-256: {emailDetail.bodySha256}</div>
+              </div>
+            )}
           </div>
         </div>
       )}

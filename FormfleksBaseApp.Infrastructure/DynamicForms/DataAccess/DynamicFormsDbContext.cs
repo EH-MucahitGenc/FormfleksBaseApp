@@ -25,8 +25,10 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
     public DbSet<FormRequestEntity> FormRequests => Set<FormRequestEntity>();
     public DbSet<FormRequestValueEntity> FormRequestValues => Set<FormRequestValueEntity>();
     public DbSet<FormRequestApprovalEntity> FormRequestApprovals => Set<FormRequestApprovalEntity>();
+    public DbSet<FormRequestAssignmentEntity> FormRequestAssignments => Set<FormRequestAssignmentEntity>();
     public DbSet<FormRequestManualAssignmentEntity> FormRequestManualAssignments => Set<FormRequestManualAssignmentEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<EmailOutboxEntity> EmailOutbox => Set<EmailOutboxEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity> AppNotifications => Set<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity> SystemSettings => Set<FormfleksBaseApp.Domain.Entities.System.SystemSettingEntity>();
     public DbSet<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim> QdmsPersoneller => Set<FormfleksBaseApp.Domain.Entities.Admin.QdmsPersonelAktarim>();
@@ -168,7 +170,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.RequestorUserId).HasColumnName("requestor_user_id").HasColumnType("uuid");
             e.Property(x => x.Status).HasColumnName("status").HasColumnType("smallint");
             e.Property(x => x.CurrentStepNo).HasColumnName("current_step_no").HasColumnType("integer");
-            e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint");
+            e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint").IsConcurrencyToken();
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
             e.Property(x => x.SubmittedAt).HasColumnName("submitted_at").HasColumnType("timestamp with time zone");
             e.Property(x => x.CompletedAt).HasColumnName("completed_at").HasColumnType("timestamp with time zone");
@@ -206,9 +208,38 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.ActionByUserId).HasColumnName("action_by_user_id").HasColumnType("uuid");
             e.Property(x => x.ActionComment).HasColumnName("action_comment").HasColumnType("text");
             e.Property(x => x.ActionAt).HasColumnName("action_at").HasColumnType("timestamp with time zone");
-            e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint");
+            e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint").IsConcurrencyToken();
             e.HasIndex(x => new { x.RequestId, x.StepNo });
             e.HasIndex(x => new { x.Status, x.AssigneeRoleId, x.AssigneeUserId });
+        });
+
+        modelBuilder.Entity<FormRequestAssignmentEntity>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.RequestId).HasColumnName("request_id").HasColumnType("uuid");
+            e.Property(x => x.ApprovalId).HasColumnName("approval_id").HasColumnType("uuid");
+            e.Property(x => x.UserId).HasColumnName("user_id").HasColumnType("uuid");
+            e.Property(x => x.AssignmentType).HasColumnName("assignment_type").HasColumnType("smallint");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
+            e.HasIndex(x => new { x.ApprovalId, x.UserId })
+                .IsUnique()
+                .HasFilter("approval_id IS NOT NULL AND assignment_type = 2");
+            e.HasIndex(x => new { x.RequestId, x.UserId })
+                .IsUnique()
+                .HasFilter("approval_id IS NULL AND assignment_type = 1");
+            e.HasIndex(x => new { x.UserId, x.AssignmentType, x.RequestId });
+            e.HasOne<FormRequestEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.RequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<FormRequestApprovalEntity>()
+                .WithMany()
+                .HasForeignKey(x => x.ApprovalId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint(
+                "ck_form_request_assignments_shape",
+                "(assignment_type = 1 AND approval_id IS NULL) OR (assignment_type = 2 AND approval_id IS NOT NULL)"));
         });
 
         modelBuilder.Entity<FormRequestManualAssignmentEntity>(e =>
@@ -246,6 +277,44 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.DetailJson).HasColumnName("detail_json").HasColumnType("jsonb");
             e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamp with time zone");
             e.HasIndex(x => new { x.EntityType, x.EntityId, x.CreatedAt });
+        });
+
+        modelBuilder.Entity<EmailOutboxEntity>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").HasColumnType("uuid");
+            e.Property(x => x.MessageType).HasColumnName("message_type").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.ReferenceType).HasColumnName("reference_type").HasColumnType("character varying(100)").HasMaxLength(100);
+            e.Property(x => x.ReferenceId).HasColumnName("reference_id").HasColumnType("character varying(150)").HasMaxLength(150);
+            e.Property(x => x.DeduplicationKey).HasColumnName("deduplication_key").HasColumnType("character varying(250)").HasMaxLength(250);
+            e.Property(x => x.FromAddress).HasColumnName("from_address").HasColumnType("character varying(320)").HasMaxLength(320);
+            e.Property(x => x.ToAddressesJson).HasColumnName("to_addresses_json").HasColumnType("jsonb");
+            e.Property(x => x.CcAddressesJson).HasColumnName("cc_addresses_json").HasColumnType("jsonb");
+            e.Property(x => x.BccAddressesJson).HasColumnName("bcc_addresses_json").HasColumnType("jsonb");
+            e.Property(x => x.ReplyToAddress).HasColumnName("reply_to_address").HasColumnType("character varying(320)").HasMaxLength(320);
+            e.Property(x => x.Subject).HasColumnName("subject").HasColumnType("text");
+            e.Property(x => x.BodyHtml).HasColumnName("body_html").HasColumnType("text");
+            e.Property(x => x.BodyText).HasColumnName("body_text").HasColumnType("text");
+            e.Property(x => x.BodySha256).HasColumnName("body_sha256").HasColumnType("character(64)").HasMaxLength(64);
+            e.Property(x => x.HeadersJson).HasColumnName("headers_json").HasColumnType("jsonb");
+            e.Property(x => x.AttachmentManifestJson).HasColumnName("attachment_manifest_json").HasColumnType("jsonb");
+            e.Property(x => x.AttachmentPayloadJson).HasColumnName("attachment_payload_json").HasColumnType("jsonb");
+            e.Property(x => x.Status).HasColumnName("status").HasColumnType("smallint");
+            e.Property(x => x.AttemptCount).HasColumnName("attempt_count").HasColumnType("integer");
+            e.Property(x => x.MaxAttempts).HasColumnName("max_attempts").HasColumnType("integer");
+            e.Property(x => x.LastError).HasColumnName("last_error").HasColumnType("text");
+            e.Property(x => x.SmtpMessageId).HasColumnName("smtp_message_id").HasColumnType("character varying(255)").HasMaxLength(255);
+            e.Property(x => x.QueuedAt).HasColumnName("queued_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.FirstAttemptAt).HasColumnName("first_attempt_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.LastAttemptAt).HasColumnName("last_attempt_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.SentAt).HasColumnName("sent_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.LockedAt).HasColumnName("locked_at").HasColumnType("timestamp with time zone");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamp with time zone");
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt, x.QueuedAt });
+            e.HasIndex(x => new { x.ReferenceType, x.ReferenceId, x.QueuedAt });
+            e.HasIndex(x => x.QueuedAt);
+            e.HasIndex(x => x.DeduplicationKey).IsUnique().HasFilter("deduplication_key IS NOT NULL");
         });
 
         modelBuilder.Entity<FormfleksBaseApp.Domain.Entities.System.AppNotificationEntity>(e =>

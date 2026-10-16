@@ -127,6 +127,7 @@ export function flattenFormTypeData(items: HrFormDetailItemDto[]): FlattenedRepo
   const columns: { dataField: string; caption: string; isGrid: boolean }[] = [
     { dataField: 'formRequestNo', caption: 'Talep No', isGrid: false },
     { dataField: 'requestorName', caption: 'Talebi Oluşturan', isGrid: false },
+    { dataField: 'location', caption: 'Şube', isGrid: false },
     { dataField: 'subjectPersonName', caption: 'İlgili Kişi', isGrid: false },
     { dataField: 'createdAt', caption: 'Oluşturma Tarihi', isGrid: false },
     { dataField: 'completedAt', caption: 'Tamamlanma Tarihi', isGrid: false },
@@ -149,6 +150,7 @@ export function flattenFormTypeData(items: HrFormDetailItemDto[]): FlattenedRepo
     const baseRow: any = {
       formRequestNo: item.formRequestNo,
       requestorName: item.requestorName,
+      location: item.location || '-',
       subjectPersonName: item.subjectPersonName || '-',
       createdAt: formatDateValue(item.createdAt),
       completedAt: item.completedAt ? formatDateValue(item.completedAt) : '-',
