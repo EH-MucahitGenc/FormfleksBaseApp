@@ -5,13 +5,14 @@ import { FfButton, cn } from '@/components/ui/index';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { FfSkeletonLoader } from '@/components/shared/FfSkeletonLoader';
 import DataGrid, { Column, SearchPanel, Paging, Pager, FilterRow, HeaderFilter, Summary, TotalItem, GroupPanel, Grouping, ColumnChooser } from 'devextreme-react/data-grid';
-import { Download, FileText, Filter, PieChart as PieChartIcon, BarChart as BarChartIcon, Printer, TrendingUp, Clock, CheckCircle, XCircle, Building2, MapPin, Users } from 'lucide-react';
+import { Download, FileText, Filter, PieChart as PieChartIcon, BarChart as BarChartIcon, Printer, TrendingUp, Clock, CheckCircle, XCircle, Building2, MapPin, Users, Activity } from 'lucide-react';
 import { HrReportDetailModal } from './HrReportDetailModal';
 import { HrPrintDocument } from './HrPrintDocument';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, LabelList } from 'recharts';
 import { useReactToPrint } from 'react-to-print';
 import { HrDynamicFormReport } from './HrDynamicFormReport';
 import { HrExportModal } from './HrExportModal';
+import { FormTrackingCenter } from './FormTrackingCenter';
 
 const COLORS = ['#F97316','#3B82F6','#10B981','#8B5CF6','#EC4899','#14B8A6','#F43F5E','#EAB308','#6366F1','#84CC16'];
 const STATUS_COLORS: Record<string,string> = { 'Taslak':'#94A3B8','Onay Bekliyor':'#F59E0B','Onaylandı':'#10B981','Reddedildi':'#EF4444','İptal':'#64748B' };
@@ -32,7 +33,7 @@ export const HrReportingDashboard = () => {
   
   const [scorecardFormType, setScorecardFormType] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'summary'|'scorecard'|'form_details'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary'|'scorecard'|'form_details'|'tracking'>('summary');
   const [selectedRow, setSelectedRow] = useState<{requestorUserId:string;formTypeId:string;title:string}|null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -74,7 +75,7 @@ export const HrReportingDashboard = () => {
     enabled: activeTab === 'summary' // Advanced data is now merged into summary tab
   });
 
-  const isLoading = isSummaryLoading || (activeTab === 'summary' && isAdvancedLoading);
+  const isLoading = activeTab !== 'tracking' && (isSummaryLoading || (activeTab === 'summary' && isAdvancedLoading));
 
   // Cascade reset handlers
   const onLocationChange = (val: string) => { setSelLocation(val); setSelDepartment(''); setSelUserId(''); };
@@ -160,6 +161,7 @@ export const HrReportingDashboard = () => {
         </div>
       </section>
 
+      {activeTab !== 'tracking' && <>
       <section className="rounded-2xl border border-surface-muted/80 bg-white p-4 shadow-[0_18px_55px_rgba(24,24,27,0.055)]">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -215,17 +217,19 @@ export const HrReportingDashboard = () => {
           {dateMode!=='all' && <span className="bg-orange-50 text-orange-700 border border-orange-200 rounded-full px-3 py-1 font-medium">{dateMode==='thisMonth'?'Bu Ay':dateMode==='lastMonth'?'Geçen Ay':'Özel Tarih'}</span>}
         </div>
       )}
+      </>}
 
-      <div className="flex w-fit items-center gap-1 rounded-2xl border border-surface-muted/80 bg-white p-1 shadow-soft">
+      <div className="flex max-w-full w-fit items-center gap-1 overflow-x-auto rounded-lg border border-surface-muted/80 bg-white p-1 shadow-soft">
         {[
           { id: 'summary', label: 'Grafiksel Analizler', icon: <PieChartIcon className="h-4 w-4" /> },
           { id: 'scorecard', label: 'Personel Karnesi', icon: <Users className="h-4 w-4" /> },
-          { id: 'form_details', label: 'Form Detay Raporları', icon: <FileText className="h-4 w-4" /> }
+          { id: 'form_details', label: 'Form Detay Raporları', icon: <FileText className="h-4 w-4" /> },
+          { id: 'tracking', label: 'Form İzleme', icon: <Activity className="h-4 w-4" /> }
         ].map(t=>(
           <button 
             key={t.id} 
             onClick={()=>setActiveTab(t.id as any)} 
-            className={cn('flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all', activeTab===t.id?'bg-brand-dark text-white shadow-soft':'text-brand-gray hover:bg-surface-ground hover:text-brand-dark')}
+            className={cn('flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-semibold transition-all', activeTab===t.id?'bg-brand-dark text-white shadow-soft':'text-brand-gray hover:bg-surface-ground hover:text-brand-dark')}
           >
             {t.icon} {t.label}
           </button>
@@ -534,6 +538,10 @@ export const HrReportingDashboard = () => {
           {/* FORM DETAILS TAB */}
           {activeTab==='form_details' && (
             <HrDynamicFormReport startDate={start} endDate={end} />
+          )}
+
+          {activeTab==='tracking' && (
+            <FormTrackingCenter />
           )}
         </div>
       )}

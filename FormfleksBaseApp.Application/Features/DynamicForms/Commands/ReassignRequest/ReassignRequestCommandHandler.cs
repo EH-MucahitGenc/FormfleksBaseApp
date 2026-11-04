@@ -63,11 +63,31 @@ public sealed class ReassignRequestCommandHandler : IRequestHandler<ReassignRequ
         if (newOwner == null)
             throw new BusinessException("Devredilecek kullanıcı bulunamadı.");
 
-        // İsteği devredenin bilgilerini al
+        // İsteği devredenin ve mevcut sahibin bilgilerini al
         var currentOwner = await _userRepository.GetUserByIdWithRolesAsync(request.CurrentUserId, ct);
+        var previousOwnerUserId = formRequest.RequestorUserId;
+        var previousOwner = previousOwnerUserId == request.CurrentUserId
+            ? currentOwner
+            : await _userRepository.GetUserByIdWithRolesAsync(previousOwnerUserId, ct);
         var assignerName = currentOwner?.DisplayName ?? currentOwner?.Email ?? "Sistem Yöneticisi";
 
         formRequest.RequestorUserId = request.NewOwnerUserId;
+        _db.AuditLogs.Add(new AuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            EntityType = "FormRequest",
+            EntityId = formRequest.Id,
+            ActionType = "DraftReassigned",
+            ActorUserId = request.CurrentUserId,
+            DetailJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                PreviousOwnerUserId = previousOwnerUserId,
+                PreviousOwnerName = previousOwner?.DisplayName ?? previousOwner?.Email,
+                NewOwnerUserId = request.NewOwnerUserId,
+                NewOwnerName = newOwner.DisplayName ?? newOwner.Email
+            }),
+            CreatedAt = DateTime.UtcNow
+        });
         await _db.SaveChangesAsync(ct);
 
         // Bildirim mailini gönder

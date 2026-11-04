@@ -1,6 +1,8 @@
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.GetHrAdvancedAnalytics;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.GetHrFormDetails;
 using FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.GetHrSummaryReport;
+using FormfleksBaseApp.Application.Features.DynamicForms.Queries.Reports.GetFormTracking;
+using FormfleksBaseApp.Contracts.DynamicForms.FormTracking;
 using FormfleksBaseApp.DynamicForms.Business.Contracts.Reports;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +49,29 @@ public class ReportsController : ControllerBase
     {
         var result = await _mediator.Send(query, ct);
         return Ok(result);
+    }
+
+    [HttpGet("form-tracking")]
+    public async Task<ActionResult<FormTrackingListResultDto>> GetFormTracking(
+        [FromQuery] GetFormTrackingListQuery query,
+        CancellationToken ct)
+        => Ok(await _mediator.Send(query, ct));
+
+    [HttpGet("form-tracking/{requestId:guid}")]
+    public async Task<ActionResult<FormTrackingDetailDto>> GetFormTrackingDetail(Guid requestId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetFormTrackingDetailQuery(requestId), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpGet("form-tracking/{requestId:guid}/emails/{emailId:guid}")]
+    public async Task<ActionResult<FormTrackingEmailDetailDto>> GetFormTrackingEmailDetail(
+        Guid requestId,
+        Guid emailId,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetFormTrackingEmailDetailQuery(requestId, emailId), ct);
+        return result is null ? NotFound() : Ok(result);
     }
 
     /// <summary>Returns all distinct branch (Isyeri) names for the filter cascade.</summary>

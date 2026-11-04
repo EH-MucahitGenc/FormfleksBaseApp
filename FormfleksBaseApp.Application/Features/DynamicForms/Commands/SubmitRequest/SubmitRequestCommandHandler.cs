@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Application.Common.Models;
 using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Application.Features.DynamicForms;
 
 using Microsoft.Extensions.Logging;
 
@@ -449,6 +450,8 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
         if (formType != null)
         {
+            var suppressedGlobalIkUserIds = await ApprovalEmailRecipientPolicy.GetSuppressedGlobalIkUserIdsAsync(
+                _db, formType.SystemUsageType, targetList.Select(x => x.UserId), ct);
             var attachments = new List<FormfleksBaseApp.Application.Common.Models.EmailAttachment>();
 
             try 
@@ -466,12 +469,15 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
 
             foreach (var target in targetList.DistinctBy(x => x.UserId))
             {
-                // [MAGIC LINK] Her alıcı için onay adımının ID'sini (approvalId) ve alıcının kendi UserId'sini
-                // içeren eşsiz bir JWT üretilir. Bu sayede sadece bu mailin gittiği kişi formu onaylayabilir.
-                var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
-                
-                _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+                if (!suppressedGlobalIkUserIds.Contains(target.UserId))
+                {
+                    // [MAGIC LINK] Her alıcı için onay adımının ID'sini (approvalId) ve alıcının kendi UserId'sini
+                    // içeren eşsiz bir JWT üretilir. Bu sayede sadece bu mailin gittiği kişi formu onaylayabilir.
+                    var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
+
+                    _logger.LogInformation("SubmitRequest: Queuing email notification for {Email} ({Name})", target.Email, target.Name);
+                    await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+                }
 
                 // Yeni Eklenti: SignalR İçi-İçi Canlı Bildirim
                 await _notificationService.SendNotificationAsync(

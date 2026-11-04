@@ -170,6 +170,7 @@ builder.Services.AddScoped<IActiveDirectoryAuthenticator, LdapActiveDirectoryAut
 
 // Email & Background Queue
 builder.Services.AddSingleton<FormfleksBaseApp.Infrastructure.Services.IEmailBackgroundQueue, FormfleksBaseApp.Infrastructure.Services.EmailBackgroundQueue>();
+builder.Services.AddSingleton<FormfleksBaseApp.Infrastructure.Services.ApprovalQueuedEmailPolicy>();
 builder.Services.AddSingleton<FormfleksBaseApp.Infrastructure.Services.IEmailSmtpSender, FormfleksBaseApp.Infrastructure.Services.EmailSmtpSender>();
 builder.Services.AddHostedService<FormfleksBaseApp.Infrastructure.Services.EmailSenderBackgroundWorker>();
 builder.Services.AddHostedService<FormfleksBaseApp.Api.BackgroundJobs.ApprovalReminderBackgroundJob>();

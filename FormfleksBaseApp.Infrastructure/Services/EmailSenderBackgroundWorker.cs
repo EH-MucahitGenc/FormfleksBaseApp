@@ -13,16 +13,18 @@ public sealed class EmailSenderBackgroundWorker : BackgroundService
     private readonly ILogger<EmailSenderBackgroundWorker> _logger;
     private readonly IOptionsMonitor<EmailSettings> _emailOptions;
     private readonly ISystemSettingsService _systemSettingsService;
+    private readonly ApprovalQueuedEmailPolicy _approvalEmailPolicy;
 
     public EmailSenderBackgroundWorker(IEmailBackgroundQueue emailQueue, IEmailSmtpSender smtpSender,
         ILogger<EmailSenderBackgroundWorker> logger, IOptionsMonitor<EmailSettings> emailOptions,
-        ISystemSettingsService systemSettingsService)
+        ISystemSettingsService systemSettingsService, ApprovalQueuedEmailPolicy approvalEmailPolicy)
     {
         _emailQueue = emailQueue;
         _smtpSender = smtpSender;
         _logger = logger;
         _emailOptions = emailOptions;
         _systemSettingsService = systemSettingsService;
+        _approvalEmailPolicy = approvalEmailPolicy;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -39,6 +41,13 @@ public sealed class EmailSenderBackgroundWorker : BackgroundService
                 {
                     await _emailQueue.MarkSuppressedAsync(queuedEmail.Id,
                         "EmailSettings.Enabled is false; message was not transmitted.", stoppingToken);
+                    continue;
+                }
+
+                if (await _approvalEmailPolicy.ShouldSuppressAsync(queuedEmail.Message, stoppingToken))
+                {
+                    await _emailQueue.MarkSuppressedAsync(queuedEmail.Id,
+                        "Global İK kullanıcısına deneme süresi dışındaki form için onay e-postası gönderilmedi.", stoppingToken);
                     continue;
                 }
 

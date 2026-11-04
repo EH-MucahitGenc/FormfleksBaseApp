@@ -275,6 +275,26 @@ public class ProbationTrackingCronJob : CronJobService
             });
         }
 
+        dynamicFormsDb.AuditLogs.Add(new AuditLogEntity
+        {
+            Id = Guid.NewGuid(),
+            EntityType = "FormRequest",
+            EntityId = req.Id,
+            ActionType = "ProbationDraftCreated",
+            ActorUserId = ProbationFormConstants.SystemUserId,
+            DetailJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                req.RequestNo,
+                PersonnelId = p.Id,
+                PersonnelName = $"{p.Adi} {p.Soyadi}".Trim(),
+                MonthType = monthType,
+                OwnerUserId = requestorId,
+                CandidateUserIds = candidateUserIds,
+                ManagerNotFound = managerNotFound
+            }),
+            CreatedAt = req.CreatedAt
+        });
+
         await dynamicFormsDb.SaveChangesAsync(cancellationToken);
 
         var fields = await dynamicFormsDb.FormFields.Where(f => f.FormTypeId == template.Id && f.Active).ToListAsync(cancellationToken);

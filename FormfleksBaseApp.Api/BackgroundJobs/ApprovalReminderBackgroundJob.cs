@@ -1,6 +1,7 @@
 using FormfleksBaseApp.Application.Common.Interfaces;
 using FormfleksBaseApp.Domain.Entities.DynamicForms;
 using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Application.Features.DynamicForms;
 using FormfleksBaseApp.DynamicForms.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -325,9 +326,14 @@ public class ApprovalReminderBackgroundJob : CronJobService
         }
         
         string formTypeName = formType?.Name ?? formTypeId.ToString();
+        var suppressedGlobalIkUserIds = await ApprovalEmailRecipientPolicy.GetSuppressedGlobalIkUserIdsAsync(
+            db, formType?.SystemUsageType, targetList.Select(x => x.UserId), ct);
 
         foreach (var target in targetList.DistinctBy(x => x.UserId))
         {
+            if (suppressedGlobalIkUserIds.Contains(target.UserId))
+                continue;
+
             var token = tokenService.CreateQuickActionToken(approvalId, target.UserId);
             
             await emailService.SendApprovalReminderEmailAsync(

@@ -57,6 +57,93 @@ export interface HrPersonnelItemDto {
   location: string;
 }
 
+export interface FormTrackingListItemDto {
+  requestId: string;
+  requestNo: string;
+  formTypeName: string;
+  systemUsageType?: string;
+  subjectPersonName: string;
+  department?: string;
+  title?: string;
+  statusCode: number;
+  status: string;
+  ownerUserId: string;
+  ownerName: string;
+  ownerEmail?: string;
+  currentStepNo?: number;
+  currentStepName?: string;
+  currentAssignees: string[];
+  draftCandidates: string[];
+  isPooledDraft: boolean;
+  createdAt: string;
+  lastActivityAt: string;
+  waitingSince: string;
+  waitingDays: number;
+}
+
+export interface FormTrackingListResultDto {
+  items: FormTrackingListItemDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface FormTrackingEventDto {
+  id: string;
+  category: 'system' | 'assignment' | 'action' | 'email' | string;
+  eventType: string;
+  title: string;
+  description?: string;
+  actorName?: string;
+  occurredAt: string;
+  deliveryStatus?: string;
+  recipients: string[];
+  count: number;
+  emailLogId?: string;
+  detailJson?: string;
+}
+
+export interface FormTrackingDetailDto {
+  summary: FormTrackingListItemDto;
+  events: FormTrackingEventDto[];
+}
+
+export interface FormTrackingEmailDetailDto {
+  requestId: string;
+  email: {
+    id: string;
+    messageType: string;
+    fromAddress?: string;
+    toAddresses: string[];
+    ccAddresses: string[];
+    bccAddresses: string[];
+    replyToAddress?: string;
+    subject: string;
+    bodyHtml: string;
+    bodyText?: string;
+    headersJson: string;
+    attachmentManifestJson: string;
+    status: string;
+    attemptCount: number;
+    lastError?: string;
+    smtpMessageId?: string;
+    queuedAt: string;
+    sentAt?: string;
+  };
+}
+
+export interface FormTrackingFilters {
+  search?: string;
+  systemUsageType?: string;
+  status?: string;
+  ownerSearch?: string;
+  startDate?: string;
+  endDate?: string;
+  minWaitingDays?: string;
+  page: number;
+  pageSize: number;
+}
+
 export const reportService = {
   getHrSummaryReport: async (startDate?: string, endDate?: string, requestorUserId?: string, department?: string, location?: string) => {
     const params = new URLSearchParams();
@@ -123,6 +210,35 @@ export const reportService = {
     if (location) params.append('location', location);
     if (department) params.append('department', department);
     const response = await api.get<HrPersonnelItemDto[]>(`/dynamic-forms/reports/hr-personnel?${params.toString()}`);
+    return response.data;
+  },
+
+  getFormTracking: async (filters: FormTrackingFilters): Promise<FormTrackingListResultDto> => {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('Search', filters.search);
+    if (filters.systemUsageType) params.append('SystemUsageType', filters.systemUsageType);
+    if (filters.status) params.append('Status', filters.status);
+    if (filters.ownerSearch) params.append('OwnerSearch', filters.ownerSearch);
+    if (filters.startDate) params.append('StartDate', new Date(filters.startDate).toISOString());
+    if (filters.endDate) {
+      const end = new Date(filters.endDate);
+      end.setHours(23, 59, 59, 999);
+      params.append('EndDate', end.toISOString());
+    }
+    if (filters.minWaitingDays) params.append('MinWaitingDays', filters.minWaitingDays);
+    params.append('Page', String(filters.page));
+    params.append('PageSize', String(filters.pageSize));
+    const response = await api.get<FormTrackingListResultDto>(`/dynamic-forms/reports/form-tracking?${params.toString()}`);
+    return response.data;
+  },
+
+  getFormTrackingDetail: async (requestId: string): Promise<FormTrackingDetailDto> => {
+    const response = await api.get<FormTrackingDetailDto>(`/dynamic-forms/reports/form-tracking/${requestId}`);
+    return response.data;
+  },
+
+  getFormTrackingEmailDetail: async (requestId: string, emailId: string): Promise<FormTrackingEmailDetailDto> => {
+    const response = await api.get<FormTrackingEmailDetailDto>(`/dynamic-forms/reports/form-tracking/${requestId}/emails/${emailId}`);
     return response.data;
   }
 };

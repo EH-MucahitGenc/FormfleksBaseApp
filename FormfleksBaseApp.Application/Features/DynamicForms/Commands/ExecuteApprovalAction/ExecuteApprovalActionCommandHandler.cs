@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using FormfleksBaseApp.Application.Auth.Interfaces;
 using FormfleksBaseApp.Domain.Constants;
+using FormfleksBaseApp.Application.Features.DynamicForms;
 
 namespace FormfleksBaseApp.Application.Features.DynamicForms.Commands.ExecuteApprovalAction;
 
@@ -553,10 +554,15 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
 
         if (formType != null)
         {
+            var suppressedGlobalIkUserIds = await ApprovalEmailRecipientPolicy.GetSuppressedGlobalIkUserIdsAsync(
+                _db, formType.SystemUsageType, targetList.Select(x => x.UserId), ct);
             foreach (var target in targetList.DistinctBy(x => x.UserId))
             {
-                var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
-                await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+                if (!suppressedGlobalIkUserIds.Contains(target.UserId))
+                {
+                    var token = _tokens.CreateQuickActionToken(approvalId, target.UserId);
+                    await _emailService.SendApprovalRequestEmailAsync(target.Email, target.Name, requestNo, requestId, formType.Name, reqName, reqPers?.Isyeri_Tanimi ?? "", attachments, token, ct);
+                }
                 
                 // SignalR Notification
                 await _notificationService.SendNotificationAsync(

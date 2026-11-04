@@ -25,6 +25,7 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
     {
         var dto = request.Request;
         FormRequestEntity req;
+        var isNewRequest = false;
 
         if (dto.RequestId.HasValue && dto.RequestId.Value != Guid.Empty)
         {
@@ -57,6 +58,7 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
         }
         else
         {
+            isNewRequest = true;
             var formType = await _db.FormTypes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == dto.FormTypeId, ct)
                 ?? throw new BusinessException("Form şablonu bulunamadı.");
 
@@ -105,6 +107,25 @@ public sealed class SaveDraftCommandHandler : IRequestHandler<SaveDraftCommand, 
         }
 
         await _db.SaveChangesAsync(ct);
+
+        if (isNewRequest)
+        {
+            _db.AuditLogs.Add(new AuditLogEntity
+            {
+                Id = Guid.NewGuid(),
+                EntityType = "FormRequest",
+                EntityId = req.Id,
+                ActionType = "DraftCreated",
+                ActorUserId = dto.RequestorUserId,
+                DetailJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    req.RequestNo,
+                    req.FormTypeId,
+                    OwnerUserId = req.RequestorUserId
+                }),
+                CreatedAt = req.CreatedAt
+            });
+        }
 
         // Alan kimlikleri için form alanlarını bulalım
         var formFields = await _db.FormFields
