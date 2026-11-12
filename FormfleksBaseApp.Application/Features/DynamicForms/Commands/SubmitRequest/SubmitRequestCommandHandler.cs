@@ -111,6 +111,9 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         if (req.Status != (short)FormRequestStatus.Draft && req.Status != (short)FormRequestStatus.ReturnedForRevision)
             throw new BusinessException("Sadece taslak (Draft) veya iade edilmiş (ReturnedForRevision) durumundaki formlar onaya gönderilebilir.");
 
+        if (string.IsNullOrWhiteSpace(req.ApprovalLocationName))
+            req.ApprovalLocationName = await FormRequestApprovalLocation.ResolveAsync(_db, req, ct);
+
         // Aktif workflow bul
         var wfDef = await _db.WorkflowDefinitions
             .AsNoTracking()
@@ -320,17 +323,17 @@ public sealed class SubmitRequestCommandHandler : IRequestHandler<SubmitRequestC
         }
         else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
-            var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
-            var reqLocation = authReqPers?.Isyeri_Tanimi;
+            var formRequest = await _db.FormRequests.FirstAsync(r => r.Id == requestId, ct);
+            var reqLocation = await FormRequestApprovalLocation.ResolveAsync(_db, formRequest, ct);
 
             IQueryable<UserLocationRoleEntity> query = _db.UserLocationRoles
                 .AsNoTracking()
                 .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value);
 
             if (isGlobalManagerInfoOnly)
-                query = query.Where(x => x.LocationName == reqLocation);
+                query = query.Where(x => !x.IsGlobalManager && reqLocation != null && x.LocationName == reqLocation);
             else
-                query = query.Where(x => x.IsGlobalManager || x.LocationName == reqLocation);
+                query = query.Where(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
 
             var authorizedLocationUserIds = await query
                 .Select(x => x.UserId)

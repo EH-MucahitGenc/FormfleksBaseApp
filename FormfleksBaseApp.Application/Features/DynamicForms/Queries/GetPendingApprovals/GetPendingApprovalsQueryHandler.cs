@@ -71,7 +71,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                                                                  c.UserId == request.ActorUserId &&
                                                                  c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate)
                           || (app.AssigneeRoleId.HasValue && userRoleIds.Contains(app.AssigneeRoleId.Value))
-                          || (ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (person != null && lr.LocationName == person.Isyeri_Tanimi))))
+                          || (ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (r.ApprovalLocationName != null && lr.LocationName == r.ApprovalLocationName) || (r.ApprovalLocationName == null && person != null && lr.LocationName == person.Isyeri_Tanimi))))
                           || (ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == request.ActorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))
                       )
                       orderby app.StepNo ascending, r.CreatedAt ascending
@@ -85,7 +85,7 @@ public sealed class GetPendingApprovalsQueryHandler : IRequestHandler<GetPending
                           AssigneeRoleId = app.AssigneeRoleId,
                           RequestorUserId = r.RequestorUserId,
                           RequestorName = person != null ? person.Adi + " " + person.Soyadi : "Bilinmiyor",
-                          RequestorLocation = _db.QdmsPersoneller
+                          RequestorLocation = r.ApprovalLocationName ?? _db.QdmsPersoneller
                               .Where(q => q.Isyeri_Tanimi != null && q.Isyeri_Tanimi != "" && q.LinkedUserId == r.RequestorUserId)
                               .Select(q => q.Isyeri_Tanimi)
                               .FirstOrDefault()

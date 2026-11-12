@@ -204,17 +204,17 @@ public class ApprovalReminderBackgroundJob : CronJobService
         }
         else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
-            var authReqPers = await db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
-            var reqLocation = authReqPers?.Isyeri_Tanimi;
+            var formRequest = await db.FormRequests.AsNoTracking().FirstAsync(r => r.Id == requestId, ct);
+            var reqLocation = await FormRequestApprovalLocation.ResolveAsync(db, formRequest, ct);
 
             IQueryable<UserLocationRoleEntity> query = db.UserLocationRoles
                 .AsNoTracking()
                 .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value);
 
             if (isGlobalManagerInfoOnly)
-                query = query.Where(x => x.LocationName == reqLocation);
+                query = query.Where(x => !x.IsGlobalManager && reqLocation != null && x.LocationName == reqLocation);
             else
-                query = query.Where(x => x.IsGlobalManager || x.LocationName == reqLocation);
+                query = query.Where(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
 
             var authorizedLocationUserIds = await query.Select(x => x.UserId).Distinct().ToListAsync(ct);
 

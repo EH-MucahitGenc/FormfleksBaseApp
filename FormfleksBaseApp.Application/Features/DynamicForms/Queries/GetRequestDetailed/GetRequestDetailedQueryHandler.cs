@@ -73,6 +73,7 @@ public sealed class GetRequestDetailedQueryHandler
         var formCreatorPerson = await _db.QdmsPersoneller
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.LinkedUserId == request.RequestorUserId && p.IsActive, ct);
+        var approvalLocation = request.ApprovalLocationName ?? formCreatorPerson?.Isyeri_Tanimi;
 
         // If not the creator, check if they are an assigned approver
         if (!isAuthorized)
@@ -102,7 +103,7 @@ public sealed class GetRequestDetailedQueryHandler
                                                                             c.UserId == query.RequestorUserId &&
                                                                             c.AssignmentType == (short)FormRequestAssignmentType.ApprovalCandidate) ||
                                          (a.AssigneeRoleId.HasValue && userRoleIds.Contains(a.AssigneeRoleId.Value)) ||
-                                         (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (formCreatorPerson != null && lr.LocationName == formCreatorPerson.Isyeri_Tanimi)))) ||
+                                         (ws != null && ws.AssigneeType == 15 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && (lr.IsGlobalManager || (approvalLocation != null && lr.LocationName == approvalLocation)))) ||
                                          (ws != null && ws.AssigneeType == 16 && ws.TargetLocationRoleId.HasValue && _db.UserLocationRoles.Any(lr => lr.UserId == query.RequestorUserId && lr.IsActive && lr.RoleId == ws.TargetLocationRoleId && lr.IsGlobalManager))
                                      )
                                      select a).AnyAsync(ct);

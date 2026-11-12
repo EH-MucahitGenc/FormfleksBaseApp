@@ -168,6 +168,7 @@ public sealed class DynamicFormsDbContext : DbContext, IDynamicFormsDbContext
             e.Property(x => x.FormTypeId).HasColumnName("form_type_id").HasColumnType("uuid");
             e.Property(x => x.RequestNo).HasColumnName("request_no").HasColumnType("character varying(50)").HasMaxLength(50);
             e.Property(x => x.RequestorUserId).HasColumnName("requestor_user_id").HasColumnType("uuid");
+            e.Property(x => x.ApprovalLocationName).HasColumnName("approval_location_name").HasColumnType("character varying(150)").HasMaxLength(150);
             e.Property(x => x.Status).HasColumnName("status").HasColumnType("smallint");
             e.Property(x => x.CurrentStepNo).HasColumnName("current_step_no").HasColumnType("integer");
             e.Property(x => x.ConcurrencyToken).HasColumnName("concurrency_token").HasColumnType("bigint").IsConcurrencyToken();

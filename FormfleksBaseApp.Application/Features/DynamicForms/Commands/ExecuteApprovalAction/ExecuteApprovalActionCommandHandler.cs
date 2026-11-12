@@ -110,8 +110,7 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         bool hasBranchHrAuth = false;
         if (currentStep.AssigneeType == (short)WorkflowAssigneeType.LocationBasedRole && currentStep.TargetLocationRoleId.HasValue)
         {
-            var reqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == req.RequestorUserId, ct);
-            var reqLocation = reqPers?.Isyeri_Tanimi;
+            var reqLocation = await FormRequestApprovalLocation.ResolveAsync(_db, req, ct);
 
             var locationRoles = await _db.UserLocationRoles
                 .AsNoTracking()
@@ -217,6 +216,14 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         }
         else // Approve
         {
+            if (string.IsNullOrWhiteSpace(req.ApprovalLocationName))
+            {
+                var approverId = currentStep.AssigneeType is (short)WorkflowAssigneeType.LocationBasedRole or (short)WorkflowAssigneeType.GlobalRole
+                    ? (Guid?)null
+                    : reqDto.ActorUserId;
+                req.ApprovalLocationName = await FormRequestApprovalLocation.ResolveAsync(_db, req, ct, approverId);
+            }
+
             if (approval is not null)
                 approval.Status = (short)ApprovalStatus.Approved; //
 
@@ -428,17 +435,17 @@ public sealed class ExecuteApprovalActionCommandHandler : IRequestHandler<Execut
         }
         else if (assigneeType == (short)WorkflowAssigneeType.LocationBasedRole && targetLocationRoleId.HasValue)
         {
-            var authReqPers = await _db.QdmsPersoneller.AsNoTracking().FirstOrDefaultAsync(p => p.LinkedUserId == requestorUserId && p.IsActive, ct);
-            var reqLocation = authReqPers?.Isyeri_Tanimi;
+            var formRequest = await _db.FormRequests.FirstAsync(r => r.Id == requestId, ct);
+            var reqLocation = await FormRequestApprovalLocation.ResolveAsync(_db, formRequest, ct);
 
             IQueryable<UserLocationRoleEntity> query = _db.UserLocationRoles
                 .AsNoTracking()
                 .Where(x => x.IsActive && x.RoleId == targetLocationRoleId.Value);
 
             if (isGlobalManagerInfoOnly)
-                query = query.Where(x => x.LocationName == reqLocation);
+                query = query.Where(x => !x.IsGlobalManager && reqLocation != null && x.LocationName == reqLocation);
             else
-                query = query.Where(x => x.IsGlobalManager || x.LocationName == reqLocation);
+                query = query.Where(x => x.IsGlobalManager || (reqLocation != null && x.LocationName == reqLocation));
 
             var authorizedLocationUserIds = await query
                 .Select(x => x.UserId)

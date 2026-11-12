@@ -137,6 +137,7 @@ public sealed class FormRequestEntity
     public Guid FormTypeId { get; set; }
     public string RequestNo { get; set; } = default!;
     public Guid RequestorUserId { get; set; }
+    public string? ApprovalLocationName { get; set; }
     public short Status { get; set; }
     public int? CurrentStepNo { get; set; }
     public long ConcurrencyToken { get; set; }
